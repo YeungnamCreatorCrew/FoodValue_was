@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.idea/
+.vscode/
+
+# 로컬 AI 작업 지침 (공유하지 않음)
+CLAUDE.md
+docs/

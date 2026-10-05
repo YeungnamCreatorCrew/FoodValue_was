@@ -1,0 +1,44 @@
+name: foodvalue
+# 로컬 개발용 DB. 실행: docker compose up -d
+#  1) postgres 가 뜨고
+#  2) flyway 가 db/migration/ 의 SQL 을 순서대로 실행해 테이블을 만든 뒤 종료
+# 운영(Supabase 등)과 PostgreSQL 메이저 버전을 맞춰 둘 것
+services:
+  postgres:
+    image: postgres:17
+    container_name: foodvalue-postgres
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Seoul
+    command: ["postgres", "-c", "timezone=Asia/Seoul"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  flyway:
+    image: flyway/flyway:12-alpine
+    container_name: foodvalue-flyway
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./db/migration:/flyway/sql:ro
+    command: >
+      -url=jdbc:postgresql://postgres:5432/${DB_NAME}
+      -user=${DB_USER}
+      -password=${DB_PASSWORD}
+      -connectRetries=10
+      -outOfOrder=true
+      migrate
+
+volumes:
+  pgdata:
