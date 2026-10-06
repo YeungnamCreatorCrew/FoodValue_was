@@ -90,10 +90,10 @@ def list_posts(
             title=post.title,
             author=_author(post.author),
             comment_count=count,
-            thumbnail_url=post.images[0].url if post.images else None,
+            has_image=has_image,
             created_at=post.created_at,
         )
-        for post, count in rows
+        for post, count, has_image in rows
     ]
     return Page(items=items, page=page, size=size, total=total)
 

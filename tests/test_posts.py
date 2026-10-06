@@ -166,7 +166,8 @@ def test_list_filter_search_paging():
     assert get(keyword=tag, size=2)["total"] == 3 and len(get(keyword=tag, size=2)["items"]) == 2
     assert [i["id"] for i in get(keyword=tag, size=2, page=2)["items"]] == [a]  # 마지막 페이지
     by_id = {i["id"]: i for i in res["items"]}
-    assert by_id[a]["thumbnailUrl"] == "https://a.com/t.jpg" and by_id[b]["thumbnailUrl"] is None
+    assert by_id[a]["hasImage"] is True and by_id[b]["hasImage"] is False
+    assert "thumbnailUrl" not in by_id[a] and "imageUrls" not in by_id[a]
 
 
 def test_list_empty_and_out_of_range_page():
