@@ -3,11 +3,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
-from app.routers import auth, posts, users
+from app.core.limits import ImageUploadSizeLimit
+from app.routers import auth, images, posts, users
 
 get_settings()  # 필수 환경 변수가 없으면 기동 단계에서 바로 실패
 
 app = FastAPI(title="FoodValue")
+app.add_middleware(ImageUploadSizeLimit)
 
 
 @app.exception_handler(RequestValidationError)
@@ -26,3 +28,4 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(posts.router, prefix="/api/v1")
+app.include_router(images.router, prefix="/api/v1")
