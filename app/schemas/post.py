@@ -72,7 +72,7 @@ class PostSummary(CamelModel):
     title: str
     author: Author
     comment_count: int
-    thumbnail_url: str | None
+    has_image: bool
     created_at: datetime
 
 
