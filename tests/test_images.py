@@ -132,7 +132,6 @@ def test_chunked_body_without_content_length_is_cut_off():
 def test_limit_applies_only_to_upload_path():
     h = _user()
     body = {"category": "SHOWOFF", "title": "t", "content": "c" * (IMAGE_MAX_BYTES + 200 * 1024)}
-    r = client.post(f"{API}/posts", json=body, headers=h)  # 본문이 커도 글 작성은 이 제한 대상이 아님
-    assert r.status_code == 201
-    with get_engine().begin() as conn:
-        conn.execute(text("DELETE FROM post WHERE id=:i"), {"i": r.json()["id"]})
+    r = client.post(f"{API}/posts", json=body, headers=h)
+    # 업로드 크기 제한(413)은 이미지 경로에만 적용된다. 글 본문은 자체 길이 제한에 걸려 400이어야 한다
+    assert r.status_code == 400

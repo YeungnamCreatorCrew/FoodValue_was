@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.constants import (
+    ID_MAX,
     PAGE_DEFAULT_SIZE,
     PAGE_MAX_SIZE,
     SEARCH_KEYWORD_MAX_LENGTH,
@@ -24,6 +27,9 @@ from app.services.post_service import ForbiddenError, NotFoundError
 
 # 조회(GET)는 공개(get_optional_user), 작성·수정·삭제는 JWT 필수(get_current_user)
 router = APIRouter(tags=["posts"])
+
+PostId = Annotated[int, Path(ge=1, le=ID_MAX)]
+CommentId = Annotated[int, Path(ge=1, le=ID_MAX)]
 
 
 def _http(e: Exception, what: str) -> HTTPException:
@@ -51,7 +57,7 @@ def create_post(body: PostCreate, db: Session = Depends(get_db), user: User = De
 
 @router.get("/posts/{post_id}", response_model=PostDetail)
 def get_post(
-    post_id: int, db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)
+    post_id: PostId, db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)
 ):
     try:
         return post_service.get_post(db, viewer, post_id)
@@ -61,7 +67,7 @@ def get_post(
 
 @router.patch("/posts/{post_id}", response_model=PostDetail)
 def update_post(
-    post_id: int, body: PostUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    post_id: PostId, body: PostUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ):
     try:
         return post_service.update_post(db, user, post_id, body)
@@ -70,7 +76,7 @@ def update_post(
 
 
 @router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_post(post_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def delete_post(post_id: PostId, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
         post_service.delete_post(db, user, post_id)
     except (NotFoundError, ForbiddenError) as e:
@@ -79,7 +85,7 @@ def delete_post(post_id: int, db: Session = Depends(get_db), user: User = Depend
 
 @router.get("/posts/{post_id}/comments", response_model=list[CommentResponse])
 def list_comments(
-    post_id: int, db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)
+    post_id: PostId, db: Session = Depends(get_db), viewer: User | None = Depends(get_optional_user)
 ):
     try:
         return post_service.list_comments(db, viewer, post_id)
@@ -91,7 +97,7 @@ def list_comments(
     "/posts/{post_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED
 )
 def create_comment(
-    post_id: int, body: CommentBody, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    post_id: PostId, body: CommentBody, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ):
     try:
         return post_service.create_comment(db, user, post_id, body.content)
@@ -101,7 +107,7 @@ def create_comment(
 
 @router.patch("/comments/{comment_id}", response_model=CommentResponse)
 def update_comment(
-    comment_id: int, body: CommentBody, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    comment_id: CommentId, body: CommentBody, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ):
     try:
         return post_service.update_comment(db, user, comment_id, body.content)
@@ -110,7 +116,7 @@ def update_comment(
 
 
 @router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_comment(comment_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def delete_comment(comment_id: CommentId, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
         post_service.delete_comment(db, user, comment_id)
     except (NotFoundError, ForbiddenError) as e:

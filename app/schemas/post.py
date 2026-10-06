@@ -4,6 +4,8 @@ from typing import Annotated
 from pydantic import AfterValidator, AnyHttpUrl, Field, TypeAdapter, model_validator
 
 from app.core.constants import (
+    COMMENT_MAX_LENGTH,
+    POST_CONTENT_MAX_LENGTH,
     POST_IMAGE_MAX_COUNT,
     POST_IMAGE_URL_MAX_LENGTH,
     POST_TITLE_MAX_LENGTH,
@@ -21,7 +23,8 @@ def _check_url(v: str) -> str:
 
 ImageUrl = Annotated[str, Field(max_length=POST_IMAGE_URL_MAX_LENGTH), AfterValidator(_check_url)]
 Title = Annotated[str, Field(min_length=1, max_length=POST_TITLE_MAX_LENGTH)]
-Content = Annotated[str, Field(min_length=1)]
+Content = Annotated[str, Field(min_length=1, max_length=POST_CONTENT_MAX_LENGTH)]
+CommentContent = Annotated[str, Field(min_length=1, max_length=COMMENT_MAX_LENGTH)]
 
 
 def _reject_blank(*values: str | None) -> None:
@@ -89,7 +92,7 @@ class PostDetail(CamelModel):
 
 
 class CommentBody(CamelModel):
-    content: Content
+    content: CommentContent
 
     @model_validator(mode="after")
     def _not_blank(self):
