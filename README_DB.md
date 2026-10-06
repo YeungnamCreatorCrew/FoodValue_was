@@ -21,6 +21,16 @@ docker compose up -d          # PostgreSQL 실행
 - `DATABASE_URL`
 - `JWT_SECRET_KEY` (32자 이상 무작위 문자열. 생성: `python -c "import secrets; print(secrets.token_urlsafe(48))"`)
 
+이미지 저장소(S3 API) 변수. 로컬은 Docker MinIO, 운영은 Supabase Storage의 S3 연결 정보로 값만 바꿉니다.
+
+- `S3_ENDPOINT_URL` (로컬 `http://localhost:9000`, Supabase `https://<프로젝트>.supabase.co/storage/v1/s3`)
+- `S3_REGION` (로컬 `us-east-1`, Supabase는 프로젝트 리전)
+- `S3_BUCKET`
+- `S3_ACCESS_KEY`, `S3_SECRET_KEY` (로컬 MinIO 루트 계정을 겸함. 비밀번호는 8자 이상)
+- `S3_PUBLIC_BASE_URL` (업로드한 파일을 읽는 공개 주소. 로컬 `http://localhost:9000/<버킷>`, Supabase `https://<프로젝트>.supabase.co/storage/v1/object/public/<버킷>`)
+
+로컬 MinIO는 `docker compose up -d`로 함께 뜨고 버킷이 자동 생성됩니다(읽기 공개). 웹 콘솔은 http://localhost:9001 입니다.
+
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 
 `postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 19개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.

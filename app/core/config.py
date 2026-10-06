@@ -16,6 +16,13 @@ class Settings:
             raise RuntimeError(
                 f"JWT_SECRET_KEY는 {JWT_SECRET_MIN_LENGTH}자 이상이어야 합니다"
             )
+        # 이미지 저장소 (S3 API). 로컬 MinIO / 운영 Supabase Storage 모두 같은 변수 이름을 쓴다
+        self.s3_endpoint_url = self._require("S3_ENDPOINT_URL")
+        self.s3_region = self._require("S3_REGION")
+        self.s3_bucket = self._require("S3_BUCKET")
+        self.s3_access_key = self._require("S3_ACCESS_KEY")
+        self.s3_secret_key = self._require("S3_SECRET_KEY")
+        self.s3_public_base_url = self._require("S3_PUBLIC_BASE_URL").rstrip("/")
 
     @staticmethod
     def _require(name: str) -> str:

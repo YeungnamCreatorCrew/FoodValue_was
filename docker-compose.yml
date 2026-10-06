@@ -40,5 +40,27 @@ services:
       -outOfOrder=true
       migrate
 
+  # 로컬 이미지 저장소. 운영의 Supabase Storage와 같은 S3 API로 접근한다
+  # 공식 minio/minio 이미지는 Docker Hub·quay.io 배포가 중단돼서 bitnamilegacy 이미지를 쓴다 (개발 전용)
+  minio:
+    image: bitnamilegacy/minio:latest
+    container_name: foodvalue-minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"   # 웹 콘솔: http://localhost:9001
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+      MINIO_DEFAULT_BUCKETS: ${S3_BUCKET}:public   # 시작할 때 버킷 생성, 읽기 공개
+    volumes:
+      - miniodata:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   pgdata:
+  miniodata:
