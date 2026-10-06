@@ -32,3 +32,9 @@ POST_IMAGE_MAX_COUNT = 10
 SEARCH_KEYWORD_MAX_LENGTH = 100
 PAGE_DEFAULT_SIZE = 20
 PAGE_MAX_SIZE = 50
+
+# 이미지 업로드
+IMAGE_MAX_BYTES = 5 * 1024 * 1024
+IMAGE_UPLOAD_PATH = "/api/v1/images"
+IMAGE_REQUEST_OVERHEAD_BYTES = 64 * 1024  # 멀티파트 경계·헤더 몫. 요청 본문 상한 = 이미지 상한 + 이 값
+IMAGE_KEY_PREFIX = "posts"  # 저장 경로: posts/{user_id}/{uuid}.{확장자}
