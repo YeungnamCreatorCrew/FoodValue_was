@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-from app.core.constants import PAGE_MAX_SIZE
+from app.core.constants import COMMENT_MAX_LENGTH, ID_MAX, PAGE_MAX_SIZE, POST_CONTENT_MAX_LENGTH
 from app.core.db import get_engine
 from app.main import app
 
@@ -262,3 +262,60 @@ def test_comment_invalid_and_missing():
     assert client.get(f"{API}/posts/999999999/comments").status_code == 404
     assert client.patch(f"{API}/comments/999999999", json={"content": "a"}, headers=h).status_code == 404
     assert client.delete(f"{API}/comments/999999999", headers=h).status_code == 404
+
+
+# ---------- 입력 상한 ----------
+def test_content_length_limits():
+    h = _user()
+    assert _post(h, content="가" * POST_CONTENT_MAX_LENGTH).status_code == 201
+    assert _post(h, content="가" * (POST_CONTENT_MAX_LENGTH + 1)).status_code == 400
+    pid = _post(h).json()["id"]
+    url = f"{API}/posts/{pid}/comments"
+    assert client.post(url, json={"content": "가" * COMMENT_MAX_LENGTH}, headers=h).status_code == 201
+    assert client.post(url, json={"content": "가" * (COMMENT_MAX_LENGTH + 1)}, headers=h).status_code == 400
+    assert client.patch(f"{API}/posts/{pid}", json={"content": "가" * (POST_CONTENT_MAX_LENGTH + 1)}, headers=h).status_code == 400
+
+
+@pytest.mark.parametrize("bad_id", [0, -1, ID_MAX + 1, 99999999999999999999])
+def test_out_of_range_id_is_400_not_500(bad_id):
+    h = _user()
+    assert client.get(f"{API}/posts/{bad_id}").status_code == 400
+    assert client.get(f"{API}/posts/{bad_id}/comments").status_code == 400
+    assert client.patch(f"{API}/posts/{bad_id}", json={"title": "x"}, headers=h).status_code == 400
+    assert client.delete(f"{API}/posts/{bad_id}", headers=h).status_code == 400
+    assert client.post(f"{API}/posts/{bad_id}/comments", json={"content": "x"}, headers=h).status_code == 400
+    assert client.patch(f"{API}/comments/{bad_id}", json={"content": "x"}, headers=h).status_code == 400
+    assert client.delete(f"{API}/comments/{bad_id}", headers=h).status_code == 400
+
+
+def test_max_id_is_404():
+    h = _user()
+    assert client.get(f"{API}/posts/{ID_MAX}").status_code == 404
+    assert client.delete(f"{API}/comments/{ID_MAX}", headers=h).status_code == 404
+
+
+# ---------- CORS ----------
+def test_cors_preflight_allowed_origin():
+    r = client.options(
+        f"{API}/posts",
+        headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST",
+                 "Access-Control-Request-Headers": "authorization,content-type"},
+    )
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+def test_cors_blocks_unknown_origin():
+    r = client.options(
+        f"{API}/posts",
+        headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
+    )
+    assert "access-control-allow-origin" not in r.headers
+    r = client.get(f"{API}/posts", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_cors_header_on_error_responses():
+    r = client.get(f"{API}/posts/999999999", headers={"Origin": "http://localhost:5173"})
+    assert r.status_code == 404
+    assert r.headers["access-control-allow-origin"] == "http://localhost:5173"

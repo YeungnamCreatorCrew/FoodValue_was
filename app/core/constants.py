@@ -27,11 +27,17 @@ class PostCategory(StrEnum):
 
 
 POST_TITLE_MAX_LENGTH = 100  # post.title VARCHAR(100)
+POST_CONTENT_MAX_LENGTH = 10_000  # post.content는 TEXT라 DB 제한이 없어 서버에서 막는다
+COMMENT_MAX_LENGTH = 1_000
 POST_IMAGE_URL_MAX_LENGTH = 500  # post_image.url VARCHAR(500)
 POST_IMAGE_MAX_COUNT = 10
 SEARCH_KEYWORD_MAX_LENGTH = 100
 PAGE_DEFAULT_SIZE = 20
 PAGE_MAX_SIZE = 50
+ID_MAX = 2**63 - 1  # BIGINT 상한. 넘는 경로 ID는 DB 오류(500) 대신 입력 검증(400)으로 거른다
+
+# CORS: 웹 프론트가 다른 origin에서 호출할 때 허용할 주소. 운영 값은 .env의 CORS_ORIGINS(쉼표 구분)
+CORS_DEFAULT_ORIGINS = ["http://localhost:3000", "http://localhost:5173"]  # 로컬 개발(React/Vite 기본 포트)
 
 # 이미지 업로드
 IMAGE_MAX_BYTES = 5 * 1024 * 1024
