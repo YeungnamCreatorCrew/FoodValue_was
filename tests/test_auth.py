@@ -87,7 +87,7 @@ def test_signup_duplicate_nickname():
 def test_signup_invalid_input(patch):
     uid = uuid.uuid4().hex[:8]
     body = {"email": f"{PREFIX}{uid}@example.com", "password": "password123", "nickname": f"t{uid}", **patch}
-    assert client.post("/api/v1/auth/signup", json=body).status_code == 422
+    assert client.post("/api/v1/auth/signup", json=body).status_code == 400
 
 
 # ---------- 로그인 ----------
