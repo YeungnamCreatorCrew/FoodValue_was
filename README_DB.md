@@ -19,6 +19,7 @@ docker compose up -d          # PostgreSQL 실행
 - `DB_PASSWORD`
 - `DB_PORT`
 - `DATABASE_URL`
+- `JWT_SECRET_KEY` (32자 이상 무작위 문자열. 생성: `python -c "import secrets; print(secrets.token_urlsafe(48))"`)
 
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 
