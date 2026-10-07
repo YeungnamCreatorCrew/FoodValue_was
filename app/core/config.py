@@ -26,6 +26,17 @@ class Settings:
         self.s3_access_key = self._require("S3_ACCESS_KEY")
         self.s3_secret_key = self._require("S3_SECRET_KEY")
         self.s3_public_base_url = self._require("S3_PUBLIC_BASE_URL").rstrip("/")
+        # Gemini (레시피 생성). 키와 모델명은 코드에 두지 않고 .env에서만 읽는다. 레시피 생성 시점에 require_gemini()로 검증한다
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY") or None
+        self.gemini_model = os.getenv("GEMINI_MODEL") or None
+
+    def require_gemini(self) -> tuple[str, str]:
+        """(api_key, model)을 반환한다. 둘 중 하나라도 없으면 RuntimeError"""
+        if not self.gemini_api_key:
+            raise RuntimeError("환경 변수 GEMINI_API_KEY가 설정되지 않았습니다 (.env 확인)")
+        if not self.gemini_model:
+            raise RuntimeError("환경 변수 GEMINI_MODEL이 설정되지 않았습니다 (.env 확인)")
+        return self.gemini_api_key, self.gemini_model
 
     @staticmethod
     def _require(name: str) -> str:
