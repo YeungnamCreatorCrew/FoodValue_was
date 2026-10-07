@@ -4,6 +4,8 @@
 
 ## 문서
 
+- [냉장고 API 가이드](README_FRIDGE.md): 확정 기능, 단위·영양 계산과 OCR 설정
+
 - [DB 가이드](README_DB.md): 로컬 DB 실행, 스키마(Flyway) 변경 규칙
 
 ## 커밋 · PR 규칙
