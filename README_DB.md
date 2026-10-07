@@ -3,6 +3,10 @@
 로컬은 Docker로 띄운 PostgreSQL을 각자 쓰고, 운영 DB(Supabase)는 나중에 연결 주소만 바꿔서 붙입니다.
 테이블은 `db/migration/` 의 SQL 파일로만 만들고 바꿉니다. `docker compose up` 하면 Flyway 컨테이너가 이 파일을 자동 실행합니다.
 
+냉장고 OCR 선택 환경 변수는 `CLOVA_OCR_RECEIPT_URL`, `CLOVA_OCR_SECRET`입니다.
+최신 스키마는 앱 테이블 21개이며 날짜 기반 migration도 포함합니다.
+냉장고 동작과 설정은 [냉장고 API 가이드](README_FRIDGE.md)를 참고합니다.
+
 ## 처음 한 번
 
 1. `.env` 파일을 프로젝트 루트에 둡니다. `.env`는 Git에 올리지 않고 팀원끼리 직접 전달합니다.
@@ -33,10 +37,10 @@ docker compose up -d          # PostgreSQL 실행
 
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 
-`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 19개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
+`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 21개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
 
 ```bash
-docker compose logs flyway    # "Successfully applied 3 migrations" 가 보이면 성공 (V1~V3)
+docker compose logs flyway    # 현재 SQL 파일 전체 적용 확인 (V1~V3 + 날짜 기반 V 파일)
 ```
 
 새 V 파일이 추가되면 `docker compose run --rm flyway` 로 다시 실행하면 아직 안 돌린 파일만 적용됩니다.

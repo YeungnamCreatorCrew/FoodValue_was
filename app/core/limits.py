@@ -20,7 +20,7 @@ class ImageUploadSizeLimit:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope["method"] != "POST" or scope["path"] != IMAGE_UPLOAD_PATH:
+        if scope["type"] != "http" or scope["method"] != "POST" or scope["path"] not in (IMAGE_UPLOAD_PATH, "/api/v1/fridge/receipts"):
             await self.app(scope, receive, send)
             return
 
