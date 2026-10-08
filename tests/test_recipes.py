@@ -31,6 +31,10 @@ def cleanup():
     yield
     with get_engine().begin() as conn:
         conn.execute(
+            text("DELETE FROM fridge_ingredient WHERE user_id IN (SELECT id FROM users WHERE email LIKE :p)"),
+            {"p": f"{PREFIX}%"},
+        )
+        conn.execute(
             text("DELETE FROM saved_recipe WHERE user_id IN (SELECT id FROM users WHERE email LIKE :p)"),
             {"p": f"{PREFIX}%"},
         )
@@ -136,6 +140,86 @@ def test_timeout_504(gemini):
     results[:] = [httpx.ReadTimeout("slow")]
     assert client.post(GENERATE, json=VALID, headers=_user()).status_code == 504
     assert len(calls) == 2
+
+
+# ---------- 냉장고 재료 선택 ----------
+FRIDGE = f"{API}/fridge/items"
+
+
+def _fridge(headers, name="대파", quantity="2"):
+    body = {"displayName": name, "quantity": quantity, "unit": "개", "storage": "FRIDGE", "purchasedAt": "2026-01-01"}
+    r = client.post(FRIDGE, json=body, headers=headers)
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+def _payload(prompt):
+    return json.loads(prompt.split("입력(JSON):\n", 1)[1])
+
+
+def test_generate_with_fridge_ingredients_only(gemini):
+    h = _user()
+    ids = [_fridge(h, "대파"), _fridge(h, "두부")]
+    r = client.post(GENERATE, json={"fridgeIngredientIds": ids}, headers=h)
+    assert r.status_code == 200 and r.json() == RECIPE
+    assert _payload(gemini[0][0])["mainIngredients"] == ["대파", "두부"]
+
+
+def test_generate_merges_manual_and_fridge_dedup(gemini):
+    h = _user()
+    ids = [_fridge(h, "대파"), _fridge(h, "두부")]
+    body = {"mainIngredients": ["김치", "대 파"], "fridgeIngredientIds": ids + ids[:1]}
+    assert client.post(GENERATE, json=body, headers=h).status_code == 200
+    assert _payload(gemini[0][0])["mainIngredients"] == ["김치", "대 파", "두부"]
+
+
+def test_fridge_ingredient_of_other_user_404(gemini):
+    other_id = _fridge(_user())
+    r = client.post(GENERATE, json={"fridgeIngredientIds": [other_id]}, headers=_user())
+    assert r.status_code == 404
+    assert gemini[0] == []
+
+
+def test_fridge_ingredient_unknown_deleted_or_empty_404(gemini):
+    h = _user()
+    deleted, empty, ok = _fridge(h, "삭제"), _fridge(h, "소진", "1"), _fridge(h, "대파")
+    assert client.delete(f"{FRIDGE}/{deleted}", headers=h).status_code == 204
+    body = {"reason": "FINISH", "usedAt": "2026-01-02"}
+    assert client.post(f"{FRIDGE}/{empty}/consume", json=body, headers=h).status_code == 200
+    for bad in (deleted, empty, 999_999_999):
+        assert client.post(GENERATE, json={"fridgeIngredientIds": [ok, bad]}, headers=h).status_code == 404
+    assert gemini[0] == []
+
+
+def test_fridge_ingredient_excluded_conflict_422(gemini):
+    h = _user()
+    body = {"fridgeIngredientIds": [_fridge(h, "대파")], "excludedIngredients": ["대 파"]}
+    assert client.post(GENERATE, json=body, headers=h).status_code == 422
+    assert gemini[0] == []
+
+
+def test_combined_ingredients_over_limit_422(gemini):
+    h = _user()
+    ids = [_fridge(h, f"냉{i}") for i in range(3)]
+    body = {"mainIngredients": [f"재료{i}" for i in range(8)], "fridgeIngredientIds": ids}
+    assert client.post(GENERATE, json=body, headers=h).status_code == 422
+    assert gemini[0] == []
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"fridgeIngredientIds": []},
+        {"fridgeIngredientIds": [0]},
+        {"fridgeIngredientIds": [-1]},
+        {"fridgeIngredientIds": ["a"]},
+        {"fridgeIngredientIds": [2**63]},
+        {"fridgeIngredientIds": list(range(1, 12))},
+    ],
+)
+def test_fridge_ids_validation_422(gemini, body):
+    assert client.post(GENERATE, json=body, headers=_user()).status_code == 422
+    assert gemini[0] == []
 
 
 # ---------- 저장 레시피 ----------
