@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.core.limits import ImageUploadSizeLimit
-from app.routers import auth, fridge, images, posts, recipes, users
+from app.routers import auth, fridge, images, posts, prices, recipes, users
 
 RECIPES_PATH = "/api/v1/recipes"
 
@@ -48,3 +48,4 @@ app.include_router(posts.router, prefix="/api/v1")
 app.include_router(images.router, prefix="/api/v1")
 app.include_router(recipes.router, prefix="/api/v1")
 app.include_router(fridge.router, prefix="/api/v1")
+app.include_router(prices.router, prefix="/api/v1")

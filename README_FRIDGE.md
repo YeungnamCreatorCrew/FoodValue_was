@@ -108,7 +108,7 @@ API 키 발급과 실제 영수증 품질 검증은 실환경 설정 후 진행�
 ## 스키마·검증
 
 V20261007_1830__fridge_management.sql을 추가했습니다. 기존 V 파일은 수정하지 않습니다.
-fridge_receipt 포함 앱 테이블은 총 21개입니다. 실데이터는 스키마 확정 후 적재합니다.
+이 migration까지 fridge_receipt 포함 앱 테이블은 21개입니다. 이후 시세 migration까지의 최신 개수는 README_DB.md를 참고합니다.
 
 ```bash
 docker compose run --rm flyway
