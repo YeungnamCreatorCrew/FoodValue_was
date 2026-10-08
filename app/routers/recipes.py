@@ -22,9 +22,15 @@ SavedRecipeId = Annotated[int, Path(ge=1, le=ID_MAX)]
 
 
 @router.post("/recipes/generate", response_model=Recipe)
-def generate_recipe(body: RecipeGenerateRequest, _: User = Depends(get_current_user)):
+def generate_recipe(
+    body: RecipeGenerateRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
     try:
-        return recipe_service.generate_recipe(body)
+        return recipe_service.generate_recipe(db, user, body)
+    except recipe_service.FridgeIngredientNotFoundError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "냉장고 재료를 찾을 수 없습니다") from None
+    except recipe_service.InvalidIngredientsError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from None
     except recipe_service.RecipeTimeoutError:
         raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "레시피 생성 시간이 초과되었습니다") from None
     except recipe_service.RecipeGenerationError:

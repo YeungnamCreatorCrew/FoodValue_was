@@ -51,3 +51,14 @@ def ingredients(db: Session, user_id: int, storage: Storage | None, food_type: F
     }[sort]
     rows = db.execute(query.order_by(order, FridgeIngredient.id).offset((page - 1) * size).limit(size)).all()
     return rows, total
+
+
+def usable_names(db: Session, user_id: int, ingredient_ids: list[int]) -> dict[int, str]:
+    """내 것이고 삭제되지 않았으며 잔량이 남은 재료의 {id: 이름}. 조건에 안 맞는 id는 빠진다."""
+    rows = db.execute(select(FridgeIngredient.id, FridgeIngredient.display_name).where(
+        FridgeIngredient.id.in_(ingredient_ids),
+        FridgeIngredient.user_id == user_id,
+        FridgeIngredient.deleted_at.is_(None),
+        FridgeIngredient.quantity > 0,
+    )).all()
+    return dict(rows)

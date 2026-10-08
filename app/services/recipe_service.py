@@ -8,10 +8,10 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.constants import GEMINI_MAX_RETRIES, GEMINI_TIMEOUT_SECONDS
+from app.core.constants import GEMINI_MAX_RETRIES, GEMINI_TIMEOUT_SECONDS, RECIPE_MAIN_INGREDIENTS_MAX
 from app.models.saved_recipe import SavedRecipe
 from app.models.user import User
-from app.repositories import saved_recipe_repository
+from app.repositories import fridge_repository, saved_recipe_repository
 from app.schemas.common import Page
 from app.schemas.recipe import Recipe, RecipeGenerateRequest, SavedRecipeDetail, SavedRecipeSummary
 
@@ -28,6 +28,14 @@ class RecipeTimeoutError(Exception):
     """LLM 호출이 제한 시간을 넘김 (재시도 후에도). 504"""
 
 
+class FridgeIngredientNotFoundError(Exception):
+    """없거나, 다른 사용자 것이거나, 삭제됐거나, 잔량이 없는 냉장고 재료. 404"""
+
+
+class InvalidIngredientsError(Exception):
+    """재료 조합이 규칙에 어긋남(합쳐서 한도 초과, 제외재료와 충돌). 422"""
+
+
 _PROMPT = """너는 한국 가정식 요리 전문가다. 아래 입력으로 레시피를 정확히 1개 만들어라.
 - 주재료를 중심으로 만들고, 제외재료는 재료·양념 어디에도 쓰지 않는다.
 - 인분은 네가 정한다. 사용자가 조리조건/기타요청에 원하는 인분을 적었다면 그에 맞춘다.
@@ -39,9 +47,33 @@ _PROMPT = """너는 한국 가정식 요리 전문가다. 아래 입력으로 �
 """
 
 
-def _build_prompt(body: RecipeGenerateRequest) -> str:
+def _key(name: str) -> str:
+    return "".join(name.split()).casefold()
+
+
+def _resolve_main_ingredients(db: Session, user: User, body: RecipeGenerateRequest) -> list[str]:
+    """직접 입력 재료 + 냉장고 재료 이름. 같은 이름은 한 번만 쓴다."""
+    names = list(body.main_ingredients)
+    ids = list(dict.fromkeys(body.fridge_ingredient_ids))
+    if ids:
+        found = fridge_repository.usable_names(db, user.id, ids)
+        if len(found) != len(ids):  # 타인 것과 없는 것을 구분하지 않는다
+            raise FridgeIngredientNotFoundError
+        fridge_names = [found[i] for i in ids]
+        excluded = {_key(x) for x in body.excluded_ingredients}
+        if any(_key(n) in excluded for n in fridge_names):
+            raise InvalidIngredientsError("선택한 냉장고 재료가 제외재료에 포함되어 있습니다")
+        names += fridge_names
+    seen: set[str] = set()
+    unique = [n for n in names if not (_key(n) in seen or seen.add(_key(n)))]
+    if len(unique) > RECIPE_MAIN_INGREDIENTS_MAX:
+        raise InvalidIngredientsError(f"주재료는 합쳐서 {RECIPE_MAIN_INGREDIENTS_MAX}개까지 가능합니다")
+    return unique
+
+
+def _build_prompt(main_ingredients: list[str], body: RecipeGenerateRequest) -> str:
     payload = {
-        "mainIngredients": body.main_ingredients,
+        "mainIngredients": main_ingredients,
         "excludedIngredients": body.excluded_ingredients,
         "requestNote": body.request_note,
     }
@@ -63,8 +95,10 @@ def _call_gemini(prompt: str) -> str:
     return response.text or ""
 
 
-def generate_recipe(body: RecipeGenerateRequest) -> Recipe:
-    prompt = _build_prompt(body)
+def generate_recipe(db: Session, user: User, body: RecipeGenerateRequest) -> Recipe:
+    main_ingredients = _resolve_main_ingredients(db, user, body)
+    db.rollback()  # 최대 수십 초 걸리는 LLM 호출 동안 DB 연결을 잡고 있지 않는다
+    prompt = _build_prompt(main_ingredients, body)
     timed_out = False
     for _ in range(1 + GEMINI_MAX_RETRIES):
         try:
