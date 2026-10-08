@@ -1,0 +1,162 @@
+from datetime import date, timedelta
+
+import pytest
+from sqlalchemy import event, text
+
+from app.routers.prices import router
+from app.services import price_service
+from tests.test_fridge import api
+
+ROOT='/api/v1/prices'
+DAY=date(2026,10,8)
+
+
+@pytest.fixture
+def prices(api,monkeypatch):
+    client,engine,actor,application=api
+    application.include_router(router,prefix='/api/v1')
+    monkeypatch.setattr(price_service,'today',lambda:DAY)
+    # 공개 조회는 토큰 없음, 로그인 조회만 테스트 사용자를 반환한다.
+    from app.core.deps import get_optional_user
+    from fastapi import Header,HTTPException
+    def optional(authorization:str | None=Header(None)):
+        if authorization=='Bearer test':
+            return actor
+        if authorization:
+            raise HTTPException(401,'인증 실패')
+        return None
+    application.dependency_overrides[get_optional_user]=optional
+    statements=[
+        '''CREATE TABLE price_daily(id INTEGER PRIMARY KEY,item_id INTEGER,region TEXT,price_date DATE,
+        price INTEGER,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE price_model_run(id INTEGER PRIMARY KEY,item_id INTEGER,base_date DATE,data_date DATE,
+        status TEXT,model_name TEXT,model_version TEXT,quality TEXT,metrics JSON,error_code TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,finished_at TIMESTAMP)''',
+        '''CREATE TABLE price_forecast(id INTEGER PRIMARY KEY,item_id INTEGER,base_date DATE,target_date DATE,
+        predicted_price INTEGER,lower_price INTEGER,upper_price INTEGER,model_run_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE price_insight(id INTEGER PRIMARY KEY,item_id INTEGER,base_date DATE,recommendation TEXT,
+        buy_after_days INTEGER,expected_saving INTEGER,mape NUMERIC,factors JSON,model_run_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        "INSERT INTO item(id,name,category,default_unit,default_storage,food_type,price_source,price_code,price_unit_label) VALUES(2,'대파','VEGETABLE','단','FRIDGE','RAW','KAMIS','211-00-01','1kg')",
+        "INSERT INTO item_alias(item_id,alias) VALUES(2,'흙대파')",
+        "INSERT INTO price_model_run(id,item_id,base_date,data_date,status,model_name,model_version,quality,metrics,finished_at) VALUES(1,2,'2026-10-08','2026-10-08','SUCCESS','XGBOOST','test','VALIDATED','{}',CURRENT_TIMESTAMP)",
+        "INSERT INTO price_insight(item_id,base_date,recommendation,buy_after_days,expected_saving,mape,factors,model_run_id) VALUES(2,'2026-10-08','BUY_LATER',7,70,3,'[]',1)",
+    ]
+    with engine.begin() as conn:
+        for statement in statements:
+            conn.execute(text(statement))
+        for offset,price in ((0,1000),(-7,1100),(-10,1150)):
+            conn.execute(text("INSERT INTO price_daily(item_id,region,price_date,price) VALUES(2,'NATIONAL',:day,:p)"),{'day':DAY+timedelta(days=offset),'p':price})
+        for h in range(1,8):
+            conn.execute(text("INSERT INTO price_forecast(item_id,base_date,target_date,predicted_price,lower_price,upper_price,model_run_id) VALUES(2,:base,:target,:p,:low,:high,1)"),
+                         {'base':DAY,'target':DAY+timedelta(days=h),'p':1000-h*10,'low':900-h*10,'high':1100-h*10})
+    yield client,engine,actor
+
+
+def test_public_list_filter_search_sort(prices):
+    client,_,_=prices
+    result=client.get(ROOT+'/items').json()
+    assert result['total']==2
+    row=next(x for x in result['items'] if x['id']==2)
+    assert row['currentPrice']==1000 and row['weeklyChangePercent']==-9.09
+    assert row['forecastPrice']==930 and row['status']=='READY'
+    assert client.get(ROOT+'/items?keyword=흙대파').json()['total']==1
+    assert client.get(ROOT+'/items',params={'keyword':'%'}).json()['total']==0
+    assert client.get(ROOT+'/items?category=VEGETABLE&size=1').json()['total']==1
+    assert client.get(ROOT+'/items?sort=change').json()['items'][0]['id']==2
+
+
+def test_detail_forecast_consistency_and_private_inventory(prices):
+    client,_,actor=prices
+    detail=client.get(ROOT+'/items/2').json()
+    forecast=client.get(ROOT+'/items/2/forecast').json()
+    assert detail['forecast']==forecast
+    assert detail['item']['forecastPrice']==forecast['points'][-1]['predictedPrice']
+    assert detail['fridge'] is None
+    client.post('/api/v1/fridge/items',json={'itemId':2,'displayName':'대파','quantity':'.5',
+                'unit':'단','storage':'FRIDGE','purchasedAt':'2026-10-01'})
+    assert client.get(ROOT+'/items/2',headers={'Authorization':'Bearer test'}).json()['fridge']['quantities']=={'단':'0.500'}
+    actor.id=2
+    assert client.get(ROOT+'/items/2',headers={'Authorization':'Bearer test'}).json()['fridge']['ingredientCount']==0
+    assert client.get(ROOT+'/items/2',headers={'Authorization':'Bearer wrong'}).status_code==401
+
+
+def test_history_preserves_missing_dates(prices):
+    client,_,_=prices
+    result=client.get(ROOT+'/items/2/history?days=14')
+    assert result.status_code==200
+    rows=result.json()['points']
+    assert len(rows)==14 and rows[-1]['price']==1000 and rows[-2]['price'] is None
+    assert client.get(ROOT+'/items/2/history?days=15').status_code==400
+
+
+def test_empty_stale_partial_results(prices):
+    client,engine,_=prices
+    assert client.get(ROOT+'/items/1').json()['item']['status']=='NO_DATA'
+    assert client.get(ROOT+'/items/1/forecast').json()['points']==[]
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO price_model_run(id,item_id,base_date,status) VALUES(2,2,'2026-10-08','FAILED')"))
+    result=client.get(ROOT+'/items/2/forecast').json()
+    assert result['modelRunId']==1 and result['latestAttemptStatus']=='FAILED'
+    with engine.begin() as conn:
+        conn.execute(text('DELETE FROM price_forecast WHERE id=(SELECT max(id) FROM price_forecast)'))
+    assert client.get(ROOT+'/items/2/forecast').json()['points']==[]
+
+
+def test_query_count_does_not_grow_per_item(prices):
+    client,engine,_=prices
+    def count():
+        calls=[]
+        def listener(*args):
+            calls.append(1)
+        event.listen(engine,'before_cursor_execute',listener)
+        try:
+            assert client.get(ROOT+'/items').status_code==200
+        finally:
+            event.remove(engine,'before_cursor_execute',listener)
+        return len(calls)
+    first=count()
+    with engine.begin() as conn:
+        for i in range(3,13):
+            conn.execute(text("INSERT INTO item(id,name,category,default_unit,default_storage,food_type,price_source) VALUES(:id,:name,'VEGETABLE','g','FRIDGE','RAW','KAMIS')"),{'id':i,'name':f'품목{i}'})
+    assert count()==first
+
+
+def test_snapshot_reads_one_consistent_statement(prices):
+    _,engine,_=prices
+    from app.repositories.price_repository import snapshot
+    from sqlalchemy.orm import Session
+    calls=[]
+    def listener(*args):
+        calls.append(1)
+    event.listen(engine,'before_cursor_execute',listener)
+    try:
+        with Session(engine) as db:
+            run,points,guide=snapshot(db,2,DAY)
+            assert len(points)==7 and guide.model_run_id==run.id
+            assert all(point.model_run_id==run.id for point in points)
+        assert len(calls)==1
+    finally:
+        event.remove(engine,'before_cursor_execute',listener)
+
+
+@pytest.mark.parametrize('path',['/items/0','/items/9223372036854775808','/items?size=51','/items?category=INVALID'])
+def test_input_validation(prices,path):
+    assert prices[0].get(ROOT+path).status_code==400
+
+
+def test_missing_item_and_factors(prices):
+    client,_,_=prices
+    assert client.get(ROOT+'/items/999').status_code==404
+    assert client.get(ROOT+'/items/2/factors').json()['baseDate']=='2026-10-08'
+
+
+def test_stale_and_baseline_states(prices,monkeypatch):
+    client,engine,_=prices
+    monkeypatch.setattr(price_service,'today',lambda:DAY+timedelta(days=3))
+    assert client.get(ROOT+'/items/2/forecast').json()['status']=='STALE'
+    monkeypatch.setattr(price_service,'today',lambda:DAY)
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE price_model_run SET quality='BASELINE' WHERE id=1"))
+    assert client.get(ROOT+'/items/2/forecast').json()['status']=='BASELINE'

@@ -16,6 +16,9 @@ dependencies = [
     "uvicorn[standard]>=0.54.0",
 ]
 
+[project.optional-dependencies]
+prices = ["xgboost>=3.0,<4", "scikit-learn>=1.6,<2"]
+
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
