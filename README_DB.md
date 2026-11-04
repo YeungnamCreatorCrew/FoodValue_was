@@ -4,9 +4,33 @@
 테이블은 `db/migration/` 의 SQL 파일로만 만들고 바꿉니다. `docker compose up` 하면 Flyway 컨테이너가 이 파일을 자동 실행합니다.
 
 냉장고 OCR 선택 환경 변수는 `CLOVA_OCR_RECEIPT_URL`, `CLOVA_OCR_SECRET`입니다.
-최신 스키마는 앱 테이블 22개이며 날짜 기반 migration도 포함합니다.
+최신 스키마는 앱 테이블 25개이며 날짜 기반 migration도 포함합니다.
 시세 조회·예측 배치는 [시세 가이드](README_PRICES.md)를 참고합니다.
 냉장고 동작과 설정은 [냉장고 API 가이드](README_FRIDGE.md)를 참고합니다.
+
+## 예측 외부 원천 스키마 추가 (2026-11-03)
+
+`V20261103_1611__external_prediction_sources.sql`에서 다음 3개 테이블을 추가했습니다.
+기존 테이블·컬럼은 변경하지 않습니다.
+
+| 테이블 | 용도 |
+| --- | --- |
+| `external_collection_run` | 기관·자료별 수집 성공/실패, 요청·수신·삽입 건수와 실행 시점 |
+| `external_observation` | 지역·관측소별 원천 값, 단위, 대상 기간, 예보 발표·실제 공표·수집 시각과 수정 버전 |
+| `item_weather_station` | 품목과 주산지 후보·관측소 연결, 검증 상태와 확인된 비중 |
+
+동일 원천 키와 내용 해시는 중복 저장하지 않고, 내용이 달라지면 새 버전으로 보존합니다.
+공표 시점을 확인하지 못한 자료는 `UNKNOWN`으로 보관합니다. 주산지 연결의 미확인 비중은 `NULL`입니다.
+`item_id`는 기존 `item`을 참조하지만 특정 품목 ID나 실데이터를 migration에 넣지 않았습니다.
+
+이 변경이 포함된 브랜치를 받은 뒤 다음 명령으로 기존 DB에 적용합니다. DB 초기화는 필요하지 않습니다.
+
+```bash
+docker compose up -d postgres
+docker compose run --rm flyway
+```
+
+이 migration은 테이블 구조만 공유합니다. API 키, 수집 원본과 로컬 DB 데이터는 포함하지 않습니다.
 
 ## 처음 한 번
 
@@ -38,7 +62,7 @@ docker compose up -d          # PostgreSQL 실행
 
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 
-`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 22개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
+`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 25개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
 
 ```bash
 docker compose logs flyway    # 현재 SQL 파일 전체 적용 확인 (V1~V3 + 날짜 기반 V 파일)
