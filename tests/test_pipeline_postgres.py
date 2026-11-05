@@ -60,6 +60,13 @@ class FakeApis:
                      'minTa': '10.0', 'maxTa': '20.0', 'sumRn': '' if i % 3 else '4.5', 'avgRhm': '60', 'sumSsHr': '7'}
                     for d, i in self.days(first, last)]
             return {'response': {'header': {'resultCode': '00'}, 'body': {'items': {'item': rows}, 'totalCount': len(rows)}}}
+        if url == data_go_kr.VILAGE_URL:
+            day = date(int(params['base_date'][:4]), int(params['base_date'][4:6]), int(params['base_date'][6:]))
+            rows = [{'category': 'TMP', 'fcstDate': (day + timedelta(days=1)).strftime('%Y%m%d'),
+                     'fcstTime': f'{h:02d}00', 'fcstValue': '12'} for h in range(24)]
+            rows += [{'category': 'TMX', 'fcstDate': (day + timedelta(days=1)).strftime('%Y%m%d'), 'fcstTime': '1500',
+                      'fcstValue': '34.0' if params['nx'] == 60 else '20.0'}]
+            return {'response': {'header': {'resultCode': '00'}, 'body': {'items': {'item': rows}, 'totalCount': len(rows)}}}
         if url == data_go_kr.HOLIDAY_URL:
             year, month = int(params['solYear']), int(params['solMonth'])
             rows = [{'locdate': int(f'{year}{month:02d}05'), 'dateName': '추석' if month == 9 else '테스트휴일',
@@ -103,7 +110,7 @@ def test_collect_store_dedupe_and_revision(pipeline):
     first = collect(engine, item_id, apis, start=apis.start)
     assert {key: row['status'] for key, row in first.items()} == {
         ('KAMIS', 'RETAIL_DAILY'): 'SUCCESS', ('KAMIS', 'WHOLESALE_DAILY'): 'SUCCESS',
-        ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS'}
+        ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS'}
     assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == DAYS
     # 주산지 관측소 + 전국 집계 관측소. ASOS는 전일까지
     assert first[('KMA', 'ASOS_DAILY')]['received'] == (len(data_go_kr.NATIONAL_STATIONS) + 1) * (DAYS - 1)
@@ -172,12 +179,16 @@ def test_structured_tables_are_refreshed_idempotently(pipeline):
         collect(engine, item_id, apis, start=apis.start)
         first = warehouse_service.refresh(engine, [item_id], weather_start=apis.start, weather_end=today())
         again = warehouse_service.refresh(engine, [item_id], weather_start=apis.start, weather_end=today())
-        assert first == again and first['weather_daily'] == DAYS - 1
+        assert first == again and first['weather_daily'] == DAYS - 1 and first['weather_forecast'] == 1
         with engine.connect() as conn:
             weather = conn.execute(text("SELECT avg_temp,max_temp,min_temp,station_count,heat_station_ratio FROM weather_daily "
                                         "WHERE weather_date=:d AND data_type='ACTUAL'"), {'d': today() - timedelta(days=1)}).one()
             assert tuple(weather) == (Decimal('15.0'), Decimal('20.0'), Decimal('10.0'),
                                       len(data_go_kr.NATIONAL_STATIONS), Decimal('0.00'))
+            forecast = conn.execute(text("SELECT avg_temp,heat_station_ratio,station_count,sunshine_hours FROM weather_daily "
+                                         "WHERE data_type='FORECAST'")).one()
+            # 격자 (60, 120)·(60, 127) 두 곳만 최고 34℃
+            assert tuple(forecast) == (Decimal('12.0'), Decimal('11.76'), len(data_go_kr.FORECAST_POINTS), None)
             years = conn.scalar(text('SELECT count(DISTINCT extract(year FROM cal_date)) FROM calendar_day'))
             assert conn.scalar(text('SELECT count(*) FROM calendar_day')) >= 365 * years
             chuseok = conn.execute(text("SELECT is_holiday,holiday_name,is_market_closed FROM calendar_day WHERE cal_date=:d"),

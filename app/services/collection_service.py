@@ -9,7 +9,8 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -25,6 +26,7 @@ from app.services.fridge_service import today
 BACKFILL_DAYS = 1830  # 예측 모델이 사용하는 최대 5년
 OVERLAP_DAYS = 14  # 증분 수집도 최근 2주는 다시 받아 원천 수정을 반영한다.
 INSERT_CHUNK = 500
+SEOUL = ZoneInfo('Asia/Seoul')
 
 
 @dataclass
@@ -65,6 +67,7 @@ def _store(db, run_id, records):
         rows = [{'collection_run_id': run_id, 'item_id': r.item_id, 'source': r.source, 'dataset': r.dataset,
                  'source_record_key': r.key, 'entity_code': r.entity_code, 'entity_name': r.entity_name,
                  'observed_on': r.observed_on, 'period_start': r.observed_on, 'period_end': r.observed_on,
+                 'issued_at': r.issued_at,
                  'units': r.units, 'payload': r.payload, 'payload_sha256': digest(r.payload)}
                 for r in records[offset:offset + INSERT_CHUNK]]
         result = db.execute(insert(ExternalObservation).values(rows)
@@ -180,6 +183,7 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, cr
             results.append({**result, 'itemId': item.id})
     if not credentials.data_go_kr_key:
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.ASOS, 'MISSING_DATA_GO_KR_KEY'))
+        results.append(skipped(engine, data_go_kr.KMA, data_go_kr.VILAGE, 'MISSING_DATA_GO_KR_KEY'))
         results.append(skipped(engine, data_go_kr.KASI, data_go_kr.HOLIDAY, 'MISSING_DATA_GO_KR_KEY'))
         return results
     # 품목 주산지(검증) 관측소 + weather_daily 전국 집계용 관측소
@@ -190,6 +194,10 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, cr
     results.append(run_dataset(engine, data_go_kr.KMA, data_go_kr.ASOS, first, weather_end,
                                lambda: data_go_kr.collect_asos(fetch, key=credentials.data_go_kr_key,
                                                                stations=starts, end=weather_end)))
+    # 단기예보는 매 실행 시 최신 발표본 1회분을 받는다(과거 발표본은 API에서 제공하지 않음).
+    base = data_go_kr.vilage_base(datetime.now(SEOUL))
+    results.append(run_dataset(engine, data_go_kr.KMA, data_go_kr.VILAGE, base.date(), base.date() + timedelta(days=4),
+                               lambda: data_go_kr.collect_vilage(fetch, key=credentials.data_go_kr_key, base=base)))
     # 임시공휴일 지정을 반영하도록 올해·내년은 매번 다시 받는다. 처음이면 백필 기간 전체를 받는다.
     first = start or incremental_start(engine, data_go_kr.KASI, data_go_kr.HOLIDAY, end)
     first = min(first, end.replace(month=1, day=1))

@@ -74,3 +74,15 @@ def test_price_change_history_merges_leap_day_into_feb_28():
     feb = [r for r in rows if r['month_day'] == '02-28' and r['horizon_days'] == 1]
     assert len(feb) == 1 and feb[0]['base_price'] == 110  # 같은 해 02-28 행이 우선
     assert not any(r['month_day'] == '02-29' for r in rows)
+
+
+def test_forecast_aggregate_skips_points_without_temperature():
+    points = [{'tmpMean': 10.0, 'tmx': 34.0, 'tmn': 5.0, 'pcpSum': 90.0, 'rehMean': 60.0},
+              {'tmpMean': None, 'tmx': 20.0, 'tmn': -13.0, 'pcpSum': None, 'rehMean': None},
+              {'tmpMean': None, 'tmx': None, 'tmn': None, 'pcpSum': 1.0}]
+    row = warehouse.aggregate_forecast(points)
+    assert row['station_count'] == 2 and row['sunshine_hours'] is None
+    assert (row['avg_temp'], row['max_temp'], row['min_temp']) == (Decimal('10.0'), Decimal('27.0'), Decimal('-4.0'))
+    assert (row['heat_station_ratio'], row['cold_station_ratio'], row['heavy_rain_station_ratio']) == (
+        Decimal('50.00'), Decimal('50.00'), Decimal('100.00'))
+    assert warehouse.aggregate_forecast([{'pcpSum': 1.0}]) is None

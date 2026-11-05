@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, datetime, timedelta
 
 from app.collectors.http import AuthError, CollectorError
 
@@ -16,6 +17,7 @@ class Record:
     entity_name: str | None = None
     units: dict = field(default_factory=dict)
     item_id: int | None = None
+    issued_at: datetime | None = None  # 예보 발표시각
 
 
 @dataclass
@@ -25,18 +27,34 @@ class Batch:
     partial_error: str | None = None  # 일부 요청만 실패하면 받은 레코드는 보존하고 PARTIAL로 기록한다.
 
 
-def gather(calls):
-    """calls: (요청 함수) 목록. 일부 실패는 PARTIAL, 전부 실패하면 마지막 오류를 올린다. 인증 오류는 즉시 중단."""
-    records, requests, failed = {}, 0, None
-    for call in calls:
-        requests += 1
+def gather(calls, workers=1):
+    """calls: 요청 함수 목록. 함수는 레코드 목록 또는 (레코드 목록, 요청 수)를 반환한다.
+
+    일부 실패는 PARTIAL, 전부 실패하면 마지막 오류를 올린다. 인증 오류는 즉시 중단한다.
+    workers > 1이면 함수들을 병렬로 실행한다(기관 서버 부담을 고려해 작게 둔다).
+    """
+    def run(call):
         try:
-            for record in call():
-                records[record.key] = record
+            result = call()
         except AuthError:
             raise
         except CollectorError as error:
-            failed = error
+            return [], 1, error
+        records, count = result if isinstance(result, tuple) else (result, 1)
+        return records, count, None
+
+    calls = list(calls)
+    if workers > 1 and len(calls) > 1:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            outcomes = list(pool.map(run, calls))
+    else:
+        outcomes = [run(call) for call in calls]
+    records, requests, failed = {}, 0, None
+    for found, count, error in outcomes:
+        requests += count
+        failed = error or failed
+        for record in found:
+            records[record.key] = record
     if failed is not None and not records:
         raise failed
     return Batch(list(records.values()), requests, failed.code if failed else None)

@@ -3,18 +3,20 @@
 | 테이블 | 근거 자료 |
 | --- | --- |
 | weather_daily(ACTUAL) | 전국 ASOS 관측소 일자료(external_observation)의 관측소 평균·특보 기준 비율 |
+| weather_daily(FORECAST) | 단기예보 17개 시·도 대표 격자의 최신 발표본 평균. 오늘 이후 날짜만 덮어씀 |
 | calendar_day | 공휴일(KASI)을 수집한 연도의 모든 날짜. 음력은 천문연 자료 기반 korean-lunar-calendar로 변환 |
 | calendar_event | 공휴일 이름이 설날·추석인 연속 기간 |
 | price_change_history | price_daily(NATIONAL)의 같은 날 기준 1~7일 뒤 변동률 |
 
-원천에 없는 값은 만들지 않는다. 예보(FORECAST)·생산량(item_production)·이벤트 가중치는 원천 수집기가 없어 적재하지 않는다.
+원천에 없는 값은 만들지 않는다. 생산량(item_production)·이벤트 가중치는 원천 수집기가 없어 적재하지 않는다.
 """
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from statistics import mean
+from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -33,6 +35,7 @@ EVENTS = {'설날': 'SEOLLAL', '추석': 'CHUSEOK'}
 EVENT_EFFECT_BEFORE, EVENT_EFFECT_AFTER = 14, 3  # 명절 D-14 ~ 종료 D+3
 MAX_CHANGE_RATE = Decimal('9999.99')  # NUMERIC(6,2)
 CHUNK = 500
+SEOUL = ZoneInfo('Asia/Seoul')
 
 
 def _decimal(value, places='0.1'):
@@ -86,6 +89,53 @@ def refresh_weather_daily(engine, start: date, end: date):
             by_day[row.observed_on].append(row.payload)
         records = [{'weather_date': day, 'data_type': 'ACTUAL', **aggregate_weather(readings)}
                    for day, readings in sorted(by_day.items())]
+        count = _upsert(db, WeatherDaily, records, 'uk_weather_daily', {'weather_date', 'data_type'}) if records else 0
+        db.commit()
+    return count
+
+
+def aggregate_forecast(points: list[dict]):
+    """대표 격자별 일 예보 요약 → 전국 FORECAST 1행. 일조시간은 예보 항목이 없어 NULL.
+
+    기온 값이 하나도 없는 날(발표 직후 마지막 날처럼 예보 시간이 일부뿐인 날)은 None을 반환한다.
+    """
+    points = [p for p in points if any(p.get(key) is not None for key in ('tmpMean', 'tmx', 'tmn'))]
+    if not points:
+        return None
+
+    def values(key):
+        return [p[key] for p in points if p.get(key) is not None]
+
+    def avg(key):
+        data = values(key)
+        return _decimal(mean(data)) if data else None
+
+    def ratio(key, test):
+        data = values(key)
+        return _decimal(sum(test(v) for v in data) / len(data) * 100, '0.01') if data else None
+
+    return {'avg_temp': avg('tmpMean'), 'max_temp': avg('tmx'), 'min_temp': avg('tmn'), 'precipitation': avg('pcpSum'),
+            'avg_humidity': avg('rehMean'), 'sunshine_hours': None,
+            'heat_station_ratio': ratio('tmx', lambda v: v >= HEAT_MAX_TEMP),
+            'heavy_rain_station_ratio': ratio('pcpSum', lambda v: v >= HEAVY_RAIN_MM),
+            'cold_station_ratio': ratio('tmn', lambda v: v <= COLD_MIN_TEMP), 'station_count': len(points)}
+
+
+def refresh_weather_forecast(engine):
+    """가장 최근 발표본으로 오늘 이후 날짜의 FORECAST 행을 덮어쓴다. 지난 날짜의 예보 행은 마지막 예보로 남긴다."""
+    with Session(engine) as db:
+        issued = db.scalar(select(func.max(ExternalObservation.issued_at)).where(
+            ExternalObservation.source == data_go_kr.KMA, ExternalObservation.dataset == data_go_kr.VILAGE))
+        if issued is None:
+            return 0
+        rows = latest_versions(db, ExternalObservation.source == data_go_kr.KMA,
+                               ExternalObservation.dataset == data_go_kr.VILAGE, ExternalObservation.issued_at == issued,
+                               ExternalObservation.observed_on >= issued.astimezone(SEOUL).date())
+        by_day = defaultdict(list)
+        for row in rows:
+            by_day[row.observed_on].append(row.payload)
+        records = [{'weather_date': day, 'data_type': 'FORECAST', **row} for day, row in
+                   sorted((day, aggregate_forecast(points)) for day, points in by_day.items()) if row]
         count = _upsert(db, WeatherDaily, records, 'uk_weather_daily', {'weather_date', 'data_type'}) if records else 0
         db.commit()
     return count
@@ -213,6 +263,7 @@ def refresh(engine, item_ids, *, weather_start: date, weather_end: date, since: 
     """파이프라인에서 수집 직후 호출한다. 테이블별 적재 행 수를 반환한다."""
     result = {}
     for name, task in (('weather_daily', lambda: refresh_weather_daily(engine, weather_start, weather_end)),
+                       ('weather_forecast', lambda: refresh_weather_forecast(engine)),
                        ('calendar', lambda: dict(zip(('calendar_day', 'calendar_event'), refresh_calendar(engine)))),
                        ('price_change_history', lambda: refresh_price_change_history(engine, item_ids, since))):
         try:

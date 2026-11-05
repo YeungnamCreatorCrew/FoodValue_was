@@ -141,6 +141,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 | KAMIS | 같은 API 도매(02) | WHOLESALE_DAILY | `external_observation` | 전일 도매가·소매/도매 비율·7/28일 변화율 |
 | 기상청 | 지상(종관, ASOS) 일자료 `AsosDalyInfoService` | ASOS_DAILY | `external_observation` | 검증된 주산지 관측소의 7일 기온·최고/최저·습도·일조, 7/28일 강수 |
 | 한국천문연구원 | 특일 정보 `SpcdeInfoService/getRestDeInfo` | HOLIDAY | `external_observation` | 목표일 공휴일 여부, 설날·추석까지/이후 일수(최대 45) |
+| 기상청 | 단기예보 `VilageFcstInfoService_2.0/getVilageFcst` | VILAGE_FCST_DAILY | `external_observation` | 사용 안 함(과거 발표본이 없어 백테스트 불가). `weather_daily` FORECAST용 |
 
 - 품목은 `price_source='KAMIS'`, `food_type='RAW'`이고 `price_code`가 `품목-품종-등급`(예: `246-00-04`)이어야 합니다. 부류코드는 품목코드 첫 자리로 정합니다.
 - KAMIS 응답은 `countyname='평균'` 행만 전국 값으로 적재합니다. 도매가는 `price_daily`에 섞지 않습니다.
@@ -171,7 +172,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 ### 실행
 
 `.env`에 `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`, `DATA_GO_KR_SERVICE_KEY`를 추가합니다. 공공데이터포털 키는 인코딩·디코딩 키 모두 사용할 수 있습니다.
-공공데이터포털에서 기상청 ASOS 일자료와 한국천문연구원 특일 정보 활용신청이 각각 필요합니다.
+공공데이터포털에서 기상청 ASOS 일자료·단기예보와 한국천문연구원 특일 정보 활용신청이 각각 필요합니다.
 
 ```bash
 uv sync --extra prices
@@ -199,17 +200,21 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 
 | 테이블 | 정제 규칙 |
 | --- | --- |
-| `weather_daily` (ACTUAL) | 전국 ASOS 관측소(`data_go_kr.NATIONAL_STATIONS`, 95곳) 단순 평균. 폭염(최고 33℃↑)·호우(80mm↑)·한파(최저 −12℃↓) 관측소 비율(%), 자료가 있는 관측소 수 |
+| `weather_daily` (ACTUAL) | 전국 ASOS 관측소(`data_go_kr.NATIONAL_STATIONS`, 97곳) 단순 평균. 폭염(최고 33℃↑)·호우(80mm↑)·한파(최저 −12℃↓) 관측소 비율(%), 자료가 있는 관측소 수 |
+| `weather_daily` (FORECAST) | 단기예보 17개 시·도 대표 격자의 최신 발표본 평균. 오늘 이후 날짜를 덮어쓰고 지난 날짜는 마지막 예보로 남김. 일조시간은 예보 항목이 없어 NULL |
 | `calendar_day` | 공휴일을 수집한 연도의 모든 날짜. 요일(1=월), 공휴일명(대체·임시 포함), 음력(천문연 자료 기반 `korean-lunar-calendar`), 휴장일 |
 | `calendar_event` | 공휴일명이 설날·추석인 연속 기간. 영향 기간은 시작 D−14 ~ 종료 D+3 |
 | `price_change_history` | `price_daily`(NATIONAL)의 기준일 대비 1~7일 뒤 변동률(%) |
 
-- 전국 집계 관측소는 수집 대상에 항상 포함됩니다(첫 백필 약 95곳 × 6년 요청, 이후 매일 관측소당 1회). 폐지 지점은 무자료로 집계에서 빠집니다. 목록은 기상자료개방포털 지점 목록과 대조해 갱신합니다.
+- 전국 관측소 97곳은 2026-11-03 자료로 지점번호 1~339를 전수 조회해 응답이 있는 지점만 남긴 목록입니다. 신설 지점은 설치 이전 기간이 무자료라 그 날짜 집계에서 빠집니다(`station_count`로 확인).
+- ASOS는 지점마다 기간 전체를 한 번에 요청하고 999행 단위로 페이지를 넘깁니다. 실측: 5년 백필 194회 요청·177,073행·약 6분, 매일 증분 97회·약 40초(4개 병렬).
+- 단기예보는 매 실행마다 최신 발표본(발표 15분 후부터) 17회 요청합니다. 24시간 값이 모두 있는 날만 평균기온·강수합·습도를 만들고, 강수량 범주는 범위 중간값, '1mm 미만'은 0.5mm, 'Nmm 이상'은 N mm로 환산합니다.
+- 음력은 2021~2027년 2,556일을 천문연 음양력 API(`LrsrCldInfoService`)와 대조해 모두 일치함을 확인했습니다(2023 윤2월, 2025 윤6월 포함).
 - `is_market_closed`는 원천이 없어 규칙으로 정합니다: 일요일과 설날·추석 연휴. 대체공휴일은 휴장으로 보지 않습니다.
 - 변동률의 휴장일 기준가는 직전 거래일 가격(최대 7일)을 쓰고, 목표일까지 새 거래가 없으면 0%를 만들지 않고 제외합니다. 윤년 2월 29일은 02-28로 합치며 같은 해 02-28 행이 우선합니다.
 - 공휴일을 수집하지 않은 연도는 `calendar_day`에 넣지 않습니다(공휴일 없음으로 단정하지 않음).
 - 매일 실행은 이번에 수집한 기간만 다시 계산합니다. 달력은 수집된 전 연도를 갱신합니다.
-- `weather_daily`의 FORECAST, `item_production`, `event_item_weight`는 원천 수집기가 없어 채우지 않습니다.
+- `item_production`(가락 반입량·KOSIS 생산량·KREI 전망)과 `event_item_weight`는 채우지 않습니다. KOSIS·가락시장·서울 열린데이터 API 주소가 현재 실행 환경 네트워크에서 차단되어 응답 형식을 검증하지 못했습니다.
 
 ```bash
 uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_warehouse.py tests/test_price_prediction.py -p no:cacheprovider

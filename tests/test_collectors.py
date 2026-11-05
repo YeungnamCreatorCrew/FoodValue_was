@@ -1,5 +1,5 @@
 """Open API 응답 해석. 실제 네트워크·인증키를 사용하지 않는다."""
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -117,14 +117,13 @@ def test_asos_requests_station_years_and_holiday_months():
     def fetch(url, params):
         seen.append(params)
         return asos_payload([])
-    # 관측소마다 시작일이 다르다(새 관측소만 백필).
-    batch = data_go_kr.collect_asos(fetch, key='a%2Bb', stations={'133': date(2026, 5, 20), '108': date(2025, 1, 1)},
-                                    end=date(2026, 6, 1))
-    assert batch.requests == 3 and batch.records == [] and batch.partial_error is None
-    assert [p['stnIds'] for p in seen] == ['108', '108', '133'] and seen[0]['serviceKey'] == 'a+b'
-    assert (seen[0]['startDt'], seen[0]['endDt']) == ('20250101', '20260101')
-    assert (seen[2]['startDt'], seen[2]['endDt']) == ('20260520', '20260601')
-    assert len(set(data_go_kr.NATIONAL_STATIONS)) == len(data_go_kr.NATIONAL_STATIONS)
+    # 관측소마다 시작일이 다르다(새 관측소만 백필). 기간 전체를 한 번에 요청한다.
+    batch = data_go_kr.collect_asos(fetch, key='a%2Bb', end=date(2026, 6, 1), workers=1,
+                                    stations={'133': date(2026, 5, 20), '108': date(2025, 1, 1), '90': date(2026, 7, 1)})
+    assert batch.requests == 2 and batch.records == [] and batch.partial_error is None
+    assert [p['stnIds'] for p in seen] == ['108', '133'] and seen[0]['serviceKey'] == 'a+b'
+    assert (seen[0]['startDt'], seen[0]['endDt']) == ('20250101', '20260601')
+    assert len(set(data_go_kr.NATIONAL_STATIONS)) == len(data_go_kr.NATIONAL_STATIONS) == 97
     seen.clear()
     data_go_kr.collect_holidays(fetch, key='k', years=[2026])
     assert [p['solMonth'] for p in seen] == [f'{m:02d}' for m in range(1, 13)]
@@ -168,3 +167,55 @@ def test_pipeline_arguments_and_exit_codes():
     assert price_pipeline.exit_code({**ok, 'predictions': [{'status': 'INSUFFICIENT_DATA'}]}) == 2
     assert price_pipeline.exit_code({**ok, 'predictions': [{'status': 'BUSY'}]}) == 3
     assert price_pipeline.exit_code({**ok, 'predictions': [{'status': 'FAILED'}, {'status': 'BUSY'}]}) == 1
+
+
+def test_asos_follows_pages():
+    pages = []
+
+    def fetch(url, params):
+        pages.append(params['pageNo'])
+        size = 999 if params['pageNo'] == 1 else 501
+        rows = [{'tm': (date(2020, 1, 1) + timedelta(days=(params['pageNo'] - 1) * 999 + i)).isoformat(),
+                 'stnId': '108', 'avgTa': '1'} for i in range(size)]
+        return {'response': {'header': {'resultCode': '00'}, 'body': {'items': {'item': rows}, 'totalCount': 1500}}}
+    batch = data_go_kr.collect_asos(fetch, key='k', stations={'108': date(2020, 1, 1)}, end=date(2024, 2, 8))
+    assert pages == [1, 2] and batch.requests == 2 and len(batch.records) == 1500
+
+
+def test_gather_runs_in_parallel_and_counts_failures():
+    from app.collectors.records import Record, gather
+
+    def ok(n):
+        return lambda: [Record('S', 'D', f'k{n}', {})]
+
+    def broken():
+        raise http.NetworkError('URLError')
+    batch = gather([ok(1), broken, ok(2)], workers=3)
+    assert batch.requests == 3 and len(batch.records) == 2 and batch.partial_error == 'URLError'
+
+
+def test_vilage_base_time_and_precipitation_categories():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    seoul = ZoneInfo('Asia/Seoul')
+    assert data_go_kr.vilage_base(datetime(2026, 11, 5, 11, 20, tzinfo=seoul)) == datetime(2026, 11, 5, 11, 0, tzinfo=seoul)
+    assert data_go_kr.vilage_base(datetime(2026, 11, 5, 11, 10, tzinfo=seoul)) == datetime(2026, 11, 5, 8, 0, tzinfo=seoul)
+    assert data_go_kr.vilage_base(datetime(2026, 11, 5, 2, 5, tzinfo=seoul)) == datetime(2026, 11, 4, 23, 0, tzinfo=seoul)
+    cases = {'강수없음': 0.0, '0': 0.0, '1mm 미만': 0.5, '1.0mm 미만': 0.5, '3.0mm': 3.0, '30.0~50.0mm': 40.0,
+             '50.0mm 이상': 50.0, '이상한값': None}
+    assert {value: data_go_kr.precipitation_mm(value) for value in cases} == cases
+
+
+def test_vilage_records_summarise_full_days_only():
+    from datetime import datetime
+    base = datetime(2026, 11, 5, 5, 0)
+    rows = [{'category': 'TMP', 'fcstDate': '20261106', 'fcstTime': f'{h:02d}00', 'fcstValue': str(h % 10)} for h in range(24)]
+    rows += [{'category': 'PCP', 'fcstDate': '20261106', 'fcstTime': f'{h:02d}00', 'fcstValue': '1mm 미만' if h < 2 else '강수없음'} for h in range(24)]
+    rows += [{'category': 'TMN', 'fcstDate': '20261106', 'fcstTime': '0600', 'fcstValue': '-1.0'},
+             {'category': 'TMX', 'fcstDate': '20261106', 'fcstTime': '1500', 'fcstValue': '9.0'},
+             {'category': 'TMP', 'fcstDate': '20261107', 'fcstTime': '0000', 'fcstValue': '3'}]
+    full, partial = data_go_kr.vilage_records(rows, '서울', base)
+    assert full.key == '서울:202611050500:2026-11-06' and full.issued_at == base
+    assert full.payload['tmpMean'] == round(sum(h % 10 for h in range(24)) / 24, 2)
+    assert (full.payload['tmn'], full.payload['tmx'], full.payload['pcpSum']) == (-1.0, 9.0, 1.0)
+    assert partial.payload['tmpMean'] is None and partial.payload['hours'] == 1
