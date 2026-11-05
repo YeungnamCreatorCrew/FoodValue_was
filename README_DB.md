@@ -64,6 +64,7 @@ docker compose up -d          # PostgreSQL 실행
 
 - `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`
 - `DATA_GO_KR_SERVICE_KEY`
+- `KOSIS_API_KEY`
 
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 

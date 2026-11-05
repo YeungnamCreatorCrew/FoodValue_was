@@ -89,3 +89,15 @@ def test_forecast_aggregate_skips_points_without_temperature():
     assert (row['heat_station_ratio'], row['cold_station_ratio'], row['heavy_rain_station_ratio']) == (
         Decimal('50.00'), Decimal('50.00'), Decimal('100.00'))
     assert warehouse.aggregate_forecast([{'pcpSum': 1.0}]) is None
+
+
+def test_production_rows_from_kosis_observations():
+    from types import SimpleNamespace
+    observation = SimpleNamespace(item_id=3, payload={'DT': '440715'}, units={'volume': '톤'},
+                                  period_start=date(2025, 1, 1), period_end=date(2025, 12, 31))
+    other_unit = SimpleNamespace(item_id=3, payload={'DT': '10'}, units={'volume': 'ha'},
+                                 period_start=date(2025, 1, 1), period_end=date(2025, 12, 31))
+    assert warehouse.production_rows([observation, other_unit]) == [{
+        'item_id': 3, 'measure_type': 'PRODUCTION', 'period_type': 'YEAR', 'period_start': date(2025, 1, 1),
+        'period_end': date(2025, 12, 31), 'volume': Decimal('440715.0'), 'volume_unit': 'TON',
+        'is_estimate': False, 'source': 'KOSIS'}]

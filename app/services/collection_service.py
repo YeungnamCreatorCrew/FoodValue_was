@@ -9,14 +9,14 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors import data_go_kr, kamis
+from app.collectors import data_go_kr, kamis, kosis
 from app.collectors.http import CollectorError, fetch_json, number
 from app.models.external import ExternalCollectionRun, ExternalObservation, ItemWeatherStation
 from app.models.fridge import Item
@@ -24,6 +24,7 @@ from app.models.price import PriceDaily
 from app.services.fridge_service import today
 
 BACKFILL_DAYS = 1830  # 예측 모델이 사용하는 최대 5년
+KOSIS_RECENT_YEARS = 6  # 연간 생산량은 최근 6년을 매번 다시 받아 수정 공표를 반영
 OVERLAP_DAYS = 14  # 증분 수집도 최근 2주는 다시 받아 원천 수정을 반영한다.
 INSERT_CHUNK = 500
 SEOUL = ZoneInfo('Asia/Seoul')
@@ -34,11 +35,12 @@ class Credentials:
     kamis_cert_key: str | None = None
     kamis_cert_id: str | None = None
     data_go_kr_key: str | None = None
+    kosis_key: str | None = None
 
     @classmethod
     def from_env(cls):
         return cls(os.getenv('KAMIS_CERT_KEY') or None, os.getenv('KAMIS_CERT_ID') or None,
-                   os.getenv('DATA_GO_KR_SERVICE_KEY') or None)
+                   os.getenv('DATA_GO_KR_SERVICE_KEY') or None, os.getenv('KOSIS_API_KEY') or None)
 
 
 def digest(payload: dict) -> str:
@@ -61,13 +63,21 @@ def _finish(engine, run_id, status, *, requests=0, received=0, inserted=0, error
         db.commit()
 
 
+def published(value):
+    if value is None or isinstance(value, datetime):
+        return value
+    return datetime(value.year, value.month, value.day, tzinfo=SEOUL)  # 날짜만 주는 원천은 서울 자정
+
+
 def _store(db, run_id, records):
     inserted = 0
     for offset in range(0, len(records), INSERT_CHUNK):
         rows = [{'collection_run_id': run_id, 'item_id': r.item_id, 'source': r.source, 'dataset': r.dataset,
                  'source_record_key': r.key, 'entity_code': r.entity_code, 'entity_name': r.entity_name,
-                 'observed_on': r.observed_on, 'period_start': r.observed_on, 'period_end': r.observed_on,
-                 'issued_at': r.issued_at,
+                 'observed_on': r.observed_on, 'period_start': r.period_start or r.observed_on,
+                 'period_end': r.period_end or r.observed_on, 'issued_at': r.issued_at,
+                 'published_at': published(r.published_at),
+                 'publication_status': 'SOURCE_PROVIDED' if r.published_at else 'UNKNOWN',
                  'units': r.units, 'payload': r.payload, 'payload_sha256': digest(r.payload)}
                 for r in records[offset:offset + INSERT_CHUNK]]
         result = db.execute(insert(ExternalObservation).values(rows)
@@ -144,6 +154,19 @@ def station_starts(engine, stations, end):
             for code in stations}
 
 
+def collect_kosis(engine, items, start, end, fetch, credentials):
+    """연간 생산량. 수정 공표를 반영하도록 매번 최근 KOSIS_RECENT_YEARS년을 다시 받는다."""
+    targets = [(item.id, item.name) for item in items if item.name in kosis.PRODUCTION_SERIES]
+    if not credentials.kosis_key:
+        return skipped(engine, kosis.SOURCE, kosis.DATASET, 'MISSING_KOSIS_KEY')
+    if not targets:
+        return skipped(engine, kosis.SOURCE, kosis.DATASET, 'NO_KOSIS_SERIES')
+    first_year = start.year if start else end.year - KOSIS_RECENT_YEARS
+    return run_dataset(engine, kosis.SOURCE, kosis.DATASET, date(first_year, 1, 1), date(end.year, 12, 31),
+                       lambda: kosis.collect(fetch, key=credentials.kosis_key, items=targets,
+                                             start_year=first_year, end_year=end.year))
+
+
 def verified_stations(engine, item_ids):
     with Session(engine) as db:
         return sorted(set(db.scalars(select(ItemWeatherStation.station_code).where(
@@ -181,6 +204,7 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, cr
             result = run_dataset(engine, kamis.SOURCE, dataset, first, end, call,
                                  retail_item_id=item.id if dataset == kamis.RETAIL else None)
             results.append({**result, 'itemId': item.id})
+    results.append(collect_kosis(engine, items, start, end, fetch, credentials))
     if not credentials.data_go_kr_key:
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.ASOS, 'MISSING_DATA_GO_KR_KEY'))
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.VILAGE, 'MISSING_DATA_GO_KR_KEY'))

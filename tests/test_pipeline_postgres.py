@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import price_pipeline
-from app.collectors import data_go_kr, kamis
+from app.collectors import data_go_kr, kamis, kosis
 from app.repositories import covariate_repository
 from app.services import collection_service, warehouse_service
 from app.services.collection_service import Credentials
@@ -19,7 +19,7 @@ from tests.test_fridge_postgres import local
 
 pytestmark = pytest.mark.skipif(os.getenv('FOODVALUE_TEST_POSTGRES') != '1', reason='로컬 PostgreSQL 명시 실행 필요')
 DAYS = 480
-CREDENTIALS = Credentials('kamis-key', 'kamis-id', 'portal-key')
+CREDENTIALS = Credentials('kamis-key', 'kamis-id', 'portal-key', 'kosis-key')
 
 
 class FakeApis:
@@ -60,6 +60,11 @@ class FakeApis:
                      'minTa': '10.0', 'maxTa': '20.0', 'sumRn': '' if i % 3 else '4.5', 'avgRhm': '60', 'sumSsHr': '7'}
                     for d, i in self.days(first, last)]
             return {'response': {'header': {'resultCode': '00'}, 'body': {'items': {'item': rows}, 'totalCount': len(rows)}}}
+        if url == kosis.URL:
+            assert params['apiKey'] == 'kosis-key'
+            return [{'PRD_DE': str(y), 'DT': str(300000 + y), 'UNIT_NM': '톤', 'LST_CHN_DE': f'{y + 1}-10-28',
+                     'ITM_NM': '대파:생산량'} for y in range(int(params['startPrdDe']), int(params['endPrdDe']) + 1)
+                    if y < today().year]
         if url == data_go_kr.VILAGE_URL:
             day = date(int(params['base_date'][:4]), int(params['base_date'][4:6]), int(params['base_date'][6:]))
             rows = [{'category': 'TMP', 'fcstDate': (day + timedelta(days=1)).strftime('%Y%m%d'),
@@ -77,8 +82,11 @@ class FakeApis:
 
 
 @pytest.fixture
-def pipeline(local):
+def pipeline(local, monkeypatch):
     client, engine, item_id, _, _ = local
+    with engine.connect() as conn:
+        name = conn.scalar(text('SELECT name FROM item WHERE id=:id'), {'id': item_id})
+    monkeypatch.setitem(kosis.PRODUCTION_SERIES, name, ('DT_1ET0291', 'T44'))  # 테스트 품목을 대파 시계열에 연결
     station = str(90000 + random.randint(0, 9999))
     with engine.begin() as conn:
         conn.execute(text("""UPDATE item SET food_type='RAW',price_source='KAMIS',price_code=:code,price_unit_label='1kg'
@@ -96,7 +104,8 @@ def pipeline(local):
             # 공휴일은 품목과 무관한 공용 원천이다. 이 테스트 중 생성된 수집 실행이 넣은 행만 지운다.
             conn.execute(text('DELETE FROM external_observation WHERE collection_run_id > :before'), {'before': before})
             conn.execute(text('DELETE FROM external_collection_run WHERE id > :before'), {'before': before})
-            for table in ('price_insight', 'price_forecast', 'price_model_run', 'price_daily', 'item_weather_station'):
+            for table in ('price_insight', 'price_forecast', 'price_model_run', 'price_daily', 'item_weather_station',
+                          'item_production', 'price_change_history'):
                 conn.execute(text(f'DELETE FROM {table} WHERE item_id=:id'), {'id': item_id})
 
 
@@ -110,7 +119,8 @@ def test_collect_store_dedupe_and_revision(pipeline):
     first = collect(engine, item_id, apis, start=apis.start)
     assert {key: row['status'] for key, row in first.items()} == {
         ('KAMIS', 'RETAIL_DAILY'): 'SUCCESS', ('KAMIS', 'WHOLESALE_DAILY'): 'SUCCESS',
-        ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS'}
+        ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS',
+        ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS'}
     assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == DAYS
     # 주산지 관측소 + 전국 집계 관측소. ASOS는 전일까지
     assert first[('KMA', 'ASOS_DAILY')]['received'] == (len(data_go_kr.NATIONAL_STATIONS) + 1) * (DAYS - 1)
@@ -144,7 +154,7 @@ def test_missing_credentials_are_recorded_as_skipped(pipeline):
     _, engine, item_id, apis = pipeline
     results = collection_service.collect(engine, [item_id], fetch=apis, credentials=Credentials())
     assert {row['status'] for row in results} == {'SKIPPED'} and apis.calls == []
-    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY'}
+    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY', 'MISSING_KOSIS_KEY'}
 
 
 def test_full_pipeline_publishes_exogenous_forecast(pipeline):
@@ -197,6 +207,14 @@ def test_structured_tables_are_refreshed_idempotently(pipeline):
             event = conn.execute(text("SELECT name,end_date,effect_start_date FROM calendar_event "
                                       "WHERE event_code='CHUSEOK' AND start_date=:d"), {'d': date(today().year, 9, 5)}).one()
             assert tuple(event) == (f'{today().year} 추석', date(today().year, 9, 5), date(today().year, 8, 22))
+            production = conn.execute(text("SELECT period_start,period_end,volume,volume_unit,source FROM item_production "
+                                           "WHERE item_id=:id ORDER BY period_start DESC LIMIT 1"), {'id': item_id}).one()
+            last = today().year - 1
+            assert tuple(production) == (date(last, 1, 1), date(last, 12, 31), Decimal(300000 + last), 'TON', 'KOSIS')
+            assert first['item_production'] == conn.scalar(text('SELECT count(*) FROM item_production WHERE item_id=:id'), {'id': item_id})
+            published = conn.scalar(text("SELECT publication_status FROM external_observation WHERE dataset='CROP_PRODUCTION' "
+                                         "AND item_id=:id LIMIT 1"), {'id': item_id})
+            assert published == 'SOURCE_PROVIDED'
             history = conn.scalar(text('SELECT count(*) FROM price_change_history WHERE item_id=:id'), {'id': item_id})
             assert history == first['price_change_history'] and history > 0
     finally:
@@ -204,3 +222,4 @@ def test_structured_tables_are_refreshed_idempotently(pipeline):
             for table in GLOBAL_TABLES:
                 conn.execute(text(f'DELETE FROM {table}'))
             conn.execute(text('DELETE FROM price_change_history WHERE item_id=:id'), {'id': item_id})
+            conn.execute(text('DELETE FROM item_production WHERE item_id=:id'), {'id': item_id})

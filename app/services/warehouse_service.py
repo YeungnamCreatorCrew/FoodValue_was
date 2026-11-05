@@ -6,9 +6,10 @@
 | weather_daily(FORECAST) | 단기예보 17개 시·도 대표 격자의 최신 발표본 평균. 오늘 이후 날짜만 덮어씀 |
 | calendar_day | 공휴일(KASI)을 수집한 연도의 모든 날짜. 음력은 천문연 자료 기반 korean-lunar-calendar로 변환 |
 | calendar_event | 공휴일 이름이 설날·추석인 연속 기간 |
+| item_production | KOSIS 농작물생산조사 연간 전국 생산량(톤, 확정치) |
 | price_change_history | price_daily(NATIONAL)의 같은 날 기준 1~7일 뒤 변동률 |
 
-원천에 없는 값은 만들지 않는다. 생산량(item_production)·이벤트 가중치는 원천 수집기가 없어 적재하지 않는다.
+원천에 없는 값은 만들지 않는다. 가락 반입량(ARRIVAL)·KREI 전망·이벤트 가중치는 원천 수집기가 없어 적재하지 않는다.
 """
 from collections import defaultdict
 from datetime import date, timedelta
@@ -20,10 +21,10 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors import data_go_kr
+from app.collectors import data_go_kr, kosis
 from app.collectors.http import number
 from app.models.external import ExternalObservation
-from app.models.prediction_input import CalendarDay, CalendarEvent, PriceChangeHistory, WeatherDaily
+from app.models.prediction_input import CalendarDay, CalendarEvent, ItemProduction, PriceChangeHistory, WeatherDaily
 from app.models.price import PriceDaily
 from app.repositories.covariate_repository import latest_versions
 
@@ -203,6 +204,32 @@ def refresh_calendar(engine):
     return len(days), len(events)
 
 
+# ---------------------------------------------------------------- item_production
+def production_rows(observations):
+    """KOSIS 연간 전국 생산량 → item_production(PRODUCTION, YEAR, 확정치)."""
+    rows = []
+    for row in observations:
+        volume = number(row.payload.get('DT'))
+        if volume is None or volume < 0 or (row.units or {}).get('volume') not in ('톤', None):
+            continue
+        rows.append({'item_id': row.item_id, 'measure_type': 'PRODUCTION', 'period_type': 'YEAR',
+                     'period_start': row.period_start, 'period_end': row.period_end, 'volume': _decimal(volume),
+                     'volume_unit': 'TON', 'is_estimate': False, 'source': 'KOSIS'})
+    return rows
+
+
+def refresh_item_production(engine, item_ids):
+    with Session(engine) as db:
+        rows = production_rows(latest_versions(db, ExternalObservation.source == kosis.SOURCE,
+                                               ExternalObservation.dataset == kosis.DATASET,
+                                               ExternalObservation.item_id.in_(item_ids)))
+        if rows:
+            _upsert(db, ItemProduction, rows, 'uk_item_production',
+                    {'item_id', 'measure_type', 'period_type', 'period_start', 'is_estimate'})
+        db.commit()
+    return len(rows)
+
+
 # ---------------------------------------------------------------- price_change_history
 def change_history_rows(item_id: int, prices: dict[date, int], since: date | None = None):
     """기준일 d(달력의 모든 날)의 가격과 d+h(1~7)의 가격으로 변동률을 만든다.
@@ -266,6 +293,7 @@ def refresh(engine, item_ids, *, weather_start: date, weather_end: date, since: 
     for name, task in (('weather_daily', lambda: refresh_weather_daily(engine, weather_start, weather_end)),
                        ('weather_forecast', lambda: refresh_weather_forecast(engine)),
                        ('calendar', lambda: dict(zip(('calendar_day', 'calendar_event'), refresh_calendar(engine)))),
+                       ('item_production', lambda: refresh_item_production(engine, item_ids)),
                        ('price_change_history', lambda: refresh_price_change_history(engine, item_ids, since))):
         try:
             value = task()

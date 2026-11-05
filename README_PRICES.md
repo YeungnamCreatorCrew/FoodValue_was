@@ -141,6 +141,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 | KAMIS | 같은 API 도매(02) | WHOLESALE_DAILY | `external_observation` | 전일 도매가·소매/도매 비율·7/28일 변화율 |
 | 기상청 | 지상(종관, ASOS) 일자료 `AsosDalyInfoService` | ASOS_DAILY | `external_observation` | 검증된 주산지 관측소의 7일 기온·최고/최저·습도·일조, 7/28일 강수 |
 | 한국천문연구원 | 특일 정보 `SpcdeInfoService/getRestDeInfo` | HOLIDAY | `external_observation` | 목표일 공휴일 여부, 설날·추석까지/이후 일수(최대 45) |
+| KOSIS | 농작물생산조사 통계표 `statisticsParameterData` | CROP_PRODUCTION | `external_observation` | 사용 안 함(연 1회 공표). `item_production`용 |
 | 기상청 | 단기예보 `VilageFcstInfoService_2.0/getVilageFcst` | VILAGE_FCST_DAILY | `external_observation` | 사용 안 함(과거 발표본이 없어 백테스트 불가). `weather_daily` FORECAST용 |
 
 - 품목은 `price_source='KAMIS'`, `food_type='RAW'`이고 `price_code`가 `품목-품종-등급`(예: `246-00-04`)이어야 합니다. 부류코드는 품목코드 첫 자리로 정합니다.
@@ -171,7 +172,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 ### 실행
 
-`.env`에 `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`, `DATA_GO_KR_SERVICE_KEY`를 추가합니다. 공공데이터포털 키는 인코딩·디코딩 키 모두 사용할 수 있습니다.
+`.env`에 `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`, `DATA_GO_KR_SERVICE_KEY`, `KOSIS_API_KEY`를 추가합니다. 공공데이터포털 키는 인코딩·디코딩 키 모두 사용할 수 있습니다.
 공공데이터포털에서 기상청 ASOS 일자료·단기예보와 한국천문연구원 특일 정보 활용신청이 각각 필요합니다.
 
 ```bash
@@ -204,6 +205,7 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 | `weather_daily` (FORECAST) | 단기예보 17개 시·도 대표 격자의 최신 발표본 평균. 오늘 이후 날짜를 덮어쓰고 지난 날짜는 마지막 예보로 남김. 일조시간은 예보 항목이 없어 NULL |
 | `calendar_day` | 공휴일을 수집한 연도의 모든 날짜. 요일(1=월), 공휴일명(대체·임시 포함), 음력(천문연 자료 기반 `korean-lunar-calendar`), 휴장일 |
 | `calendar_event` | 공휴일명이 설날·추석인 연속 기간. 영향 기간은 시작 D−14 ~ 종료 D+3 |
+| `item_production` | KOSIS 농작물생산조사 연간 전국 생산량(PRODUCTION·YEAR·톤·확정치) |
 | `price_change_history` | `price_daily`(NATIONAL)의 기준일 대비 1~7일 뒤 변동률(%) |
 
 - 전국 관측소 97곳은 2026-11-03 자료로 지점번호 1~339를 전수 조회해 응답이 있는 지점만 남긴 목록입니다. 신설 지점은 설치 이전 기간이 무자료라 그 날짜 집계에서 빠집니다(`station_count`로 확인).
@@ -215,7 +217,9 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 - 변동률의 휴장일 기준가는 직전 거래일 가격(최대 7일)을 쓰고, 목표일까지 새 거래가 없으면 0%를 만들지 않고 제외합니다. 윤년 2월 29일은 02-28로 합치며 같은 해 02-28 행이 우선합니다.
 - 공휴일을 수집하지 않은 연도는 `calendar_day`에 넣지 않습니다(공휴일 없음으로 단정하지 않음).
 - 매일 실행은 이번에 수집한 기간만 다시 계산합니다. 달력은 수집된 전 연도를 갱신합니다.
-- `item_production`(가락 반입량·KOSIS 생산량·KREI 전망)과 `event_item_weight`는 채우지 않습니다. KOSIS·가락시장·서울 열린데이터 API 주소가 현재 실행 환경 네트워크에서 차단되어 응답 형식을 검증하지 못했습니다.
+- KOSIS 생산량은 `item.name`이 `kosis.PRODUCTION_SERIES`의 키(대파·양파·마늘·배추·무·감자·사과 등 21개)와 같은 품목만 연결합니다. 통계표·항목 코드는 KOSIS 메타 API로 확인한 값입니다.
+  다른 이름을 쓰는 품목은 이 사전에 추가합니다. 수정 공표 반영을 위해 매 실행 최근 6년(품목당 1회 요청)을 다시 받고, `LST_CHN_DE`(최종 수정일)를 공표 시점으로 저장합니다.
+- `item_production`의 가락시장 반입량(ARRIVAL·DAY)·KREI 전망치와 `event_item_weight`는 아직 채우지 않습니다.
 
 ```bash
 uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_warehouse.py tests/test_price_prediction.py -p no:cacheprovider

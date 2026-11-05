@@ -63,3 +63,18 @@ class PriceChangeHistory(Base):
     base_price: Mapped[int] = mapped_column(Integer)
     change_rate: Mapped[Decimal] = mapped_column(Numeric(6, 2))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ItemProduction(Base):
+    __tablename__ = 'item_production'
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey('item.id'))
+    measure_type: Mapped[str] = mapped_column(String(20))
+    period_type: Mapped[str] = mapped_column(String(10))
+    period_start: Mapped[date] = mapped_column(Date)
+    period_end: Mapped[date] = mapped_column(Date)
+    volume: Mapped[Decimal] = mapped_column(Numeric(14, 1))
+    volume_unit: Mapped[str] = mapped_column(String(10))
+    is_estimate: Mapped[bool] = mapped_column(Boolean)
+    source: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

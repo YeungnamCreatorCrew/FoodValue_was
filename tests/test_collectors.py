@@ -219,3 +219,37 @@ def test_vilage_records_summarise_full_days_only():
     assert full.payload['tmpMean'] == round(sum(h % 10 for h in range(24)) / 24, 2)
     assert (full.payload['tmn'], full.payload['tmx'], full.payload['pcpSum']) == (-1.0, 9.0, 1.0)
     assert partial.payload['tmpMean'] is None and partial.payload['hours'] == 1
+
+
+def kosis_row(year, value, changed='2026-10-28'):
+    return {'PRD_DE': year, 'DT': value, 'ITM_ID': 'T44', 'ITM_NM': '대파:생산량', 'C1': '00', 'C1_NM': '전국',
+            'UNIT_NM': '톤', 'LST_CHN_DE': changed, 'TBL_ID': 'DT_1ET0291', 'ORG_ID': '101'}
+
+
+def test_kosis_parse_years_units_and_errors():
+    from app.collectors import kosis
+    records = kosis.parse([kosis_row('2024', '405823', '2025-10-29'), kosis_row('2025', '440715'),
+                           kosis_row('2026', '-', '2026-08-12')], 'DT_1ET0291', 'T44', 7)
+    assert [r.key for r in records] == ['101:DT_1ET0291:T44:00:2024', '101:DT_1ET0291:T44:00:2025']
+    first = records[0]
+    assert (first.period_start, first.period_end, first.published_at) == (date(2024, 1, 1), date(2024, 12, 31), date(2025, 10, 29))
+    assert first.item_id == 7 and first.units == {'volume': '톤'} and first.payload['DT'] == '405823'
+    assert kosis.parse({'err': '30', 'errMsg': '데이터가 존재하지 않습니다.'}, 'T', 'I', 1) == []
+    with pytest.raises(http.AuthError):
+        kosis.parse({'err': '11', 'errMsg': '유효하지 않은 인증KEY입니다.'}, 'T', 'I', 1)
+    with pytest.raises(http.CollectorError):
+        kosis.parse({'err': '21'}, 'T', 'I', 1)
+
+
+def test_kosis_requests_national_series_per_item():
+    from app.collectors import kosis
+    seen = []
+
+    def fetch(url, params):
+        seen.append(params)
+        return [kosis_row('2025', '1000')]
+    batch = kosis.collect(fetch, key='k', items=[(1, '대파'), (2, '배추')], start_year=2020, end_year=2026)
+    assert batch.requests == 2 and len(batch.records) == 2
+    assert [(p['tblId'], p['itmId'], p['objL1'], p['prdSe']) for p in seen] == [
+        ('DT_1ET0291', 'T44', '00', 'Y'), ('DT_1ET0028', 'T10', '00', 'Y')]
+    assert (seen[0]['startPrdDe'], seen[0]['endPrdDe']) == ('2020', '2026')

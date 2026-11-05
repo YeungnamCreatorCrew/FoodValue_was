@@ -18,6 +18,9 @@ class Record:
     units: dict = field(default_factory=dict)
     item_id: int | None = None
     issued_at: datetime | None = None  # 예보 발표시각
+    period_start: date | None = None  # 없으면 observed_on (일 자료)
+    period_end: date | None = None
+    published_at: date | datetime | None = None  # 원천이 제공한 공표(수정)일
 
 
 @dataclass
