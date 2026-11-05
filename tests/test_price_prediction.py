@@ -21,7 +21,7 @@ def test_features_and_training_have_no_future_labels():
     edited[61:]=[900000]*len(edited[61:])
     assert model.features(days,edited,ages,60,7)==before
     inputs,targets=model.training_data(days,values,observed,ages,80,7)
-    assert targets[-1]==values[80]
+    assert targets[-1]==values[80]/values[73]-1  # 시작일 가격 대비 변화율
     assert inputs[-1][0]==values[73]
 
 
