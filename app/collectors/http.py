@@ -68,7 +68,8 @@ def decode(body: bytes):
 
 
 def text_value(value):
-    if value is None:
+    # KAMIS는 빈 필드를 []로 보낸다. 목록·객체는 문자열 값으로 보지 않는다.
+    if value is None or isinstance(value, (list, dict)):
         return None
     value = str(value).strip()
     return value or None

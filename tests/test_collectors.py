@@ -41,6 +41,10 @@ def test_kamis_keeps_only_national_average_with_prices():
                                                                      (date(2026, 10, 9), '3,000')]
     assert records[0].key == f'{CODE}:2026-10-07' and records[0].item_id == 7
     assert records[0].units == {'price': 'KRW', 'unitLabel': '1kg'}
+    # 실제 KAMIS 응답은 빈 이름 필드를 []로 보낸다.
+    empty = kamis.parse(kamis_payload([{**kamis_row('평균', '10/07', '3,120'), 'itemname': [], 'kindname': []}]),
+                        CODE, kamis.RETAIL, 7, None)
+    assert empty[0].entity_name is None
 
 
 def test_kamis_status_codes():
