@@ -46,7 +46,7 @@ def local(monkeypatch):
     try:
         with engine.begin() as conn:
             count = conn.scalar(text("SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' AND table_name <> 'flyway_schema_history'"))
-            assert count == 22
+            assert count == 25
             assert conn.scalar(text("SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='fridge_ingredient' AND column_name='expires_at'")) == 0
             item_id = conn.scalar(text('''INSERT INTO item(name,category,default_unit,default_storage,food_type,grams_per_unit)
                 VALUES(:name,'ETC','모','FRIDGE','PROCESSED',300) RETURNING id'''), {'name':f'pg-test-{tag}'})
@@ -167,7 +167,7 @@ def test_all_migrations_on_empty_schema(local):
                 # 매개변수 없는 simple query로 여러 SQL 문을 한 파일 그대로 실행한다.
                 with conn.connection.driver_connection.cursor() as cursor:
                     cursor.execute(path.read_text(encoding='utf-8'), prepare=False)
-            assert conn.scalar(text("SELECT count(*) FROM information_schema.tables WHERE table_schema=:s AND table_type='BASE TABLE'"), {'s':schema}) == 22
+            assert conn.scalar(text("SELECT count(*) FROM information_schema.tables WHERE table_schema=:s AND table_type='BASE TABLE'"), {'s':schema}) == 25
             assert conn.scalar(text("SELECT count(*) FROM information_schema.columns WHERE table_schema=:s AND table_name='fridge_ingredient' AND column_name='expires_at'"), {'s':schema}) == 0
         finally:
             # 테이블·데이터·스키마 생성 모두 롤백한다. 기존 public 스키마에 영향 없음.
