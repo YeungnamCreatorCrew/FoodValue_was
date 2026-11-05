@@ -34,7 +34,9 @@ def service_key(value: str) -> str:
 
 def fetch_json(url: str, params: dict, *, timeout: float = TIMEOUT_SECONDS, retries: int = RETRIES, sleep=time.sleep):
     query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
-    request = urllib.request.Request(f'{url}?{query}', headers={'User-Agent': USER_AGENT, 'Accept': 'application/json'})
+    # 파라미터가 없으면 '?'를 붙이지 않는다. ECOS는 경로형 URL 끝의 '?' 때문에 무자료(INFO-200)를 돌려준다.
+    request = urllib.request.Request(f'{url}?{query}' if query else url,
+                                     headers={'User-Agent': USER_AGENT, 'Accept': 'application/json'})
     last = 'UNKNOWN'
     for attempt in range(retries):
         try:

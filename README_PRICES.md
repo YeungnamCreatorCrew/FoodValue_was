@@ -107,6 +107,7 @@ latestAttemptStatus로 최신 배치 실패·학습 자료 부족·실행 중 �
 ## 실행·협업
 
 API 서버에는 무거운 예측 의존성이 필요하지 않습니다. 배치 실행 환경은 추가 패키지를 설치합니다.
+macOS는 XGBoost가 쓰는 OpenMP 런타임이 따로 필요합니다(`brew install libomp`). 없으면 배치·백테스트가 `ModelDependencyError`와 안내 메시지를 출력합니다.
 
 ```bash
 uv sync --group dev --extra prices
@@ -143,7 +144,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 | 기관 | API | dataset | 적재 위치 | 예측 사용 |
 | --- | --- | --- | --- | --- |
-| KAMIS | 기간별 품목 가격 `periodProductList` 소매(01) | RETAIL_DAILY | `price_daily`(NATIONAL) + 원본 버전 | 예측 대상 |
+| KAMIS | 최근 1년: 기간별 품목 가격 `periodProductList`, 그 이전: 일별 부류별 가격 `dailyPriceByCategoryList` 소매(01) | RETAIL_DAILY | `price_daily`(NATIONAL) + 원본 버전 | 예측 대상 |
 | KAMIS | 같은 API 도매(02) | WHOLESALE_DAILY | `external_observation` | 전일 도매가·소매/도매 비율·7/28일 변화율 |
 | 기상청 | 지상(종관, ASOS) 일자료 `AsosDalyInfoService` | ASOS_DAILY | `external_observation` → `weather_daily` | 검증된 주산지 관측소의 7일 기온·최고/최저·습도·일조, 7/28일 강수. 전국 평균 7일 기온·28일 강수·폭염/호우/한파 지수 |
 | 한국천문연구원 | 특일 정보 `SpcdeInfoService/getRestDeInfo` | HOLIDAY | `external_observation` → `calendar_event` | 목표일 공휴일 여부, 설날·추석까지/이후 일수(최대 45), 목표일의 명절 영향기간 여부·명절 가격 압력 |
@@ -154,6 +155,10 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 - 품목은 `price_source='KAMIS'`, `food_type='RAW'`이고 `price_code`가 `품목-품종-등급`(예: `246-00-04`)이어야 합니다. 부류코드는 품목코드 첫 자리로 정합니다.
 - KAMIS 응답은 `countyname='평균'` 행만 전국 값으로 적재합니다. 도매가는 `price_daily`에 섞지 않습니다.
+- `periodProductList`는 로컬 실측에서 최근 1년치만 돌려주고 그 이전 기간은 시간 초과가 났습니다. 그래서 최근 364일만 이 API로 받고,
+  더 오래된 날짜는 `dailyPriceByCategoryList`를 평일마다 1회(4개 병렬) 호출해 품목·품종·등급이 일치하는 행의 당일 가격(`dpr1`)을 씁니다.
+  당일 열(`day1`)의 (월/일)이 요청일과 다르면 저장하지 않고, 코드 열(`item_code`·`kind_code`·`rank_code`)이 없는 응답은
+  `KAMIS_UNEXPECTED_DAILY_RESPONSE`로 실패 처리합니다(추측해서 저장하지 않음). 이 응답 형식은 공개 규격 기준이며 실제 응답으로 한 번 확인이 필요합니다.
 - 기상은 `item_weather_station.mapping_status='VERIFIED'`인 관측소만 사용합니다. `share`가 없으면 같은 비중, `months`·유효기간 밖의 관측소는 제외합니다.
 - 수집 실행마다 `external_collection_run`에 상태(SUCCESS/NO_DATA/PARTIAL/AUTH_ERROR/NETWORK_ERROR/FAILED/SKIPPED)와 요청·수신·삽입 건수를 남깁니다.
 - 같은 원천 키·같은 내용은 다시 저장하지 않습니다. 원천이 값을 수정하면 새 버전으로 보존하고 예측은 최신 수집본을 사용합니다.
@@ -189,7 +194,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 공공데이터포털에서 기상청 ASOS 일자료·단기예보와 한국천문연구원 특일 정보 활용신청이 각각 필요합니다.
 
 ```bash
-uv sync --extra prices
+uv sync --extra prices   # macOS는 XGBoost용 OpenMP가 필요: brew install libomp
 docker compose run --rm flyway
 uv run --extra prices python -m app.price_pipeline --start 2021-11-01 --collect-only   # 최초 백필
 uv run --extra prices python -m app.price_pipeline                                     # 매일: 증분 수집 + 예측
@@ -247,7 +252,8 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 - 매일 실행은 이번에 수집한 기간만 다시 계산합니다. 달력은 수집된 전 연도를 갱신합니다.
 - KOSIS 생산량은 `item.name`이 `kosis.PRODUCTION_SERIES`의 키(대파·양파·마늘·배추·무·감자·사과 등 21개)와 같은 품목만 연결합니다. 통계표·항목 코드는 KOSIS 메타 API로 확인한 값입니다.
   다른 이름을 쓰는 품목은 이 사전에 추가합니다. 수정 공표 반영을 위해 매 실행 최근 6년(품목당 1회 요청)을 다시 받고, `LST_CHN_DE`(최종 수정일)를 공표 시점으로 저장합니다.
-- ECOS는 개발 환경에서 KAMIS와 같이 연결이 끊겨 실제 응답을 확인하지 못했습니다. 공개 규격(731Y001, 항목 0000001)대로 구현했으며 서버에서 아래로 확인합니다.
+- ECOS는 경로형 URL이라 끝에 `?`가 붙으면 무자료(INFO-200)를 돌려줍니다. 파라미터가 없으면 `?`를 붙이지 않습니다(로컬 실측으로 확인된 문제).
+- KAMIS·ECOS는 해외 서버(클라우드 개발 환경)에서는 연결이 끊깁니다. 국내 IP에서 실행합니다. 서버에서 아래로 확인합니다.
   `uv run --extra prices python -c "from app.collectors import ecos; from app.collectors.http import fetch_json; import os, datetime as d; print(ecos.collect(fetch_json, key=os.environ['ECOS_API_KEY'], start=d.date(2026,10,1), end=d.date.today()).records[:3])"`
 - `item_production`의 가락시장 반입량(ARRIVAL·DAY)·KREI 전망치는 아직 채우지 않습니다.
 

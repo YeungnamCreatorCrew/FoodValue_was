@@ -32,7 +32,7 @@ class InsufficientDataError(Exception):
 
 
 class ModelDependencyError(Exception):
-    pass
+    """예측 의존성 문제. 메시지에 비밀값이 없어 그대로 출력해도 된다."""
 
 
 @dataclass
@@ -105,11 +105,19 @@ def training_data(days, values, observed, ages, cutoff, horizon):
     return _training(lambda o, h: features(days, values, ages, o, h), values, observed, cutoff, horizon)
 
 
+def check_dependencies():
+    """예측 전에 XGBoost를 한 번 불러 본다. 실패하면 ModelDependencyError(원인 안내 메시지 포함)."""
+    _model()
+
+
 def _model():
     try:
         from xgboost import XGBRegressor
     except ImportError:
         raise ModelDependencyError('예측 배치에는 uv sync --extra prices가 필요합니다') from None
+    except Exception as error:  # 설치는 됐지만 네이티브 라이브러리를 못 불러온 경우(XGBoostError)
+        raise ModelDependencyError('xgboost 라이브러리를 불러오지 못했습니다. macOS는 brew install libomp가 필요합니다 '
+                                   f'({type(error).__name__})') from None
     return XGBRegressor(n_estimators=80, max_depth=3, learning_rate=.05,
                         objective='reg:squarederror', tree_method='hist', n_jobs=1,
                         random_state=42, subsample=1, colsample_bytree=1)

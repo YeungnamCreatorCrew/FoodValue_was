@@ -87,3 +87,15 @@ def test_invalid_prices_and_duplicates():
         model.normalize([(day,0)],day)
     with pytest.raises(model.InsufficientDataError):
         model.normalize([(day,1000),(day,2000)],day)
+
+
+def test_native_library_failure_is_reported_with_hint(monkeypatch):
+    import sys
+    import types
+
+    class Broken(types.ModuleType):
+        def __getattr__(self, name):
+            raise RuntimeError('libomp.dylib could not be loaded')
+    monkeypatch.setitem(sys.modules, 'xgboost', Broken('xgboost'))
+    with pytest.raises(model.ModelDependencyError, match='libomp'):
+        model.check_dependencies()

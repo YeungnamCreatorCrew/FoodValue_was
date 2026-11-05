@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app import price_backtest, price_pipeline
 from app.collectors import data_go_kr, ecos, kamis, kosis
+from app.collectors.records import windows
 from app.repositories import covariate_repository
 from app.services import collection_service, warehouse_service
 from app.services.collection_service import Credentials
@@ -25,7 +26,7 @@ CREDENTIALS = Credentials('kamis-key', 'kamis-id', 'portal-key', 'kosis-key', 'e
 class FakeApis:
     """도매가가 소매가를 5일 앞서는 합성 시장. 실제 시장 관계를 입증하지 않는다."""
 
-    def __init__(self, station):
+    def __init__(self, station, code='246-00-04'):
         self.start = today() - timedelta(days=DAYS - 1)
         rng = random.Random(3)
         level, drift, self.wholesale = 1000.0, 0, []
@@ -36,6 +37,7 @@ class FakeApis:
             self.wholesale.append(level)
         self.retail = [round(1.5 * self.wholesale[i] + rng.gauss(0, 3)) for i in range(DAYS)]
         self.station = station
+        self.code = code
         self.calls = []
         self.overrides = {}
 
@@ -47,6 +49,18 @@ class FakeApis:
 
     def __call__(self, url, params):
         self.calls.append(url)
+        if url == kamis.URL and params.get('action') == kamis.DAILY_ACTION:
+            assert params['p_cert_key'] == 'kamis-key'
+            day = date.fromisoformat(params['p_regday'])
+            index = (day - self.start).days
+            if not 0 <= index < DAYS:
+                return {'data': ['001']}
+            retail = params['p_product_cls_code'] == '01'
+            price = self.overrides.get(day, self.retail[index] if retail else round(self.wholesale[index + 5]))
+            row = {'item_name': '대파', 'item_code': params['p_item_category_code'][0] + '00', 'kind_code': '', 'rank_code': '',
+                   'day1': f'당일 ({day.month:02d}/{day.day:02d})', 'dpr1': f'{price:,}'}
+            return {'data': {'error_code': '000', 'item': [row, {**row, 'item_code': self.code[:3],
+                                                                 'kind_code': self.code[4:6], 'rank_code': self.code[7:]}]}}
         if url == kamis.URL:
             assert params['p_cert_key'] == 'kamis-key'
             retail = params['p_productclscode'] == '01'
@@ -93,13 +107,14 @@ def pipeline(local, monkeypatch):
         name = conn.scalar(text('SELECT name FROM item WHERE id=:id'), {'id': item_id})
     monkeypatch.setitem(kosis.PRODUCTION_SERIES, name, ('DT_1ET0291', 'T44'))  # 테스트 품목을 대파 시계열에 연결
     station = str(90000 + random.randint(0, 9999))
+    code = f'2{item_id % 100:02d}-00-04'
     with engine.begin() as conn:
         conn.execute(text("""UPDATE item SET food_type='RAW',price_source='KAMIS',price_code=:code,price_unit_label='1kg'
-            WHERE id=:id"""), {'id': item_id, 'code': f'2{item_id % 100:02d}-00-04'})
+            WHERE id=:id"""), {'id': item_id, 'code': code})
         conn.execute(text("""INSERT INTO item_weather_station(item_id,station_code,station_name,producing_region,
             mapping_status,share,rationale) VALUES(:id,:station,'테스트','테스트 주산지','VERIFIED',1,'통합 테스트')"""),
                      {'id': item_id, 'station': station})
-    apis = FakeApis(station)
+    apis = FakeApis(station, code)
     with engine.connect() as conn:
         before = conn.scalar(text('SELECT coalesce(max(id),0) FROM external_collection_run'))
     try:
@@ -114,6 +129,14 @@ def pipeline(local, monkeypatch):
                 conn.execute(text(f'DELETE FROM {table} WHERE item_id=:id'), {'id': item_id})
 
 
+def kamis_expectation(apis):
+    """(적재될 일수, 요청 수). 최근 PERIOD_LIMIT_DAYS일은 기간 API, 그 이전은 평일만 일별 API로 받는다."""
+    boundary = today() - timedelta(days=kamis.PERIOD_LIMIT_DAYS)
+    older = [d for d, _ in apis.days(apis.start, boundary - timedelta(days=1)) if d.weekday() < 5]
+    recent = [d for d, _ in apis.days(boundary, today())]
+    return len(older) + len(recent), len(older) + len(list(windows(boundary, today(), kamis.WINDOW_DAYS)))
+
+
 def collect(engine, item_id, apis, **kwargs):
     results = collection_service.collect(engine, [item_id], fetch=apis, credentials=CREDENTIALS, **kwargs)
     return {(row['source'], row['dataset']): row for row in results}
@@ -126,16 +149,17 @@ def test_collect_store_dedupe_and_revision(pipeline):
         ('KAMIS', 'RETAIL_DAILY'): 'SUCCESS', ('KAMIS', 'WHOLESALE_DAILY'): 'SUCCESS',
         ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS',
         ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS', ('ECOS', 'EXCHANGE_RATE_DAILY'): 'SUCCESS'}
-    assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == DAYS
+    kamis_days, kamis_requests = kamis_expectation(apis)
+    assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == kamis_days
     # 주산지 관측소 + 전국 집계 관측소. ASOS는 전일까지
     assert first[('KMA', 'ASOS_DAILY')]['received'] == (len(data_go_kr.NATIONAL_STATIONS) + 1) * (DAYS - 1)
     with engine.connect() as conn:
-        assert conn.scalar(text("SELECT count(*) FROM price_daily WHERE item_id=:id AND region='NATIONAL'"), {'id': item_id}) == DAYS
+        assert conn.scalar(text("SELECT count(*) FROM price_daily WHERE item_id=:id AND region='NATIONAL'"), {'id': item_id}) == kamis_days
         latest = conn.scalar(text('SELECT price FROM price_daily WHERE item_id=:id AND price_date=:d'), {'id': item_id, 'd': today()})
         assert latest == apis.retail[-1]
         run = conn.execute(text('SELECT status,request_count,records_received,records_inserted,finished_at FROM external_collection_run WHERE id=:id'),
                            {'id': first[('KAMIS', 'WHOLESALE_DAILY')]['runId']}).one()
-        assert run[0] == 'SUCCESS' and run[1] == 6 and run[2] == run[3] == DAYS and run[4] is not None
+        assert run[0] == 'SUCCESS' and run[1] == kamis_requests and run[2] == run[3] == kamis_days and run[4] is not None
     # 같은 내용의 재수집은 새 행을 만들지 않는다.
     again = collect(engine, item_id, apis, start=apis.start)
     assert all(row['inserted'] == 0 for row in again.values())
@@ -150,7 +174,7 @@ def test_collect_store_dedupe_and_revision(pipeline):
                            {'id': item_id, 'd': today()}) == 2
     with Session(engine) as db:
         covariates = covariate_repository.load(db, item_id, apis.start, today(), today() + timedelta(days=7))
-    assert len(covariates.wholesale) == DAYS and len(covariates.weather) == DAYS - 1
+    assert len(covariates.wholesale) == kamis_days and len(covariates.weather) == DAYS - 1
     assert covariates.weather[today() - timedelta(days=1)]['sumRn'] in (0.0, 4.5)
     assert date(today().year, 9, 5) in covariates.holidays and today().year in covariates.holiday_years
 

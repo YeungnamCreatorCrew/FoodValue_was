@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from app.core.constants import ID_MAX
 from app.models.price import PriceDaily
 from app.services.price_batch_service import guidance, load_inputs
-from app.services.price_prediction import HORIZON, InsufficientDataError, predict
+from app.services.price_prediction import HORIZON, InsufficientDataError, ModelDependencyError, check_dependencies, predict
 
 
 def base_dates(start: date, end: date, every: int):
@@ -40,10 +40,13 @@ def base_dates(start: date, end: date, every: int):
 def _forecast(task):
     base_date, rows, covariates = task
     try:
-        result = predict(rows, base_date, covariates)
+        return base_date, predict(rows, base_date, covariates), None
     except InsufficientDataError:
-        return base_date, None
-    return base_date, result
+        return base_date, None, {'status': 'INSUFFICIENT_DATA'}
+    except Exception as error:
+        # 자식 프로세스의 예외는 부모로 넘어오며 형식이 바뀔 수 있어(PicklingError) 여기서 문자열로 바꾼다.
+        # 예측 단계에는 DB 주소·인증키가 없어 메시지를 남겨도 된다.
+        return base_date, None, {'status': 'FAILED', 'errorCode': type(error).__name__, 'message': str(error)[:300]}
 
 
 def records_for(base_date, result, rows, actual: dict[date, int]):
@@ -97,6 +100,7 @@ def summarize(records):
 
 
 def run(engine, item_id, dates, workers=1):
+    check_dependencies()  # 병렬 실행 전에 부모에서 확인해 원인 메시지를 그대로 보여 준다.
     tasks = []
     with Session(engine) as db:
         actual = dict(db.execute(select(PriceDaily.price_date, PriceDaily.price).where(
@@ -109,10 +113,10 @@ def run(engine, item_id, dates, workers=1):
     runs, records = [], []
     # fork는 부모가 이미 XGBoost(OpenMP)를 썼으면 자식이 멈출 수 있어 spawn으로 새 프로세스를 띄운다.
     with ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context('spawn')) as pool:
-        for base_date, result in pool.map(_forecast, tasks):
+        for base_date, result, failure in pool.map(_forecast, tasks):
             rows = next(task[1] for task in tasks if task[0] == base_date)
             if result is None:
-                runs.append({'baseDate': base_date.isoformat(), 'status': 'INSUFFICIENT_DATA'})
+                runs.append({'baseDate': base_date.isoformat(), **failure})
                 continue
             found = records_for(base_date, result, rows, actual)
             records += found
@@ -147,6 +151,9 @@ def main(argv=None):
                 writer.writerows(records)
         print(json.dumps(output, ensure_ascii=False))
         return 0
+    except ModelDependencyError as error:
+        print(json.dumps({'status': 'FAILED', 'errorCode': 'ModelDependencyError', 'message': str(error)}, ensure_ascii=False))
+        return 1
     except Exception as error:
         # DB 주소가 포함될 수 있어 예외 원문은 출력하지 않는다.
         print(json.dumps({'status': 'FAILED', 'errorCode': type(error).__name__}))

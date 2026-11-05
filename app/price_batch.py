@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 
 from app.core.constants import ID_MAX
 from app.services import price_batch_service
+from app.services.price_prediction import ModelDependencyError
 
 
 def main():
@@ -28,6 +29,9 @@ def main():
     except price_batch_service.BatchBusyError:
         print(json.dumps({'status':'BUSY'}))
         return 3
+    except ModelDependencyError as error:
+        print(json.dumps({'status':'FAILED','errorCode':'ModelDependencyError','message':str(error)},ensure_ascii=False))
+        return 1
     except Exception as error:
         # DB URL·외부 설정이 포함될 수 있어 예외 원문은 출력하지 않는다.
         print(json.dumps({'status':'FAILED','errorCode':type(error).__name__}))
