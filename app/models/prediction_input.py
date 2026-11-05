@@ -78,3 +78,14 @@ class ItemProduction(Base):
     is_estimate: Mapped[bool] = mapped_column(Boolean)
     source: Mapped[str] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ExchangeRateDaily(Base):
+    __tablename__ = 'exchange_rate_daily'
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    rate_date: Mapped[date] = mapped_column(Date)
+    currency_code: Mapped[str] = mapped_column(String(10))
+    rate: Mapped[Decimal] = mapped_column(Numeric(12, 4))
+    unit_label: Mapped[str] = mapped_column(String(30))
+    source: Mapped[str] = mapped_column(String(20), server_default='ECOS')
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

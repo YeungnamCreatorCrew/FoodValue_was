@@ -253,3 +253,34 @@ def test_kosis_requests_national_series_per_item():
     assert [(p['tblId'], p['itmId'], p['objL1'], p['prdSe']) for p in seen] == [
         ('DT_1ET0291', 'T44', '00', 'Y'), ('DT_1ET0028', 'T10', '00', 'Y')]
     assert (seen[0]['startPrdDe'], seen[0]['endPrdDe']) == ('2020', '2026')
+
+
+def test_ecos_url_parse_and_errors():
+    from app.collectors import ecos
+    assert ecos.url('KEY', date(2026, 10, 1), date(2026, 11, 4), '0000001') == (
+        'https://ecos.bok.or.kr/api/StatisticSearch/KEY/json/kr/1/1000/731Y001/D/20261001/20261104/0000001')
+    payload = {'StatisticSearch': {'list_total_count': 2, 'row': [
+        {'STAT_CODE': '731Y001', 'ITEM_CODE1': '0000001', 'ITEM_NAME1': '원/미국달러(매매기준율)', 'UNIT_NAME': '원',
+         'TIME': '20261103', 'DATA_VALUE': '1385.2'},
+        {'TIME': '20261104', 'DATA_VALUE': '1,390.50', 'UNIT_NAME': '원'}]}}
+    records, total = ecos.parse(payload, 'USD')
+    assert total == 2 and [(r.observed_on, r.payload['DATA_VALUE']) for r in records] == [
+        (date(2026, 11, 3), '1385.2'), (date(2026, 11, 4), '1,390.50')]
+    assert records[0].key == '731Y001:USD:2026-11-03' and records[0].entity_code == 'USD'
+    assert ecos.parse({'RESULT': {'CODE': 'INFO-200', 'MESSAGE': '해당하는 데이터가 없습니다.'}}, 'USD') == ([], 0)
+    with pytest.raises(http.AuthError):
+        ecos.parse({'RESULT': {'CODE': 'INFO-100'}}, 'USD')
+    with pytest.raises(http.CollectorError):
+        ecos.parse({'RESULT': {'CODE': 'ERROR-500'}}, 'USD')
+
+
+def test_ecos_pages_by_row_range():
+    from app.collectors import ecos
+    urls = []
+
+    def fetch(url, params):
+        urls.append(url)
+        rows = [{'TIME': '20261104', 'DATA_VALUE': '1'}]
+        return {'StatisticSearch': {'list_total_count': 1500, 'row': rows}}
+    batch = ecos.collect(fetch, key='K', start=date(2021, 1, 1), end=date(2026, 11, 4))
+    assert batch.requests == 2 and '/1/1000/' in urls[0] and '/1001/2000/' in urls[1]

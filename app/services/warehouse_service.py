@@ -6,6 +6,7 @@
 | weather_daily(FORECAST) | 단기예보 17개 시·도 대표 격자의 최신 발표본 평균. 오늘 이후 날짜만 덮어씀 |
 | calendar_day | 공휴일(KASI)을 수집한 연도의 모든 날짜. 음력은 천문연 자료 기반 korean-lunar-calendar로 변환 |
 | calendar_event | 공휴일 이름이 설날·추석인 연속 기간 |
+| exchange_rate_daily | ECOS 731Y001 일별 원/미국달러 매매기준율 |
 | item_production | KOSIS 농작물생산조사 연간 전국 생산량(톤, 확정치) |
 | price_change_history | price_daily(NATIONAL)의 같은 날 기준 1~7일 뒤 변동률 |
 
@@ -21,10 +22,10 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors import data_go_kr, kosis
+from app.collectors import data_go_kr, ecos, kosis
 from app.collectors.http import number
 from app.models.external import ExternalObservation
-from app.models.prediction_input import CalendarDay, CalendarEvent, ItemProduction, PriceChangeHistory, WeatherDaily
+from app.models.prediction_input import CalendarDay, CalendarEvent, ExchangeRateDaily, ItemProduction, PriceChangeHistory, WeatherDaily
 from app.models.price import PriceDaily
 from app.repositories.covariate_repository import latest_versions
 
@@ -230,6 +231,29 @@ def refresh_item_production(engine, item_ids):
     return len(rows)
 
 
+# ---------------------------------------------------------------- exchange_rate_daily
+def exchange_rows(observations):
+    rows = []
+    for row in observations:
+        rate = number(row.payload.get('DATA_VALUE'))
+        if rate is None or rate <= 0 or row.observed_on is None:
+            continue
+        rows.append({'rate_date': row.observed_on, 'currency_code': row.entity_code, 'rate': _decimal(rate, '0.0001'),
+                     'unit_label': ((row.units or {}).get('rate') or '원')[:30], 'source': 'ECOS'})
+    return rows
+
+
+def refresh_exchange_rate(engine, start: date, end: date):
+    with Session(engine) as db:
+        rows = exchange_rows(latest_versions(db, ExternalObservation.source == ecos.SOURCE,
+                                             ExternalObservation.dataset == ecos.DATASET,
+                                             ExternalObservation.observed_on.between(start, end)))
+        if rows:
+            _upsert(db, ExchangeRateDaily, rows, 'uk_exchange_rate_daily', {'rate_date', 'currency_code'})
+        db.commit()
+    return len(rows)
+
+
 # ---------------------------------------------------------------- price_change_history
 def change_history_rows(item_id: int, prices: dict[date, int], since: date | None = None):
     """기준일 d(달력의 모든 날)의 가격과 d+h(1~7)의 가격으로 변동률을 만든다.
@@ -294,6 +318,7 @@ def refresh(engine, item_ids, *, weather_start: date, weather_end: date, since: 
                        ('weather_forecast', lambda: refresh_weather_forecast(engine)),
                        ('calendar', lambda: dict(zip(('calendar_day', 'calendar_event'), refresh_calendar(engine)))),
                        ('item_production', lambda: refresh_item_production(engine, item_ids)),
+                       ('exchange_rate_daily', lambda: refresh_exchange_rate(engine, weather_start, weather_end)),
                        ('price_change_history', lambda: refresh_price_change_history(engine, item_ids, since))):
         try:
             value = task()

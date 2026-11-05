@@ -16,7 +16,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors import data_go_kr, kamis, kosis
+from app.collectors import data_go_kr, ecos, kamis, kosis
 from app.collectors.http import CollectorError, fetch_json, number
 from app.models.external import ExternalCollectionRun, ExternalObservation, ItemWeatherStation
 from app.models.fridge import Item
@@ -36,11 +36,13 @@ class Credentials:
     kamis_cert_id: str | None = None
     data_go_kr_key: str | None = None
     kosis_key: str | None = None
+    ecos_key: str | None = None
 
     @classmethod
     def from_env(cls):
         return cls(os.getenv('KAMIS_CERT_KEY') or None, os.getenv('KAMIS_CERT_ID') or None,
-                   os.getenv('DATA_GO_KR_SERVICE_KEY') or None, os.getenv('KOSIS_API_KEY') or None)
+                   os.getenv('DATA_GO_KR_SERVICE_KEY') or None, os.getenv('KOSIS_API_KEY') or None,
+                   os.getenv('ECOS_API_KEY') or None)
 
 
 def digest(payload: dict) -> str:
@@ -167,6 +169,15 @@ def collect_kosis(engine, items, start, end, fetch, credentials):
                                              start_year=first_year, end_year=end.year))
 
 
+def collect_ecos(engine, start, end, fetch, credentials):
+    """일별 환율(조회·적재 확인용). 예측 모델 입력에는 사용하지 않는다."""
+    if not credentials.ecos_key:
+        return skipped(engine, ecos.SOURCE, ecos.DATASET, 'MISSING_ECOS_KEY')
+    first = start or incremental_start(engine, ecos.SOURCE, ecos.DATASET, end)
+    return run_dataset(engine, ecos.SOURCE, ecos.DATASET, first, end,
+                       lambda: ecos.collect(fetch, key=credentials.ecos_key, start=first, end=end))
+
+
 def verified_stations(engine, item_ids):
     with Session(engine) as db:
         return sorted(set(db.scalars(select(ItemWeatherStation.station_code).where(
@@ -205,6 +216,7 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, cr
                                  retail_item_id=item.id if dataset == kamis.RETAIL else None)
             results.append({**result, 'itemId': item.id})
     results.append(collect_kosis(engine, items, start, end, fetch, credentials))
+    results.append(collect_ecos(engine, start, end, fetch, credentials))
     if not credentials.data_go_kr_key:
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.ASOS, 'MISSING_DATA_GO_KR_KEY'))
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.VILAGE, 'MISSING_DATA_GO_KR_KEY'))

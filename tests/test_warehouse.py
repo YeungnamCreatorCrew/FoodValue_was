@@ -101,3 +101,11 @@ def test_production_rows_from_kosis_observations():
         'item_id': 3, 'measure_type': 'PRODUCTION', 'period_type': 'YEAR', 'period_start': date(2025, 1, 1),
         'period_end': date(2025, 12, 31), 'volume': Decimal('440715.0'), 'volume_unit': 'TON',
         'is_estimate': False, 'source': 'KOSIS'}]
+
+
+def test_exchange_rows():
+    from types import SimpleNamespace
+    row = SimpleNamespace(observed_on=date(2026, 11, 4), entity_code='USD', payload={'DATA_VALUE': '1,390.5'},
+                          units={'rate': '원'})
+    assert warehouse.exchange_rows([row]) == [{'rate_date': date(2026, 11, 4), 'currency_code': 'USD',
+                                               'rate': Decimal('1390.5000'), 'unit_label': '원', 'source': 'ECOS'}]

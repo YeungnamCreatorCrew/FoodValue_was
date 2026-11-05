@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import price_pipeline
-from app.collectors import data_go_kr, kamis, kosis
+from app.collectors import data_go_kr, ecos, kamis, kosis
 from app.repositories import covariate_repository
 from app.services import collection_service, warehouse_service
 from app.services.collection_service import Credentials
@@ -19,7 +19,7 @@ from tests.test_fridge_postgres import local
 
 pytestmark = pytest.mark.skipif(os.getenv('FOODVALUE_TEST_POSTGRES') != '1', reason='로컬 PostgreSQL 명시 실행 필요')
 DAYS = 480
-CREDENTIALS = Credentials('kamis-key', 'kamis-id', 'portal-key', 'kosis-key')
+CREDENTIALS = Credentials('kamis-key', 'kamis-id', 'portal-key', 'kosis-key', 'ecos-key')
 
 
 class FakeApis:
@@ -60,6 +60,11 @@ class FakeApis:
                      'minTa': '10.0', 'maxTa': '20.0', 'sumRn': '' if i % 3 else '4.5', 'avgRhm': '60', 'sumSsHr': '7'}
                     for d, i in self.days(first, last)]
             return {'response': {'header': {'resultCode': '00'}, 'body': {'items': {'item': rows}, 'totalCount': len(rows)}}}
+        if url.startswith(ecos.BASE_URL + '/ecos-key/'):
+            first, last = (date(int(v[:4]), int(v[4:6]), int(v[6:])) for v in url.split('/')[-3:-1])
+            rows = [{'TIME': d.strftime('%Y%m%d'), 'DATA_VALUE': f'{1300 + i % 50:.1f}', 'UNIT_NAME': '원',
+                     'ITEM_NAME1': '원/미국달러(매매기준율)'} for d, i in self.days(first, last) if d.weekday() < 5]
+            return {'StatisticSearch': {'list_total_count': len(rows), 'row': rows}}
         if url == kosis.URL:
             assert params['apiKey'] == 'kosis-key'
             return [{'PRD_DE': str(y), 'DT': str(300000 + y), 'UNIT_NM': '톤', 'LST_CHN_DE': f'{y + 1}-10-28',
@@ -120,7 +125,7 @@ def test_collect_store_dedupe_and_revision(pipeline):
     assert {key: row['status'] for key, row in first.items()} == {
         ('KAMIS', 'RETAIL_DAILY'): 'SUCCESS', ('KAMIS', 'WHOLESALE_DAILY'): 'SUCCESS',
         ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS',
-        ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS'}
+        ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS', ('ECOS', 'EXCHANGE_RATE_DAILY'): 'SUCCESS'}
     assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == DAYS
     # 주산지 관측소 + 전국 집계 관측소. ASOS는 전일까지
     assert first[('KMA', 'ASOS_DAILY')]['received'] == (len(data_go_kr.NATIONAL_STATIONS) + 1) * (DAYS - 1)
@@ -154,7 +159,8 @@ def test_missing_credentials_are_recorded_as_skipped(pipeline):
     _, engine, item_id, apis = pipeline
     results = collection_service.collect(engine, [item_id], fetch=apis, credentials=Credentials())
     assert {row['status'] for row in results} == {'SKIPPED'} and apis.calls == []
-    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY', 'MISSING_KOSIS_KEY'}
+    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY', 'MISSING_KOSIS_KEY',
+                                                    'MISSING_ECOS_KEY'}
 
 
 def test_full_pipeline_publishes_exogenous_forecast(pipeline):
@@ -177,7 +183,7 @@ def test_full_pipeline_publishes_exogenous_forecast(pipeline):
     assert len(detail['forecast']['points']) == 7
 
 
-GLOBAL_TABLES = ('weather_daily', 'calendar_day', 'calendar_event')
+GLOBAL_TABLES = ('weather_daily', 'calendar_day', 'calendar_event', 'exchange_rate_daily')
 
 
 def test_structured_tables_are_refreshed_idempotently(pipeline):
@@ -215,6 +221,10 @@ def test_structured_tables_are_refreshed_idempotently(pipeline):
             published = conn.scalar(text("SELECT publication_status FROM external_observation WHERE dataset='CROP_PRODUCTION' "
                                          "AND item_id=:id LIMIT 1"), {'id': item_id})
             assert published == 'SOURCE_PROVIDED'
+            rate = conn.execute(text("SELECT count(*), max(rate_date), min(unit_label) FROM exchange_rate_daily "
+                                     "WHERE currency_code='USD'")).one()
+            weekdays = sum(1 for d, _ in apis.days(apis.start, today()) if d.weekday() < 5)
+            assert rate[0] == weekdays == first['exchange_rate_daily'] and rate[2] == '원'
             history = conn.scalar(text('SELECT count(*) FROM price_change_history WHERE item_id=:id'), {'id': item_id})
             assert history == first['price_change_history'] and history > 0
     finally:

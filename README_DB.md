@@ -4,7 +4,7 @@
 테이블은 `db/migration/` 의 SQL 파일로만 만들고 바꿉니다. `docker compose up` 하면 Flyway 컨테이너가 이 파일을 자동 실행합니다.
 
 냉장고 OCR 선택 환경 변수는 `CLOVA_OCR_RECEIPT_URL`, `CLOVA_OCR_SECRET`입니다.
-최신 스키마는 앱 테이블 25개이며 날짜 기반 migration도 포함합니다.
+최신 스키마는 앱 테이블 26개이며 날짜 기반 migration도 포함합니다.
 시세 조회·예측 배치는 [시세 가이드](README_PRICES.md)를 참고합니다.
 냉장고 동작과 설정은 [냉장고 API 가이드](README_FRIDGE.md)를 참고합니다.
 
@@ -65,10 +65,11 @@ docker compose up -d          # PostgreSQL 실행
 - `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`
 - `DATA_GO_KR_SERVICE_KEY`
 - `KOSIS_API_KEY`
+- `ECOS_API_KEY`
 
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 
-`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 25개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
+`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 26개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
 
 ```bash
 docker compose logs flyway    # 현재 SQL 파일 전체 적용 확인 (V1~V3 + 날짜 기반 V 파일)
