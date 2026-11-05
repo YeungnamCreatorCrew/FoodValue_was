@@ -1,4 +1,4 @@
-"""통합 파이프라인: Open API 수집 → 적재 → 품목별 7일 예측.
+"""통합 파이프라인: Open API 수집 → 적재 → 정형 테이블 정제 → 품목별 7일 예측.
 
 실행 예:
     python -m app.price_pipeline                     # 모든 KAMIS 원물 품목, 증분 수집 후 예측
@@ -10,13 +10,14 @@ OS 스케줄러에서 서울 기준 하루 1회 호출한다. 종료 코드: 0 �
 import argparse
 import json
 import os
-from datetime import date
+from datetime import date, timedelta
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
 from app.core.constants import ID_MAX
-from app.services import collection_service, price_batch_service
+from app.services import collection_service, price_batch_service, warehouse_service
+from app.services.fridge_service import today
 
 COLLECTION_FAILURES = {'AUTH_ERROR', 'NETWORK_ERROR', 'FAILED', 'PARTIAL'}
 
@@ -44,6 +45,14 @@ def run(engine, args):
         raise ValueError('대상은 KAMIS 원물 품목만 지정할 수 있습니다')
     if not args.predict_only:
         output['collection'] = collection_service.collect(engine, args.item_ids, start=args.start, end=args.end)
+        # 수집 원천을 V2 정형 테이블(weather_daily·calendar_day·calendar_event·price_change_history)로 정제한다.
+        # 이번에 수집한 기간만 다시 계산한다. 변동률은 7일 뒤 가격을 쓰므로 기준일을 7일 앞당긴다.
+        end = min(args.end or today(), today())
+        starts = [date.fromisoformat(row['startDate']) for row in output['collection']
+                  if row.get('startDate') and row['dataset'] != 'HOLIDAY']
+        since = min(starts) if starts else end - timedelta(days=collection_service.OVERLAP_DAYS)
+        output['tables'] = warehouse_service.refresh(engine, [item.id for item in items], weather_start=since,
+                                                     weather_end=end, since=since - timedelta(days=7))
     if not args.collect_only:
         for item in items:
             try:
@@ -63,7 +72,8 @@ def exit_code(output):
         return 1
     if 'BUSY' in statuses:
         return 3
-    if 'INSUFFICIENT_DATA' in statuses or any(row['status'] in COLLECTION_FAILURES for row in output['collection']):
+    table_failed = any(isinstance(value, dict) for value in output.get('tables', {}).values())
+    if 'INSUFFICIENT_DATA' in statuses or table_failed or any(row['status'] in COLLECTION_FAILURES for row in output['collection']):
         return 2
     return 0
 

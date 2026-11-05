@@ -133,7 +133,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 ## 외부 원천 통합
 
-`python -m app.price_pipeline`은 수집 → 적재 → 품목별 7일 예측을 한 번에 실행합니다.
+`python -m app.price_pipeline`은 수집 → 적재 → 정형 테이블 정제 → 품목별 7일 예측을 한 번에 실행합니다.
 
 | 기관 | API | dataset | 적재 위치 | 예측 사용 |
 | --- | --- | --- | --- | --- |
@@ -192,10 +192,27 @@ INSERT INTO item_weather_station(item_id, station_code, station_name, producing_
 VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', 'VERIFIED', NULL, NULL, '<근거 자료>');
 ```
 
-V2의 `weather_daily`, `item_production`, `calendar_day`는 이 파이프라인에서 사용하지 않습니다. 원천 버전 보존을 위해 `external_observation`에 적재합니다.
+### 정형 테이블 정제
+
+수집 직후(`--predict-only` 제외) 원천을 V2 정형 테이블로 정제합니다. 같은 키는 갱신하므로 다시 실행해도 결과가 같습니다.
+원본은 계속 `external_observation`에 보존하고, 예측 모델은 여전히 원본(관측소 단위)을 사용합니다.
+
+| 테이블 | 정제 규칙 |
+| --- | --- |
+| `weather_daily` (ACTUAL) | 전국 ASOS 관측소(`data_go_kr.NATIONAL_STATIONS`, 95곳) 단순 평균. 폭염(최고 33℃↑)·호우(80mm↑)·한파(최저 −12℃↓) 관측소 비율(%), 자료가 있는 관측소 수 |
+| `calendar_day` | 공휴일을 수집한 연도의 모든 날짜. 요일(1=월), 공휴일명(대체·임시 포함), 음력(천문연 자료 기반 `korean-lunar-calendar`), 휴장일 |
+| `calendar_event` | 공휴일명이 설날·추석인 연속 기간. 영향 기간은 시작 D−14 ~ 종료 D+3 |
+| `price_change_history` | `price_daily`(NATIONAL)의 기준일 대비 1~7일 뒤 변동률(%) |
+
+- 전국 집계 관측소는 수집 대상에 항상 포함됩니다(첫 백필 약 95곳 × 6년 요청, 이후 매일 관측소당 1회). 폐지 지점은 무자료로 집계에서 빠집니다. 목록은 기상자료개방포털 지점 목록과 대조해 갱신합니다.
+- `is_market_closed`는 원천이 없어 규칙으로 정합니다: 일요일과 설날·추석 연휴. 대체공휴일은 휴장으로 보지 않습니다.
+- 변동률의 휴장일 기준가는 직전 거래일 가격(최대 7일)을 쓰고, 목표일까지 새 거래가 없으면 0%를 만들지 않고 제외합니다. 윤년 2월 29일은 02-28로 합치며 같은 해 02-28 행이 우선합니다.
+- 공휴일을 수집하지 않은 연도는 `calendar_day`에 넣지 않습니다(공휴일 없음으로 단정하지 않음).
+- 매일 실행은 이번에 수집한 기간만 다시 계산합니다. 달력은 수집된 전 연도를 갱신합니다.
+- `weather_daily`의 FORECAST, `item_production`, `event_item_weight`는 원천 수집기가 없어 채우지 않습니다.
 
 ```bash
-uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_price_prediction.py -p no:cacheprovider
+uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_warehouse.py tests/test_price_prediction.py -p no:cacheprovider
 FOODVALUE_TEST_POSTGRES=1 uv run --group dev --extra prices pytest tests/test_pipeline_postgres.py -p no:cacheprovider
 ```
 

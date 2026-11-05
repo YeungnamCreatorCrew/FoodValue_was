@@ -117,11 +117,14 @@ def test_asos_requests_station_years_and_holiday_months():
     def fetch(url, params):
         seen.append(params)
         return asos_payload([])
-    batch = data_go_kr.collect_asos(fetch, key='a%2Bb', stations=['133', '108', '108'],
-                                    start=date(2025, 1, 1), end=date(2026, 6, 1))
-    assert batch.requests == 4 and batch.records == [] and batch.partial_error is None
-    assert seen[0]['stnIds'] == '108' and seen[0]['serviceKey'] == 'a+b'
+    # 관측소마다 시작일이 다르다(새 관측소만 백필).
+    batch = data_go_kr.collect_asos(fetch, key='a%2Bb', stations={'133': date(2026, 5, 20), '108': date(2025, 1, 1)},
+                                    end=date(2026, 6, 1))
+    assert batch.requests == 3 and batch.records == [] and batch.partial_error is None
+    assert [p['stnIds'] for p in seen] == ['108', '108', '133'] and seen[0]['serviceKey'] == 'a+b'
     assert (seen[0]['startDt'], seen[0]['endDt']) == ('20250101', '20260101')
+    assert (seen[2]['startDt'], seen[2]['endDt']) == ('20260520', '20260601')
+    assert len(set(data_go_kr.NATIONAL_STATIONS)) == len(data_go_kr.NATIONAL_STATIONS)
     seen.clear()
     data_go_kr.collect_holidays(fetch, key='k', years=[2026])
     assert [p['solMonth'] for p in seen] == [f'{m:02d}' for m in range(1, 13)]

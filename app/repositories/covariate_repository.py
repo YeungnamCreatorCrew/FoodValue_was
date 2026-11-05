@@ -12,7 +12,7 @@ from app.services.exogenous import Covariates
 WEATHER_KEYS = ('avgTa', 'minTa', 'maxTa', 'sumRn', 'avgRhm', 'sumSsHr')
 
 
-def _latest(db, *conditions):
+def latest_versions(db, *conditions):
     """원천 키별 최신 버전만. 원천이 값을 수정하면 수정본을 사용한다."""
     ranked = (select(ExternalObservation.id, func.row_number().over(
         partition_by=(ExternalObservation.source, ExternalObservation.dataset, ExternalObservation.source_record_key),
@@ -23,7 +23,7 @@ def _latest(db, *conditions):
 
 
 def wholesale(db, item_id, start: date, end: date):
-    rows = _latest(db, ExternalObservation.source == kamis.SOURCE, ExternalObservation.dataset == kamis.WHOLESALE,
+    rows = latest_versions(db, ExternalObservation.source == kamis.SOURCE, ExternalObservation.dataset == kamis.WHOLESALE,
                    ExternalObservation.item_id == item_id, ExternalObservation.observed_on.between(start, end))
     result = {}
     for row in rows:
@@ -49,7 +49,7 @@ def weather(db, item_id, start: date, end: date):
     mapped = stations(db, item_id)
     if not mapped:
         return {}
-    rows = _latest(db, ExternalObservation.source == data_go_kr.KMA, ExternalObservation.dataset == data_go_kr.ASOS,
+    rows = latest_versions(db, ExternalObservation.source == data_go_kr.KMA, ExternalObservation.dataset == data_go_kr.ASOS,
                    ExternalObservation.entity_code.in_({s.station_code for s in mapped}),
                    ExternalObservation.observed_on.between(start, end))
     by_day = defaultdict(dict)
@@ -77,7 +77,7 @@ def weather(db, item_id, start: date, end: date):
 
 
 def holidays(db, start: date, end: date):
-    rows = _latest(db, ExternalObservation.source == data_go_kr.KASI, ExternalObservation.dataset == data_go_kr.HOLIDAY,
+    rows = latest_versions(db, ExternalObservation.source == data_go_kr.KASI, ExternalObservation.dataset == data_go_kr.HOLIDAY,
                    ExternalObservation.observed_on.between(start, end))
     named = {row.observed_on: row.entity_name or '' for row in rows if row.payload.get('isHoliday') != 'N'}
     # 공휴일 자료를 실제로 수집한 연도만 달력 특징을 만든다. 미수집 연도를 '공휴일 없음'으로 보지 않는다.

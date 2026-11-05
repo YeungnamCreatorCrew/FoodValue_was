@@ -117,23 +117,28 @@ def skipped(engine, source, dataset, reason):
     return {'runId': run_id, 'source': source, 'dataset': dataset, 'status': 'SKIPPED', 'errorCode': reason}
 
 
-def incremental_start(engine, source, dataset, end, *, item_id=None, entity_codes=None):
+def incremental_start(engine, source, dataset, end, *, item_id=None):
     """저장된 최신 관측일 - OVERLAP_DAYS부터. 자료가 없으면 BACKFILL_DAYS 전부터."""
     conditions = [ExternalObservation.source == source, ExternalObservation.dataset == dataset]
     if item_id is not None:
         conditions.append(ExternalObservation.item_id == item_id)
-    if entity_codes is not None:
-        conditions.append(ExternalObservation.entity_code.in_(entity_codes))
     with Session(engine) as db:
-        if entity_codes:
-            # 관측소마다 적재 시점이 다를 수 있어 가장 늦은 관측소를 기준으로 한다.
-            latest = db.execute(select(ExternalObservation.entity_code, func.max(ExternalObservation.observed_on))
-                                .where(*conditions).group_by(ExternalObservation.entity_code)).all()
-            newest = min(day for _, day in latest) if len(latest) == len(set(entity_codes)) else None
-        else:
-            newest = db.scalar(select(func.max(ExternalObservation.observed_on)).where(*conditions))
+        newest = db.scalar(select(func.max(ExternalObservation.observed_on)).where(*conditions))
     floor = end - timedelta(days=BACKFILL_DAYS)
     return max(floor, newest - timedelta(days=OVERLAP_DAYS)) if newest else floor
+
+
+def station_starts(engine, stations, end):
+    """관측소별 증분 시작일. 자료가 없는 관측소(새로 추가·폐지)는 백필 기간 전체를 다시 확인한다."""
+    floor = end - timedelta(days=BACKFILL_DAYS)
+    with Session(engine) as db:
+        latest = dict(db.execute(select(ExternalObservation.entity_code, func.max(ExternalObservation.observed_on))
+                                 .where(ExternalObservation.source == data_go_kr.KMA,
+                                        ExternalObservation.dataset == data_go_kr.ASOS,
+                                        ExternalObservation.entity_code.in_(stations))
+                                 .group_by(ExternalObservation.entity_code)).all())
+    return {code: max(floor, latest[code] - timedelta(days=OVERLAP_DAYS)) if code in latest else floor
+            for code in stations}
 
 
 def verified_stations(engine, item_ids):
@@ -177,15 +182,14 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, cr
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.ASOS, 'MISSING_DATA_GO_KR_KEY'))
         results.append(skipped(engine, data_go_kr.KASI, data_go_kr.HOLIDAY, 'MISSING_DATA_GO_KR_KEY'))
         return results
-    stations = verified_stations(engine, [item.id for item in items])
+    # 품목 주산지(검증) 관측소 + weather_daily 전국 집계용 관측소
+    stations = sorted(set(verified_stations(engine, [item.id for item in items])) | set(data_go_kr.NATIONAL_STATIONS))
     weather_end = min(end, today() - timedelta(days=1))  # ASOS 일자료는 전일까지 제공된다.
-    if stations:
-        first = start or incremental_start(engine, data_go_kr.KMA, data_go_kr.ASOS, weather_end, entity_codes=stations)
-        results.append(run_dataset(engine, data_go_kr.KMA, data_go_kr.ASOS, first, weather_end,
-                                   lambda: data_go_kr.collect_asos(fetch, key=credentials.data_go_kr_key,
-                                                                   stations=stations, start=first, end=weather_end)))
-    else:
-        results.append(skipped(engine, data_go_kr.KMA, data_go_kr.ASOS, 'NO_VERIFIED_STATION'))
+    starts = {code: start for code in stations} if start else station_starts(engine, stations, weather_end)
+    first = min(starts.values())
+    results.append(run_dataset(engine, data_go_kr.KMA, data_go_kr.ASOS, first, weather_end,
+                               lambda: data_go_kr.collect_asos(fetch, key=credentials.data_go_kr_key,
+                                                               stations=starts, end=weather_end)))
     # 임시공휴일 지정을 반영하도록 올해·내년은 매번 다시 받는다. 처음이면 백필 기간 전체를 받는다.
     first = start or incremental_start(engine, data_go_kr.KASI, data_go_kr.HOLIDAY, end)
     first = min(first, end.replace(month=1, day=1))

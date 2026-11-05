@@ -17,7 +17,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-prices = ["xgboost>=3.0,<4", "scikit-learn>=1.6,<2"]
+prices = [
+    "xgboost>=3.0,<4",
+    "scikit-learn>=1.6,<2",
+    "korean-lunar-calendar>=0.3,<1",
+]
 
 [dependency-groups]
 dev = [

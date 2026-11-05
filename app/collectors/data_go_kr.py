@@ -17,6 +17,16 @@ ASOS_UNITS = {'avgTa': 'C', 'minTa': 'C', 'maxTa': 'C', 'sumRn': 'mm', 'avgRhm':
 PAGE_SIZE = 999
 AUTH_CODES = {'20', '30', '31', '32', '33'}  # 서비스 접근 거부·미등록 키·기한 만료·미등록 IP·미서명 호출
 NO_DATA = '03'
+# weather_daily(전국)를 만들 ASOS 지점번호. 폐지·이전된 지점은 무자료(03)로 응답하며 집계에서 빠진다.
+# 기상자료개방포털의 지점 목록과 대조해 갱신한다.
+NATIONAL_STATIONS = (
+    '90', '93', '95', '98', '99', '100', '101', '102', '104', '105', '106', '108', '112', '114', '115', '119',
+    '121', '127', '129', '130', '131', '133', '135', '136', '137', '138', '140', '143', '146', '152', '155',
+    '156', '159', '162', '165', '168', '169', '170', '172', '174', '177', '184', '185', '188', '189', '192',
+    '201', '202', '203', '211', '212', '216', '217', '221', '226', '232', '235', '236', '238', '239', '243',
+    '244', '245', '247', '248', '251', '252', '253', '254', '255', '257', '258', '259', '260', '261', '262',
+    '263', '264', '266', '268', '271', '272', '273', '276', '277', '278', '279', '281', '283', '284', '285',
+    '288', '289', '294', '295')
 
 
 def body(payload):
@@ -72,8 +82,8 @@ def asos_page(fetch, key, station, first, last, page):
     return asos_records(rows), total
 
 
-def collect_asos(fetch, *, key, stations, start, end):
-    """관측소×연도 단위로 요청한다. 1년은 한 페이지(999행)에 들어간다."""
+def collect_asos(fetch, *, key, stations, end):
+    """stations: {지점번호: 시작일}. 지점×연도 단위로 요청한다. 1년은 한 페이지(999행)에 들어간다."""
     def call(station, first, last):
         def run():
             records, total = asos_page(fetch, key, station, first, last, 1)
@@ -81,7 +91,7 @@ def collect_asos(fetch, *, key, stations, start, end):
                 raise CollectorError('ASOS_PAGE_OVERFLOW')
             return records
         return run
-    return gather(call(station, first, last) for station in sorted(set(stations))
+    return gather(call(station, first, last) for station, start in sorted(stations.items())
                   for first, last in windows(start, end, 366))
 
 
