@@ -34,9 +34,12 @@ def test_calendar_rows_lunar_holidays_and_market_closure():
     chuseok = rows[date(2026, 9, 25)]
     assert (chuseok['lunar_month'], chuseok['lunar_day'], chuseok['is_lunar_leap']) == (8, 15, False)
     assert chuseok['is_holiday'] and chuseok['is_market_closed'] and chuseok['day_of_week'] == 5
-    assert rows[date(2026, 10, 3)]['is_holiday'] and not rows[date(2026, 10, 3)]['is_market_closed']  # 토요일 개천절
+    # KAMIS 미조사일: 토·일과 모든 공휴일(대체공휴일 포함)
+    assert rows[date(2026, 10, 3)]['is_holiday'] and rows[date(2026, 10, 3)]['is_market_closed']  # 토요일 개천절
     assert rows[date(2026, 10, 4)]['is_market_closed'] and not rows[date(2026, 10, 4)]['is_holiday']  # 일요일
-    assert rows[date(2026, 10, 5)]['holiday_name'] == '대체공휴일'
+    assert rows[date(2026, 10, 10)]['is_market_closed']  # 토요일
+    assert rows[date(2026, 10, 5)]['holiday_name'] == '대체공휴일' and rows[date(2026, 10, 5)]['is_market_closed']
+    assert not rows[date(2026, 10, 6)]['is_market_closed']  # 평일
     leap = {row['cal_date']: row for row in warehouse.calendar_rows({}, {2023})}[date(2023, 3, 22)]
     assert (leap['lunar_month'], leap['lunar_day'], leap['is_lunar_leap']) == (2, 1, True)
 

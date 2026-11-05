@@ -157,8 +157,9 @@ def calendar_rows(holidays: dict[date, list[str]], years):
         while day.year == year:
             names = holidays.get(day, [])
             month, lunar_day, leap = lunar(day)
-            # 도매시장 휴장일은 원천이 없어 규칙으로 정한다: 일요일과 설날·추석 연휴.
-            closed = day.isoweekday() == 7 or any(name in EVENTS for name in names)
+            # KAMIS 가격 미조사일(시세 결측이 정상인 날). 2025~2026년 KAMIS 도매·소매 실데이터에서
+            # 결측일이 토·일과 모든 공휴일(대체공휴일 포함)과 정확히 일치함을 확인했다.
+            closed = day.isoweekday() >= 6 or bool(names)
             rows.append({'cal_date': day, 'day_of_week': day.isoweekday(), 'is_holiday': bool(names),
                          'holiday_name': ','.join(dict.fromkeys(names))[:30] or None, 'lunar_month': month,
                          'lunar_day': lunar_day, 'is_lunar_leap': leap, 'is_market_closed': closed})
