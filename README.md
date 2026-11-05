@@ -6,6 +6,8 @@
 
 - [시세·예측 API 가이드](README_PRICES.md): 예측 알고리즘·조회 API·배치 실행·검증 기준
 
+- [외부변수 가중치 결정 기록](README_WEIGHTING.md): 가중치 결정 방식·실험 로그·근거
+
 - [냉장고 API 가이드](README_FRIDGE.md): 확정 기능, 단위·영양 계산과 OCR 설정
 
 - [DB 가이드](README_DB.md): 로컬 DB 실행, 스키마(Flyway) 변경 규칙

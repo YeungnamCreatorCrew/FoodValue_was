@@ -110,7 +110,7 @@ def pipeline(local, monkeypatch):
             conn.execute(text('DELETE FROM external_observation WHERE collection_run_id > :before'), {'before': before})
             conn.execute(text('DELETE FROM external_collection_run WHERE id > :before'), {'before': before})
             for table in ('price_insight', 'price_forecast', 'price_model_run', 'price_daily', 'item_weather_station',
-                          'item_production', 'price_change_history'):
+                          'item_production', 'price_change_history', 'event_item_weight'):
                 conn.execute(text(f'DELETE FROM {table} WHERE item_id=:id'), {'id': item_id})
 
 
@@ -173,11 +173,13 @@ def test_full_pipeline_publishes_exogenous_forecast(pipeline):
     with engine.connect() as conn:
         metrics = conn.scalar(text('SELECT metrics FROM price_model_run WHERE id=:id'), {'id': prediction['runId']})
     assert prediction['status'] == 'SUCCESS', prediction
-    assert prediction['model'] == 'XGBOOST_EXT' and prediction['quality'] == 'VALIDATED', metrics['evaluation']
+    assert prediction['model'] in ('XGBOOST_EXT', 'XGBOOST_WEIGHTED') and prediction['quality'] == 'VALIDATED', metrics['evaluation']
     detail = client.get(f'/api/v1/prices/items/{item_id}').json()
     metrics = detail['forecast']['metrics']
     assert metrics['externalGroups'] == ['WHOLESALE', 'WEATHER', 'CALENDAR']
     assert metrics['externalCoverage']['WHOLESALE'] == 1.0
+    assert metrics['weighting']['blocks'] == {'MARKET': ['WHOLESALE'], 'WEATHER': ['WEATHER'], 'CALENDAR': ['CALENDAR']}
+    assert all(0.0 <= value <= 1.0 for value in metrics['weighting']['weights'].values())
     names = [factor['name'] for factor in client.get(f'/api/v1/prices/items/{item_id}/factors').json()['factors']]
     assert names[:3] == ['최근 가격', '도매가격', '주산지 기상']
     assert len(detail['forecast']['points']) == 7
@@ -227,9 +229,14 @@ def test_structured_tables_are_refreshed_idempotently(pipeline):
             assert rate[0] == weekdays == first['exchange_rate_daily'] and rate[2] == '원'
             history = conn.scalar(text('SELECT count(*) FROM price_change_history WHERE item_id=:id'), {'id': item_id})
             assert history == first['price_change_history'] and history > 0
+            # 가짜 자료는 추석이 해마다 하나뿐이고 기간이 짧아 2개 연도 이상의 명절 효과가 없을 수 있다.
+            learned = conn.scalar(text("SELECT count(*) FROM event_item_weight WHERE item_id=:id AND weight_source='LEARNED'"),
+                                  {'id': item_id})
+            assert learned == first['event_item_weight']
     finally:
         with engine.begin() as conn:
             for table in GLOBAL_TABLES:
                 conn.execute(text(f'DELETE FROM {table}'))
             conn.execute(text('DELETE FROM price_change_history WHERE item_id=:id'), {'id': item_id})
             conn.execute(text('DELETE FROM item_production WHERE item_id=:id'), {'id': item_id})
+            conn.execute(text('DELETE FROM event_item_weight WHERE item_id=:id'), {'id': item_id})

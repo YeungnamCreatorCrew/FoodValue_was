@@ -22,10 +22,14 @@ KAMIS 실제 코드 조합과 지역 대응표는 실데이터 적재 전에 확
 ## 예측 알고리즘
 
 Prophet과 XGBoost를 고정 결합하지 않습니다. 후보는 직전 가격 유지(LAST_PRICE),
-최근 7일 평균(MEAN_7), D+1~D+7 각각 학습하는 XGBoost 두 가지입니다.
+최근 7일 평균(MEAN_7), D+1~D+7 각각 학습하는 XGBoost 세 가지입니다.
 
 - XGBOOST: 현재가·1/7/14/28일 시차·7/28일 평균·변동률·변동성·목표일 요일·연중 계절·원본 가격의 경과일
-- XGBOOST_EXT: XGBOOST 입력 + 수집된 외부 원천 특징(도매가·주산지 기상·공휴일). 외부 자료가 하나도 없으면 후보에서 빠집니다.
+- XGBOOST_EXT: XGBOOST 입력 + 수집된 외부 원천 특징 전부를 한 모델에 넣습니다. 외부 자료가 하나도 없으면 후보에서 빠집니다.
+- XGBOOST_WEIGHTED: XGBOOST 예측 b에 외부변수 묶음(시장·기상·달력·계절·거시)별 전문가 모델 e_k의 수정분을
+  가중 결합합니다. `b + Σ w_k (e_k − b)`, `0 ≤ w_k ≤ 1`. 가중치는 예측 시작일까지 정답이 확인된 과거 예측 오차로만
+  7일마다 다시 학습하고, 시간순 교차검증에서 일관되게 오차를 줄이지 못한 묶음은 0입니다.
+  결정 방식과 실험 기록은 [가중치 결정 기록](README_WEIGHTING.md)을 참고합니다.
 
 XGBoost는 가격 수준이 아니라 시작일 가격 대비 변화율을 학습합니다. 학습 기간에 없던 가격대에서도 예측이 한쪽으로 묶이지 않게 하기 위해서입니다.
 외부 원천은 가격만 쓴 모델과 같은 백테스트·같은 기준으로 비교해 이길 때만 선택됩니다. 자료가 있다고 강제로 쓰지 않습니다.
@@ -69,6 +73,8 @@ VALIDATED 결과에만 다음 규칙을 적용합니다. 가격 기준 단위는
 추천은 예측에 따른 참고 정보이며 실제 절약을 보장하지 않습니다.
 factors는 현재 가격과 최근 관측 평균 등 확인 가능한 통계입니다.
 외부 원천은 도매가격·주산지 기상·예측 기간의 공휴일 관측값과 선택된 모델이 그 자료를 사용했는지(usedByModel)만 표시합니다.
+XGBOOST_WEIGHTED가 선택되면 원천별 `modelWeight`와 '외부변수 가중치'(kind=MODEL) 항목을 함께 표시합니다.
+이 값은 과거 예측 오차로 학습한 결합 비중이며 인과적 영향이 아닙니다.
 모델의 인과적 기여도·SHAP·날씨 영향 방향을 만들어 표시하지 않습니다.
 
 ## API
@@ -139,10 +145,11 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 | --- | --- | --- | --- | --- |
 | KAMIS | 기간별 품목 가격 `periodProductList` 소매(01) | RETAIL_DAILY | `price_daily`(NATIONAL) + 원본 버전 | 예측 대상 |
 | KAMIS | 같은 API 도매(02) | WHOLESALE_DAILY | `external_observation` | 전일 도매가·소매/도매 비율·7/28일 변화율 |
-| 기상청 | 지상(종관, ASOS) 일자료 `AsosDalyInfoService` | ASOS_DAILY | `external_observation` | 검증된 주산지 관측소의 7일 기온·최고/최저·습도·일조, 7/28일 강수 |
-| 한국천문연구원 | 특일 정보 `SpcdeInfoService/getRestDeInfo` | HOLIDAY | `external_observation` | 목표일 공휴일 여부, 설날·추석까지/이후 일수(최대 45) |
-| KOSIS | 농작물생산조사 통계표 `statisticsParameterData` | CROP_PRODUCTION | `external_observation` | 사용 안 함(연 1회 공표). `item_production`용 |
-| 한국은행 | ECOS 통계검색 `StatisticSearch` 731Y001 | EXCHANGE_RATE_DAILY | `external_observation` | 사용 안 함. `exchange_rate_daily` 적재 확인용 |
+| 기상청 | 지상(종관, ASOS) 일자료 `AsosDalyInfoService` | ASOS_DAILY | `external_observation` → `weather_daily` | 검증된 주산지 관측소의 7일 기온·최고/최저·습도·일조, 7/28일 강수. 전국 평균 7일 기온·28일 강수·폭염/호우/한파 지수 |
+| 한국천문연구원 | 특일 정보 `SpcdeInfoService/getRestDeInfo` | HOLIDAY | `external_observation` → `calendar_event` | 목표일 공휴일 여부, 설날·추석까지/이후 일수(최대 45), 목표일의 명절 영향기간 여부·명절 가격 압력 |
+| (파생) | `price_daily` | — | `price_change_history` | 과거 최대 5년 같은 시기(±3일)·같은 시점 변동률 평균 |
+| KOSIS | 농작물생산조사 통계표 `statisticsParameterData` | CROP_PRODUCTION | `external_observation` → `item_production` | 최신 공개 연도 생산량의 전년 대비 증감(Y년 값은 Y+1년 6월 30일부터) |
+| 한국은행 | ECOS 통계검색 `StatisticSearch` 731Y001 | EXCHANGE_RATE_DAILY | `external_observation` → `exchange_rate_daily` | 원/미국달러 7·28일 변화율(1일 지연) |
 | 기상청 | 단기예보 `VilageFcstInfoService_2.0/getVilageFcst` | VILAGE_FCST_DAILY | `external_observation` | 사용 안 함(과거 발표본이 없어 백테스트 불가). `weather_daily` FORECAST용 |
 
 - 품목은 `price_source='KAMIS'`, `food_type='RAW'`이고 `price_code`가 `품목-품종-등급`(예: `246-00-04`)이어야 합니다. 부류코드는 품목코드 첫 자리로 정합니다.
@@ -161,15 +168,20 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 | --- | --- | --- |
 | KAMIS 도매가 | 1일 | 배치 시각에 당일 도매가가 공표되지 않았을 수 있어 보수적으로 둠 |
 | ASOS 일자료 | 1일 | 기상청은 전일까지의 일자료를 제공 |
-| 공휴일 | 목표일 값 사용 | 법정공휴일은 미리 확정. 임시공휴일은 과거 백테스트에서 실제보다 일찍 알려진 것으로 취급됨 |
+| 공휴일·명절 영향기간 | 목표일 값 사용 | 법정공휴일은 미리 확정. 임시공휴일은 과거 백테스트에서 실제보다 일찍 알려진 것으로 취급됨 |
+| 전국 기상(`weather_daily`)·환율 | 1일 지연 | ASOS·도매가와 같은 보수적 가정 |
+| 과거 변동률(`price_change_history`) | 기준일 b·시점 h 값은 b+h ≤ 예측 시작일 | 그 변동률을 만든 가격이 확인된 뒤에만 사용 |
+| 명절 가격 압력 | 영향기간의 7일 뒤 가격이 확인된 명절만 | 2개 연도 미만이면 결측 |
+| 연간 생산량 | Y년 값은 Y+1년 6월 30일부터 | KOSIS가 최초 공표일을 주지 않아 둔 가정 |
 
 - 외부 값이 7일 넘게 비면 결측(NaN)으로 두고 XGBoost 결측 분기에 맡깁니다. 0이나 평균으로 채우지 않습니다. 단, ASOS의 빈 강수량은 무강수(0mm)로 해석합니다.
 - 공휴일 자료를 수집하지 않은 연도는 '공휴일 없음'으로 보지 않고 결측으로 둡니다.
 - 원천 수정 이력이 있으면 백테스트도 최신 수정본을 사용합니다. 수정 전 값으로 재현하는 시점 복원은 하지 않습니다.
 - 공개지연 값은 기관 공지 기준의 가정입니다. 원천에서 공표 시각을 받지 못해 `publication_status`는 UNKNOWN으로 저장됩니다.
 
-`metrics`에는 `candidates`, `featureSets`, `externalGroups`, `externalCoverage`(최종 평가 시점에서 그룹별 값이 채워진 비율)가 함께 저장됩니다.
-합성 자료 테스트(도매가가 소매가를 5일 앞서는 자료)에서 XGBOOST_EXT가 선택·검증되는 것을 확인했습니다. 실제 시장에서의 효과는 실데이터 백테스트로만 판단합니다.
+`metrics`에는 `candidates`, `featureSets`, `externalGroups`, `externalCoverage`(최종 평가 시점에서 그룹별 값이 채워진 비율),
+`weighting`(묶음 구성·공개 가중치·κ·평가 구간 평균 가중치)이 함께 저장됩니다. 모델 버전은 `direct-xgb-v3-weighted-exog`입니다.
+합성 자료 테스트(도매가가 소매가를 5일 앞서는 자료)에서 외부 원천 모델(XGBOOST_EXT 또는 XGBOOST_WEIGHTED)이 선택·검증되고, 무관한 환율 묶음의 가중치는 0이 되는 것을 확인했습니다. 실제 시장에서의 효과는 실데이터 백테스트로만 판단합니다.
 
 ### 실행
 
@@ -198,7 +210,7 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 ### 정형 테이블 정제
 
 수집 직후(`--predict-only` 제외) 원천을 V2 정형 테이블로 정제합니다. 같은 키는 갱신하므로 다시 실행해도 결과가 같습니다.
-원본은 계속 `external_observation`에 보존하고, 예측 모델은 여전히 원본(관측소 단위)을 사용합니다.
+원본은 계속 `external_observation`에 보존합니다. 도매가·주산지 기상·공휴일은 원본(관측소 단위)을, 전국 기상·명절 기간·과거 변동률·생산량·환율은 정형 테이블을 예측에 사용합니다.
 
 | 테이블 | 정제 규칙 |
 | --- | --- |
@@ -209,6 +221,7 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 | `item_production` | KOSIS 농작물생산조사 연간 전국 생산량(PRODUCTION·YEAR·톤·확정치) |
 | `exchange_rate_daily` | ECOS 일별 원/미국달러 매매기준율(영업일만). `V20261105_1500` migration으로 추가 |
 | `price_change_history` | `price_daily`(NATIONAL)의 기준일 대비 1~7일 뒤 변동률(%) |
+| `event_item_weight` (LEARNED) | 품목별 설날·추석 가격 압력(−1~1). 예측의 EVENT 특징과 같은 함수(`exogenous.event_weight`)로 오늘 기준 계산. MANUAL 행은 덮어쓰지 않음 |
 
 - 전국 관측소 97곳은 2026-11-03 자료로 지점번호 1~339를 전수 조회해 응답이 있는 지점만 남긴 목록입니다. 신설 지점은 설치 이전 기간이 무자료라 그 날짜 집계에서 빠집니다(`station_count`로 확인).
 - ASOS는 지점마다 기간 전체를 한 번에 요청하고 999행 단위로 페이지를 넘깁니다. 실측: 5년 백필 194회 요청·177,073행·약 6분, 매일 증분 97회·약 40초(4개 병렬).
@@ -223,10 +236,10 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
   다른 이름을 쓰는 품목은 이 사전에 추가합니다. 수정 공표 반영을 위해 매 실행 최근 6년(품목당 1회 요청)을 다시 받고, `LST_CHN_DE`(최종 수정일)를 공표 시점으로 저장합니다.
 - ECOS는 개발 환경에서 KAMIS와 같이 연결이 끊겨 실제 응답을 확인하지 못했습니다. 공개 규격(731Y001, 항목 0000001)대로 구현했으며 서버에서 아래로 확인합니다.
   `uv run --extra prices python -c "from app.collectors import ecos; from app.collectors.http import fetch_json; import os, datetime as d; print(ecos.collect(fetch_json, key=os.environ['ECOS_API_KEY'], start=d.date(2026,10,1), end=d.date.today()).records[:3])"`
-- `item_production`의 가락시장 반입량(ARRIVAL·DAY)·KREI 전망치와 `event_item_weight`는 아직 채우지 않습니다.
+- `item_production`의 가락시장 반입량(ARRIVAL·DAY)·KREI 전망치는 아직 채우지 않습니다.
 
 ```bash
-uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_warehouse.py tests/test_price_prediction.py -p no:cacheprovider
+uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_weighting.py tests/test_warehouse.py tests/test_price_prediction.py -p no:cacheprovider
 FOODVALUE_TEST_POSTGRES=1 uv run --group dev --extra prices pytest tests/test_pipeline_postgres.py -p no:cacheprovider
 ```
 

@@ -1,6 +1,7 @@
 """시점별 직접 예측. 원천 결측은 타깃으로 학습하지 않고 미래 자료는 참조하지 않는다.
 
-후보: LAST_PRICE, MEAN_7(기준 모델), XGBOOST(가격 특징만), XGBOOST_EXT(가격 + 외부 원천 특징).
+후보: LAST_PRICE, MEAN_7(기준 모델), XGBOOST(가격 특징만), XGBOOST_EXT(가격 + 외부 원천 특징 전부),
+XGBOOST_WEIGHTED(가격 모델 + 외부변수 묶음별 전문가 모델의 가중 결합, 가중치는 weighting 참고).
 외부 원천은 시간순 백테스트에서 가격만 쓴 모델과 같은 기준으로 비교해 이길 때만 선택된다.
 """
 import math
@@ -8,13 +9,16 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from statistics import mean
 
+from app.services import weighting
 from app.services.exogenous import Covariates, ExogenousFeatures
 
 HORIZON = 7
 MIN_TRAIN = 120
 MAX_BACKTEST_DAYS = 240
 MAX_FORWARD_FILL_DAYS = 7
-MODEL_VERSION = 'direct-xgb-v2-change-exog'
+MODEL_VERSION = 'direct-xgb-v3-weighted-exog'
+REFIT_DAYS = 7
+EXPERT_REFIT_DAYS = 14  # 묶음별 전문가 모델은 수가 많아 2주마다 재학습한다
 MAX_PRICE = 2**31 - 1
 
 
@@ -139,19 +143,47 @@ def predict(observations, base_date, covariates: Covariates | None = None):
     if features(days, values, ages, last, 1) is None:
         raise InsufficientDataError('연속된 최근 29일 입력이 필요합니다')
     exogenous = ExogenousFeatures(days, values, covariates) if covariates and not covariates.empty() else None
-    learners = ['XGBOOST'] + (['XGBOOST_EXT'] if exogenous and exogenous.names else [])
+    external = bool(exogenous and exogenous.names)
+    learners = ['XGBOOST'] + (['XGBOOST_EXT', 'XGBOOST_WEIGHTED'] if external else [])
     candidates = BASELINES + learners
+    blocks = list(exogenous.blocks) if external else []
+    # 묶음별 전문가 모델: 가격 특징 + 그 묶음의 외부 특징. 묶음이 하나뿐이면 XGBOOST_EXT와 입력이 같아 그대로 쓴다.
+    experts = {block: 'XGBOOST_EXT' if len(blocks) == 1 else f'EXPERT_{block}' for block in blocks}
+    fitted_names = ['XGBOOST'] + (['XGBOOST_EXT'] if external else []) + \
+        [name for name in experts.values() if name != 'XGBOOST_EXT']
+    refit_every = {name: EXPERT_REFIT_DAYS if name.startswith('EXPERT_') else REFIT_DAYS for name in fitted_names}
     cache = {}
 
     def vector(name, origin, horizon):
         key = (name, origin, horizon)
         if key not in cache:
             row = features(days, values, ages, origin, horizon)
-            cache[key] = row if row is None or name == 'XGBOOST' else row + exogenous.vector(origin, horizon)
+            if row is not None and name == 'XGBOOST_EXT':
+                row = row + exogenous.vector(origin, horizon)
+            elif row is not None and name.startswith('EXPERT_'):
+                row = row + exogenous.group_vector(origin, horizon, exogenous.blocks[name[len('EXPERT_'):]])
+            cache[key] = row
         return cache[key]
+
+    def fit(name, cutoff, horizon):
+        inputs, targets = _training(lambda o, h: vector(name, o, h), values, observed, cutoff, horizon)
+        if len(targets) < MIN_TRAIN:
+            return None
+        estimator = _model()
+        estimator.fit(inputs, targets)
+        return estimator
 
     def baseline_guess(name, origin):
         return _price(values[origin] if name == 'LAST_PRICE' else mean(values[origin-6:origin+1]))
+
+    # 가중치는 예측 시작일까지 정답이 확인된 과거 예측 오차로만 정한다. 7일마다 다시 고른다.
+    history = []
+    weight_state = {}
+
+    def weights_at(origin):
+        if 'at' not in weight_state or origin - weight_state['at'] >= REFIT_DAYS:
+            weight_state.update(at=origin, weights=weighting.choose([s for s in history if s[1] <= origin], blocks))
+        return weight_state['weights']
 
     # 시간순으로 선택 / 오차 보정 / 최종 평가를 분리한다. 각 경계에 7일 간격을 둔다.
     origins = [i for i in range(28, last-6) if features(days, values, ages, i, 1) is not None]
@@ -169,6 +201,7 @@ def predict(observations, base_date, covariates: Covariates | None = None):
     scores = [{name: [] for name in candidates} for _ in groups]
     residuals = [[] for _ in range(HORIZON)]
     evaluation_predictions = [[] for _ in range(HORIZON)]
+    evaluation_weights = {block: [] for block in blocks}
     models, fitted_at = {}, {}
     selected = baseline = None
     for group_index, group in enumerate(groups):
@@ -178,17 +211,29 @@ def predict(observations, base_date, covariates: Covariates | None = None):
                 if not observed[target]:
                     continue  # 결측 보정값을 정답으로 삼지 않는다.
                 guesses = {name: baseline_guess(name, origin) for name in BASELINES}
-                for name in learners:
+                changes = {}
+                for name in fitted_names:
                     key = (name, horizon)
-                    if key not in fitted_at or origin-fitted_at[key] >= 7:
-                        # 평가 시점까지 정답이 확인된 표본만으로 7일마다 재학습한다.
-                        inputs, targets = _training(lambda o, h: vector(name, o, h), values, observed, origin, horizon)
-                        if len(targets) < MIN_TRAIN:
+                    if key not in fitted_at or origin-fitted_at[key] >= refit_every[name]:
+                        # 평가 시점까지 정답이 확인된 표본만으로 주기적으로 재학습한다.
+                        estimator = fit(name, origin, horizon)
+                        if estimator is None:
                             break
-                        estimator = _model()
-                        estimator.fit(inputs, targets)
                         models[key], fitted_at[key] = estimator, origin
-                    guesses[name] = _from_change(values[origin], models[key].predict([vector(name, origin, horizon)])[0])
+                    changes[name] = float(models[key].predict([vector(name, origin, horizon)])[0])
+                else:
+                    guesses['XGBOOST'] = _from_change(values[origin], changes['XGBOOST'])
+                    if external:
+                        guesses['XGBOOST_EXT'] = _from_change(values[origin], changes['XGBOOST_EXT'])
+                        expert_changes = {block: changes[name] for block, name in experts.items()}
+                        weights = weights_at(origin)
+                        guesses['XGBOOST_WEIGHTED'] = _from_change(
+                            values[origin], weights.combine(changes['XGBOOST'], expert_changes))
+                        history.append((origin, target, horizon, values[target]/values[origin]-1,
+                                        changes['XGBOOST'], expert_changes))
+                        if group_index == 2 and horizon == 1:
+                            for block in blocks:
+                                evaluation_weights[block].append(weights.values[block])
                 if len(guesses) != len(candidates):
                     continue
                 truth = values[target]
@@ -227,13 +272,17 @@ def predict(observations, base_date, covariates: Covariates | None = None):
                             residuals[h-1].append(abs(truth-guess))
                         else:
                             evaluation_predictions[h-1].append((truth,guess))
+    # 공개용 가중치: 백테스트에서 정답이 확인된 모든 과거 예측 오차(최근 WINDOW개)로 정한다.
+    final_weights = weighting.choose(history, blocks) if external else None
+    needed = {'XGBOOST': ['XGBOOST'], 'XGBOOST_EXT': ['XGBOOST_EXT'],
+              'XGBOOST_WEIGHTED': list(dict.fromkeys(['XGBOOST', *experts.values()]))}.get(selected, [])
     result, lower, upper, interval_metrics = [], [], [], []
     for horizon in range(1,8):
         if selected in learners:
-            inputs, targets = _training(lambda o, h: vector(selected, o, h), values, observed, last, horizon)
-            estimator = _model()
-            estimator.fit(inputs, targets)
-            guess = _from_change(values[last], estimator.predict([vector(selected, last, horizon)])[0])
+            changes = {name: float(fit(name, last, horizon).predict([vector(name, last, horizon)])[0]) for name in needed}
+            change = (final_weights.combine(changes['XGBOOST'], {b: changes[n] for b, n in experts.items()})
+                      if selected == 'XGBOOST_WEIGHTED' else changes[selected])
+            guess = _from_change(values[last], change)
         else:
             guess = baseline_guess(selected, last)
         result.append(guess)
@@ -247,8 +296,18 @@ def predict(observations, base_date, covariates: Covariates | None = None):
                                  'coverage': mean(max(0,p-width) <= y <= min(MAX_PRICE,p+width) for y,p in evaluation) if width is not None else None,
                                  'meanWidth': mean(min(MAX_PRICE,p+width)-max(0,p-width) for _,p in evaluation) if width is not None else None})
     feature_sets = {'XGBOOST': PRICE_FEATURES}
-    if 'XGBOOST_EXT' in learners:
+    if external:
         feature_sets['XGBOOST_EXT'] = PRICE_FEATURES + exogenous.names
+        feature_sets['XGBOOST_WEIGHTED'] = PRICE_FEATURES + exogenous.names
+    weighting_metrics = {
+        'method': 'constrained_ridge_stacking', 'blocks': exogenous.blocks,
+        'blockFeatures': {block: exogenous.block_names(block) for block in blocks},
+        **final_weights.as_dict(),
+        'evaluationMeanWeights': {block: round(mean(rows), 4) if rows else None
+                                  for block, rows in evaluation_weights.items()},
+        'expertRefitEveryDays': EXPERT_REFIT_DAYS, 'windowDays': weighting.WINDOW_DAYS, 'kappas': list(weighting.KAPPAS),
+        'minGain': weighting.MIN_GAIN, 'minSamples': weighting.MIN_SAMPLES,
+    } if external else None
     return Prediction(selected, 'VALIDATED' if validated else 'BASELINE', result, lower, upper,
                       {'selection':{n:_score(r) for n,r in scores[0].items()}, 'evaluation':final_metrics,
                        'candidates':candidates, 'selectedInSelection':selected_in_selection,
@@ -256,7 +315,8 @@ def predict(observations, base_date, covariates: Covariates | None = None):
                        'featureSets':feature_sets,
                        'externalGroups':exogenous.groups if exogenous else [],
                        'externalCoverage':exogenous.coverage(evaluate_origins) if exogenous else {},
+                       'weighting': weighting_metrics,
                        'intervalMethod':'absolute_error_quantile', 'nominalCoverage':.95,
                        'evaluationStart':days[evaluate_origins[0]].isoformat(),
                        'evaluationEnd':days[evaluate_origins[-1]].isoformat(),
-                       'sourceObservations':sum(observed), 'refitEveryDays':7})
+                       'sourceObservations':sum(observed), 'refitEveryDays':REFIT_DAYS})

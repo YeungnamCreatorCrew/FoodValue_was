@@ -1,13 +1,19 @@
-"""external_observation에서 예측용 외부 원천을 읽는다. 같은 원천 키의 여러 버전 중 최신 수집본을 사용한다."""
+"""예측용 외부 원천을 읽는다.
+
+- external_observation: 도매가·주산지 기상·공휴일. 같은 원천 키의 여러 버전 중 최신 수집본을 사용한다.
+- V2 정형 테이블: weather_daily(ACTUAL)·calendar_event·price_change_history·item_production·exchange_rate_daily.
+공개 시점 규칙은 exogenous에서 적용한다. 여기서는 기간만 자른다.
+"""
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import func, select
 
 from app.collectors import data_go_kr, kamis
 from app.collectors.http import number
 from app.models.external import ExternalObservation, ItemWeatherStation
-from app.services.exogenous import Covariates
+from app.models.prediction_input import CalendarEvent, ExchangeRateDaily, ItemProduction, PriceChangeHistory, WeatherDaily
+from app.services.exogenous import SEASONAL_YEARS, Covariates, EventWindow
 
 WEATHER_KEYS = ('avgTa', 'minTa', 'maxTa', 'sumRn', 'avgRhm', 'sumSsHr')
 
@@ -87,7 +93,61 @@ def holidays(db, start: date, end: date):
     return named, {int(year) for year in years}
 
 
+def _float(value):
+    return None if value is None else float(value)
+
+
+def national_weather(db, start: date, end: date):
+    rows = db.scalars(select(WeatherDaily).where(WeatherDaily.data_type == 'ACTUAL',
+                                                 WeatherDaily.weather_date.between(start, end))).all()
+    return {row.weather_date: {'avgTemp': _float(row.avg_temp), 'precipitation': _float(row.precipitation),
+                               'heatRatio': _float(row.heat_station_ratio),
+                               'heavyRainRatio': _float(row.heavy_rain_station_ratio),
+                               'coldRatio': _float(row.cold_station_ratio)} for row in rows}
+
+
+def events(db, start: date, end: date):
+    rows = db.scalars(select(CalendarEvent).where(CalendarEvent.effect_end_date >= start,
+                                                  CalendarEvent.effect_start_date <= end)
+                      .order_by(CalendarEvent.start_date)).all()
+    return [EventWindow(row.event_code, row.start_date, row.end_date, row.effect_start_date, row.effect_end_date)
+            for row in rows]
+
+
+def change_history(db, item_id, start: date, end: date):
+    """시점 → 기준일 → 변동률(분율). 02-28 행에는 윤년 02-29 기준이 합쳐져 있을 수 있다(같은 해 02-28 우선)."""
+    rows = db.execute(select(PriceChangeHistory.price_year, PriceChangeHistory.month_day, PriceChangeHistory.horizon_days,
+                             PriceChangeHistory.change_rate)
+                      .where(PriceChangeHistory.item_id == item_id, PriceChangeHistory.region == 'NATIONAL',
+                             PriceChangeHistory.price_year.between(start.year, end.year))).all()
+    result = defaultdict(dict)
+    for year, month_day, horizon, rate in rows:
+        day = date(year, int(month_day[:2]), int(month_day[3:]))
+        if start <= day <= end:
+            result[horizon][day] = float(rate) / 100
+    return dict(result)
+
+
+def production(db, item_id):
+    rows = db.execute(select(ItemProduction.period_start, ItemProduction.volume).where(
+        ItemProduction.item_id == item_id, ItemProduction.measure_type == 'PRODUCTION',
+        ItemProduction.period_type == 'YEAR', ItemProduction.is_estimate.is_(False))).all()
+    return {start.year: float(volume) for start, volume in rows if volume and volume > 0}
+
+
+def exchange_rate(db, start: date, end: date, currency='USD'):
+    rows = db.execute(select(ExchangeRateDaily.rate_date, ExchangeRateDaily.rate).where(
+        ExchangeRateDaily.currency_code == currency, ExchangeRateDaily.rate_date.between(start, end))).all()
+    return {day: float(rate) for day, rate in rows}
+
+
 def load(db, item_id, start: date, end: date, horizon_end: date):
     holiday_map, years = holidays(db, start, horizon_end)
+    # 과거 같은 시기 변동률·명절 효과는 학습 시작보다 최대 5년 이전 자료까지 참고한다.
+    history_start = date(start.year - SEASONAL_YEARS, 1, 1)
     return Covariates(wholesale=wholesale(db, item_id, start, end), weather=weather(db, item_id, start, end),
-                      holidays=holiday_map, holiday_years=years)
+                      holidays=holiday_map, holiday_years=years,
+                      national_weather=national_weather(db, start, end),
+                      events=events(db, history_start - timedelta(days=60), horizon_end),
+                      change_history=change_history(db, item_id, history_start, end),
+                      production=production(db, item_id), fx=exchange_rate(db, start, end))

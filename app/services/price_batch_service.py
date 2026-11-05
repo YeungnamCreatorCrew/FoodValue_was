@@ -30,17 +30,38 @@ def guidance(prices, current, quality):
     return 'STABLE',None,0
 
 
+BLOCK_LABELS = {'MARKET': '도매가격', 'WEATHER': '기상(주산지·전국)', 'CALENDAR': '공휴일·명절',
+                'SEASONAL': '과거 같은 시기 변동률', 'MACRO': '생산량·환율'}
+
+
+def _usage(result):
+    """외부 원천 사용 여부와 묶음별 가중치. XGBOOST_EXT는 모든 외부 특징을 한 모델에 넣으므로 묶음 가중치가 없다."""
+    weighting = result.metrics.get('weighting') or {}
+    weights = weighting.get('weights') or {}
+    if result.model == 'XGBOOST_WEIGHTED':
+        return (lambda block: weights.get(block, 0) > 0), weights
+    return (lambda block: result.model == 'XGBOOST_EXT'), {}
+
+
 def external_factors(covariates,base_date,result):
     """모델이 사용할 수 있었던 외부 원천의 최근 관측값. 영향 방향·기여도는 만들지 않는다."""
-    used=result.model=='XGBOOST_EXT'
-    note='외부 원천 특징을 포함한 모델이 선택되었습니다.' if used else '외부 원천 특징을 포함한 모델은 백테스트에서 선택되지 않았습니다.'
+    used_by, weights = _usage(result)
+
+    def note(block):
+        if result.model == 'XGBOOST_WEIGHTED':
+            return f'가중 결합 모델에서 이 자료 묶음의 가중치는 {weights.get(block, 0):.2f}입니다.'
+        return '외부 원천 특징을 포함한 모델이 선택되었습니다.' if used_by(block) else '외부 원천 특징을 포함한 모델은 백테스트에서 선택되지 않았습니다.'
+
+    def tag(block):
+        return {'usedByModel': used_by(block), **({'modelWeight': round(weights.get(block, 0), 4)} if weights else {})}
+
     factors=[]
     wholesale_as_of=base_date-timedelta(days=WHOLESALE_LAG_DAYS)
     wholesale=[(d,p) for d,p in sorted(covariates.wholesale.items()) if wholesale_as_of-timedelta(days=7)<=d<=wholesale_as_of]
     if wholesale:
         day,price=wholesale[-1]
         factors.append({'name':'도매가격','kind':'OBSERVATION','source':'KAMIS','latestWholesalePrice':round(price),
-            'dataDate':day.isoformat(),'usedByModel':used,'description':'KAMIS 전국 평균 도매가격입니다. '+note})
+            'dataDate':day.isoformat(),**tag('MARKET'),'description':'KAMIS 전국 평균 도매가격입니다. '+note('MARKET')})
     weather_as_of=base_date-timedelta(days=WEATHER_LAG_DAYS)
     week=[covariates.weather[d] for d in (weather_as_of-timedelta(days=k) for k in range(7)) if d in covariates.weather]
     if week:
@@ -48,13 +69,19 @@ def external_factors(covariates,base_date,result):
         rains=[row['sumRn'] for row in week if row.get('sumRn') is not None]
         factors.append({'name':'주산지 기상','kind':'OBSERVATION','source':'KMA','days':len(week),
             'dataDate':weather_as_of.isoformat(),'meanTemperature7':round(mean(temps),1) if temps else None,
-            'precipitationSum7':round(sum(rains),1) if rains else None,'usedByModel':used,
-            'description':'검증된 주산지 관측소의 최근 7일 관측값입니다. '+note})
+            'precipitationSum7':round(sum(rains),1) if rains else None,**tag('WEATHER'),
+            'description':'검증된 주산지 관측소의 최근 7일 관측값입니다. '+note('WEATHER')})
     upcoming=[(d,n) for d,n in sorted(covariates.holidays.items()) if base_date<d<=base_date+timedelta(days=7)]
     if upcoming:
-        factors.append({'name':'공휴일','kind':'CALENDAR','source':'KASI','usedByModel':used,
+        factors.append({'name':'공휴일','kind':'CALENDAR','source':'KASI',**tag('CALENDAR'),
             'holidays':[{'date':d.isoformat(),'name':n} for d,n in upcoming],
-            'description':'예측 기간에 포함된 공휴일입니다. '+note})
+            'description':'예측 기간에 포함된 공휴일입니다. '+note('CALENDAR')})
+    if weights:
+        factors.append({'name':'외부변수 가중치','kind':'MODEL','method':'constrained_ridge_stacking',
+            'weights':[{'block':block,'label':BLOCK_LABELS.get(block,block),'weight':round(value,4)}
+                       for block,value in weights.items()],
+            'description':'가격만 쓴 예측을 각 자료 묶음의 예측이 고치는 정도를 얼마나 반영했는지(0~1)입니다. '
+                          '과거 예측 오차로 학습한 결합 비중이며 가격에 대한 인과적 영향이 아닙니다.'})
     return factors
 
 

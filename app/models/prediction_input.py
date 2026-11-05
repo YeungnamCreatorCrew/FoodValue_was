@@ -89,3 +89,14 @@ class ExchangeRateDaily(Base):
     unit_label: Mapped[str] = mapped_column(String(30))
     source: Mapped[str] = mapped_column(String(20), server_default='ECOS')
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class EventItemWeight(Base):
+    __tablename__ = 'event_item_weight'
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    event_code: Mapped[str] = mapped_column(String(30))
+    item_id: Mapped[int | None] = mapped_column(ForeignKey('item.id'))
+    category: Mapped[str | None] = mapped_column(String(20))
+    weight: Mapped[Decimal] = mapped_column(Numeric(4, 2))
+    weight_source: Mapped[str] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
