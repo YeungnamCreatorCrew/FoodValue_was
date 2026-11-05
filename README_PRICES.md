@@ -2,7 +2,7 @@
 
 이 문서는 README의 일부이며 초기 참고 명세서보다 우선합니다.
 시세 조회 API는 저장된 결과만 읽고 학습은 별도 배치에서 실행합니다.
-실데이터 수집·적재는 스키마와 임시 데이터 검증 이후 진행합니다.
+여러 공공 Open API(KAMIS·기상청·한국천문연구원)를 수집해 하나의 예측 파이프라인으로 통합합니다.
 
 ## 첫 구현 범위
 
@@ -11,7 +11,8 @@
 - 구매 가이드·예측 평가 지표·구간 포함률·업데이트 지연 표시
 - 비로그인 조회 허용. 토큰을 보내면 검증하고, 로그인 사용자의 냉장고 잔량만 연결
 - 예측 MVP는 KAMIS 원물(처음 적재할 품목은 대파). 참가격 가공품은 현재 시세 조회 가능
-- 관심 품목·알림·지역별 확장·레시피 연결·외부 수집기는 후속 작업
+- Open API 수집기와 통합 파이프라인(`python -m app.price_pipeline`). 아래 [외부 원천 통합](#외부-원천-통합) 참고
+- 관심 품목·알림·지역별 확장·레시피 연결은 후속 작업
 
 DB의 NATIONAL 값은 수집기가 제공하는 전국 소매가입니다.
 도매가·소매가를 같은 item/region/date 키에 섞어 적재하지 않습니다.
@@ -21,16 +22,19 @@ KAMIS 실제 코드 조합과 지역 대응표는 실데이터 적재 전에 확
 ## 예측 알고리즘
 
 Prophet과 XGBoost를 고정 결합하지 않습니다. 후보는 직전 가격 유지(LAST_PRICE),
-최근 7일 평균(MEAN_7), D+1~D+7 각각 학습하는 XGBoost(XGBOOST)입니다.
+최근 7일 평균(MEAN_7), D+1~D+7 각각 학습하는 XGBoost 두 가지입니다.
 
-입력은 현재가·1/7/14/28일 시차·7/28일 평균·변동률·변동성·목표일 요일·연중 계절·원본 가격의 경과일입니다.
-날씨·생산량·명절 데이터는 실제로 확보한 뒤 성능 비교를 거쳐 추가합니다.
+- XGBOOST: 현재가·1/7/14/28일 시차·7/28일 평균·변동률·변동성·목표일 요일·연중 계절·원본 가격의 경과일
+- XGBOOST_EXT: XGBOOST 입력 + 수집된 외부 원천 특징(도매가·주산지 기상·공휴일). 외부 자료가 하나도 없으면 후보에서 빠집니다.
+
+XGBoost는 가격 수준이 아니라 시작일 가격 대비 변화율을 학습합니다. 학습 기간에 없던 가격대에서도 예측이 한쪽으로 묶이지 않게 하기 위해서입니다.
+외부 원천은 가격만 쓴 모델과 같은 백테스트·같은 기준으로 비교해 이길 때만 선택됩니다. 자료가 있다고 강제로 쓰지 않습니다.
 
 1. 최대 5년을 사용하고, 최근 최대 240개의 예측 시작일을 시간순으로 평가합니다.
 2. 앞 절반은 모델 선택, 다음 구간은 예측 오차 보정, 마지막 구간은 최종 평가입니다.
 3. 각 경계에 7일 간격을 두어 평가 정답이 다음 구간 시작 이후로 넘어가지 않게 합니다.
 4. XGBoost는 각 평가 시점까지 알려진 정답으로만 학습하며 평가 중 7일마다 재학습합니다.
-5. 선택 구간에서 기준 모델보다 MAPE가 1% 이상 낮고 MAE가 나쁘지 않아야 XGBoost를 선택합니다.
+5. 선택 구간에서 기준 모델보다 MAPE가 1% 이상 낮고 MAE가 나쁘지 않은 XGBoost 후보 중 MAPE가 가장 낮은 것을 선택합니다.
 6. 최종 평가에서도 같은 조건을 통과해야 VALIDATED입니다. 탈락 시 선택 구간에서 정한 기준 모델로 돌아갑니다.
 7. 공개용 모델은 기준일까지 확보한 정답으로 다시 학습해 7개 가격을 저장합니다.
 
@@ -64,7 +68,8 @@ VALIDATED 결과에만 다음 규칙을 적용합니다. 가격 기준 단위는
 
 추천은 예측에 따른 참고 정보이며 실제 절약을 보장하지 않습니다.
 factors는 현재 가격과 최근 관측 평균 등 확인 가능한 통계입니다.
-모델의 인과적 기여도·SHAP·날씨 영향을 만들어 표시하지 않습니다.
+외부 원천은 도매가격·주산지 기상·예측 기간의 공휴일 관측값과 선택된 모델이 그 자료를 사용했는지(usedByModel)만 표시합니다.
+모델의 인과적 기여도·SHAP·날씨 영향 방향을 만들어 표시하지 않습니다.
 
 ## API
 
@@ -105,7 +110,7 @@ uv run --extra prices python -m app.price_batch --item-id 1
 
 item-id는 실제 대파 마스터 ID로 지정합니다. 배치는 DATABASE_URL만 요구하며 JWT/S3 키는 사용하지 않습니다.
 운영은 이 명령을 서울 기준 하루 1회 OS 스케줄러에서 실행합니다. 현재 기기에 예약 작업을 자동 등록하지 않습니다.
-가격 수집기는 아직 포함하지 않으므로 실행 전에 전국 소매 가격 이력이 필요합니다.
+이 명령은 이미 적재된 가격만 사용합니다. 수집부터 예측까지 한 번에 실행하려면 아래 통합 파이프라인을 사용합니다.
 
 종료 코드: 0 성공, 1 실패, 2 자료 부족, 3 동일 품목 실행 중.
 품목별 PostgreSQL advisory lock으로 중복 실행을 막습니다.
@@ -125,3 +130,104 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 실제 PostgreSQL 테스트는 로컬 주소만 허용하고 생성한 테스트 데이터만 정리합니다.
 전체 migration의 빈 스키마 재현성·동시 실행·실패 복구까지 확인합니다.
+
+## 외부 원천 통합
+
+`python -m app.price_pipeline`은 수집 → 적재 → 정형 테이블 정제 → 품목별 7일 예측을 한 번에 실행합니다.
+
+| 기관 | API | dataset | 적재 위치 | 예측 사용 |
+| --- | --- | --- | --- | --- |
+| KAMIS | 기간별 품목 가격 `periodProductList` 소매(01) | RETAIL_DAILY | `price_daily`(NATIONAL) + 원본 버전 | 예측 대상 |
+| KAMIS | 같은 API 도매(02) | WHOLESALE_DAILY | `external_observation` | 전일 도매가·소매/도매 비율·7/28일 변화율 |
+| 기상청 | 지상(종관, ASOS) 일자료 `AsosDalyInfoService` | ASOS_DAILY | `external_observation` | 검증된 주산지 관측소의 7일 기온·최고/최저·습도·일조, 7/28일 강수 |
+| 한국천문연구원 | 특일 정보 `SpcdeInfoService/getRestDeInfo` | HOLIDAY | `external_observation` | 목표일 공휴일 여부, 설날·추석까지/이후 일수(최대 45) |
+| KOSIS | 농작물생산조사 통계표 `statisticsParameterData` | CROP_PRODUCTION | `external_observation` | 사용 안 함(연 1회 공표). `item_production`용 |
+| 한국은행 | ECOS 통계검색 `StatisticSearch` 731Y001 | EXCHANGE_RATE_DAILY | `external_observation` | 사용 안 함. `exchange_rate_daily` 적재 확인용 |
+| 기상청 | 단기예보 `VilageFcstInfoService_2.0/getVilageFcst` | VILAGE_FCST_DAILY | `external_observation` | 사용 안 함(과거 발표본이 없어 백테스트 불가). `weather_daily` FORECAST용 |
+
+- 품목은 `price_source='KAMIS'`, `food_type='RAW'`이고 `price_code`가 `품목-품종-등급`(예: `246-00-04`)이어야 합니다. 부류코드는 품목코드 첫 자리로 정합니다.
+- KAMIS 응답은 `countyname='평균'` 행만 전국 값으로 적재합니다. 도매가는 `price_daily`에 섞지 않습니다.
+- 기상은 `item_weather_station.mapping_status='VERIFIED'`인 관측소만 사용합니다. `share`가 없으면 같은 비중, `months`·유효기간 밖의 관측소는 제외합니다.
+- 수집 실행마다 `external_collection_run`에 상태(SUCCESS/NO_DATA/PARTIAL/AUTH_ERROR/NETWORK_ERROR/FAILED/SKIPPED)와 요청·수신·삽입 건수를 남깁니다.
+- 같은 원천 키·같은 내용은 다시 저장하지 않습니다. 원천이 값을 수정하면 새 버전으로 보존하고 예측은 최신 수집본을 사용합니다.
+- 증분 수집은 저장된 최신 관측일 14일 전부터 다시 받습니다. 처음이면 1,830일(모델 최대 5년)을 백필합니다. 공휴일은 임시공휴일 반영을 위해 올해·내년을 매번 다시 받습니다.
+- 인증키가 없으면 해당 원천은 SKIPPED로 기록하고 나머지 수집과 예측은 계속합니다. 인증키는 이력·출력에 남기지 않습니다.
+
+### 시점 규칙 (미래 정보 누수 방지)
+
+예측 시작일 d의 입력은 d − 공개지연일 이하에 관측된 값만 사용합니다. 백테스트·최종 예측 모두 같은 규칙입니다.
+
+| 원천 | 공개지연 | 근거 |
+| --- | --- | --- |
+| KAMIS 도매가 | 1일 | 배치 시각에 당일 도매가가 공표되지 않았을 수 있어 보수적으로 둠 |
+| ASOS 일자료 | 1일 | 기상청은 전일까지의 일자료를 제공 |
+| 공휴일 | 목표일 값 사용 | 법정공휴일은 미리 확정. 임시공휴일은 과거 백테스트에서 실제보다 일찍 알려진 것으로 취급됨 |
+
+- 외부 값이 7일 넘게 비면 결측(NaN)으로 두고 XGBoost 결측 분기에 맡깁니다. 0이나 평균으로 채우지 않습니다. 단, ASOS의 빈 강수량은 무강수(0mm)로 해석합니다.
+- 공휴일 자료를 수집하지 않은 연도는 '공휴일 없음'으로 보지 않고 결측으로 둡니다.
+- 원천 수정 이력이 있으면 백테스트도 최신 수정본을 사용합니다. 수정 전 값으로 재현하는 시점 복원은 하지 않습니다.
+- 공개지연 값은 기관 공지 기준의 가정입니다. 원천에서 공표 시각을 받지 못해 `publication_status`는 UNKNOWN으로 저장됩니다.
+
+`metrics`에는 `candidates`, `featureSets`, `externalGroups`, `externalCoverage`(최종 평가 시점에서 그룹별 값이 채워진 비율)가 함께 저장됩니다.
+합성 자료 테스트(도매가가 소매가를 5일 앞서는 자료)에서 XGBOOST_EXT가 선택·검증되는 것을 확인했습니다. 실제 시장에서의 효과는 실데이터 백테스트로만 판단합니다.
+
+### 실행
+
+`.env`에 `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`, `DATA_GO_KR_SERVICE_KEY`, `KOSIS_API_KEY`, `ECOS_API_KEY`를 추가합니다. 공공데이터포털 키는 인코딩·디코딩 키 모두 사용할 수 있습니다.
+공공데이터포털에서 기상청 ASOS 일자료·단기예보와 한국천문연구원 특일 정보 활용신청이 각각 필요합니다.
+
+```bash
+uv sync --extra prices
+docker compose run --rm flyway
+uv run --extra prices python -m app.price_pipeline --start 2021-11-01 --collect-only   # 최초 백필
+uv run --extra prices python -m app.price_pipeline                                     # 매일: 증분 수집 + 예측
+uv run --extra prices python -m app.price_pipeline --item-id 1 --predict-only
+```
+
+`--item-id`는 반복 지정할 수 있고 생략하면 모든 KAMIS 원물 품목이 대상입니다.
+종료 코드: 0 성공, 1 예측 실패, 2 자료 부족 또는 일부 원천 수집 실패, 3 동일 품목 실행 중. 결과는 JSON 한 줄로 출력합니다.
+
+주산지 관측소는 근거를 확인한 뒤 직접 등록합니다. 검증 전에는 `CANDIDATE`로 두면 예측에 쓰이지 않습니다.
+
+```sql
+INSERT INTO item_weather_station(item_id, station_code, station_name, producing_region,
+    mapping_status, months, share, rationale)
+VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', 'VERIFIED', NULL, NULL, '<근거 자료>');
+```
+
+### 정형 테이블 정제
+
+수집 직후(`--predict-only` 제외) 원천을 V2 정형 테이블로 정제합니다. 같은 키는 갱신하므로 다시 실행해도 결과가 같습니다.
+원본은 계속 `external_observation`에 보존하고, 예측 모델은 여전히 원본(관측소 단위)을 사용합니다.
+
+| 테이블 | 정제 규칙 |
+| --- | --- |
+| `weather_daily` (ACTUAL) | 전국 ASOS 관측소(`data_go_kr.NATIONAL_STATIONS`, 97곳) 단순 평균. 폭염(최고 33℃↑)·호우(80mm↑)·한파(최저 −12℃↓) 관측소 비율(%), 자료가 있는 관측소 수 |
+| `weather_daily` (FORECAST) | 단기예보 17개 시·도 대표 격자의 최신 발표본 평균. 오늘 이후 날짜를 덮어쓰고 지난 날짜는 마지막 예보로 남김. 일조시간은 예보 항목이 없어 NULL |
+| `calendar_day` | 공휴일을 수집한 연도의 모든 날짜. 요일(1=월), 공휴일명(대체·임시 포함), 음력(천문연 자료 기반 `korean-lunar-calendar`), 휴장일 |
+| `calendar_event` | 공휴일명이 설날·추석인 연속 기간. 영향 기간은 시작 D−14 ~ 종료 D+3 |
+| `item_production` | KOSIS 농작물생산조사 연간 전국 생산량(PRODUCTION·YEAR·톤·확정치) |
+| `exchange_rate_daily` | ECOS 일별 원/미국달러 매매기준율(영업일만). `V20261105_1500` migration으로 추가 |
+| `price_change_history` | `price_daily`(NATIONAL)의 기준일 대비 1~7일 뒤 변동률(%) |
+
+- 전국 관측소 97곳은 2026-11-03 자료로 지점번호 1~339를 전수 조회해 응답이 있는 지점만 남긴 목록입니다. 신설 지점은 설치 이전 기간이 무자료라 그 날짜 집계에서 빠집니다(`station_count`로 확인).
+- ASOS는 지점마다 기간 전체를 한 번에 요청하고 999행 단위로 페이지를 넘깁니다. 실측: 5년 백필 194회 요청·177,073행·약 6분, 매일 증분 97회·약 40초(4개 병렬).
+- 단기예보는 매 실행마다 최신 발표본(발표 15분 후부터) 17회 요청합니다. 24시간 값이 모두 있는 날만 평균기온·강수합·습도를 만들고, 강수량 범주는 범위 중간값, '1mm 미만'은 0.5mm, 'Nmm 이상'은 N mm로 환산합니다.
+- 음력은 2021~2027년 2,556일을 천문연 음양력 API(`LrsrCldInfoService`)와 대조해 모두 일치함을 확인했습니다(2023 윤2월, 2025 윤6월 포함).
+- `is_market_closed`는 KAMIS 가격 미조사일(시세 결측이 정상인 날)입니다: 토·일과 모든 공휴일(대체공휴일 포함).
+  2025-12~2026-10 KAMIS 대파 도매·소매 실데이터의 결측일과 정확히 일치함을 확인했습니다. 가락시장 부류별 실제 휴장 일정(예: 채소 전날 저녁 경매 후 휴장)과는 다를 수 있습니다.
+- 변동률의 휴장일 기준가는 직전 거래일 가격(최대 7일)을 쓰고, 목표일까지 새 거래가 없으면 0%를 만들지 않고 제외합니다. 윤년 2월 29일은 02-28로 합치며 같은 해 02-28 행이 우선합니다.
+- 공휴일을 수집하지 않은 연도는 `calendar_day`에 넣지 않습니다(공휴일 없음으로 단정하지 않음).
+- 매일 실행은 이번에 수집한 기간만 다시 계산합니다. 달력은 수집된 전 연도를 갱신합니다.
+- KOSIS 생산량은 `item.name`이 `kosis.PRODUCTION_SERIES`의 키(대파·양파·마늘·배추·무·감자·사과 등 21개)와 같은 품목만 연결합니다. 통계표·항목 코드는 KOSIS 메타 API로 확인한 값입니다.
+  다른 이름을 쓰는 품목은 이 사전에 추가합니다. 수정 공표 반영을 위해 매 실행 최근 6년(품목당 1회 요청)을 다시 받고, `LST_CHN_DE`(최종 수정일)를 공표 시점으로 저장합니다.
+- ECOS는 개발 환경에서 KAMIS와 같이 연결이 끊겨 실제 응답을 확인하지 못했습니다. 공개 규격(731Y001, 항목 0000001)대로 구현했으며 서버에서 아래로 확인합니다.
+  `uv run --extra prices python -c "from app.collectors import ecos; from app.collectors.http import fetch_json; import os, datetime as d; print(ecos.collect(fetch_json, key=os.environ['ECOS_API_KEY'], start=d.date(2026,10,1), end=d.date.today()).records[:3])"`
+- `item_production`의 가락시장 반입량(ARRIVAL·DAY)·KREI 전망치와 `event_item_weight`는 아직 채우지 않습니다.
+
+```bash
+uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_warehouse.py tests/test_price_prediction.py -p no:cacheprovider
+FOODVALUE_TEST_POSTGRES=1 uv run --group dev --extra prices pytest tests/test_pipeline_postgres.py -p no:cacheprovider
+```
+
+통합 테스트는 가짜 Open API 응답으로 수집·중복 방지·수정 버전·인증키 누락·예측 공개까지 확인하며 실제 API를 호출하지 않습니다.

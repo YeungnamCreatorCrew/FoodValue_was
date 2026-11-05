@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.models.fridge import Item
 from app.models.price import PriceDaily, PriceForecast, PriceInsight, PriceModelRun
+from app.repositories import covariate_repository
+from app.services.exogenous import WEATHER_LAG_DAYS, WHOLESALE_LAG_DAYS
 from app.services.fridge_service import today
 from app.services.price_prediction import InsufficientDataError, MODEL_VERSION, predict
 
@@ -28,6 +30,34 @@ def guidance(prices, current, quality):
     return 'STABLE',None,0
 
 
+def external_factors(covariates,base_date,result):
+    """모델이 사용할 수 있었던 외부 원천의 최근 관측값. 영향 방향·기여도는 만들지 않는다."""
+    used=result.model=='XGBOOST_EXT'
+    note='외부 원천 특징을 포함한 모델이 선택되었습니다.' if used else '외부 원천 특징을 포함한 모델은 백테스트에서 선택되지 않았습니다.'
+    factors=[]
+    wholesale_as_of=base_date-timedelta(days=WHOLESALE_LAG_DAYS)
+    wholesale=[(d,p) for d,p in sorted(covariates.wholesale.items()) if wholesale_as_of-timedelta(days=7)<=d<=wholesale_as_of]
+    if wholesale:
+        day,price=wholesale[-1]
+        factors.append({'name':'도매가격','kind':'OBSERVATION','source':'KAMIS','latestWholesalePrice':round(price),
+            'dataDate':day.isoformat(),'usedByModel':used,'description':'KAMIS 전국 평균 도매가격입니다. '+note})
+    weather_as_of=base_date-timedelta(days=WEATHER_LAG_DAYS)
+    week=[covariates.weather[d] for d in (weather_as_of-timedelta(days=k) for k in range(7)) if d in covariates.weather]
+    if week:
+        temps=[row['avgTa'] for row in week if row.get('avgTa') is not None]
+        rains=[row['sumRn'] for row in week if row.get('sumRn') is not None]
+        factors.append({'name':'주산지 기상','kind':'OBSERVATION','source':'KMA','days':len(week),
+            'dataDate':weather_as_of.isoformat(),'meanTemperature7':round(mean(temps),1) if temps else None,
+            'precipitationSum7':round(sum(rains),1) if rains else None,'usedByModel':used,
+            'description':'검증된 주산지 관측소의 최근 7일 관측값입니다. '+note})
+    upcoming=[(d,n) for d,n in sorted(covariates.holidays.items()) if base_date<d<=base_date+timedelta(days=7)]
+    if upcoming:
+        factors.append({'name':'공휴일','kind':'CALENDAR','source':'KASI','usedByModel':used,
+            'holidays':[{'date':d.isoformat(),'name':n} for d,n in upcoming],
+            'description':'예측 기간에 포함된 공휴일입니다. '+note})
+    return factors
+
+
 def _run(engine,item_id,base_date):
     if base_date>today():
         raise ValueError('미래 기준일로 실행할 수 없습니다')
@@ -43,12 +73,14 @@ def _run(engine,item_id,base_date):
         rows=db.execute(select(PriceDaily.price_date,PriceDaily.price).where(PriceDaily.item_id==item_id,
             PriceDaily.region=='NATIONAL',PriceDaily.price_date<=base_date,
             PriceDaily.price_date>=base_date-timedelta(days=1854)).order_by(PriceDaily.price_date)).all()
+        # 외부 원천은 기준일까지(공휴일만 목표일까지) 읽는다. 공개지연은 특징 생성 단계에서 다시 적용한다.
+        covariates=covariate_repository.load(db,item_id,base_date-timedelta(days=1854),base_date,base_date+timedelta(days=7))
         run=PriceModelRun(item_id=item_id,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
         db.add(run)
         db.commit()
         run_id=run.id
     try:
-        result=predict([(d,p) for d,p in rows],base_date)
+        result=predict([(d,p) for d,p in rows],base_date,covariates)
         if len(result.prices)!=7 or len(result.lower)!=7 or len(result.upper)!=7:
             raise ValueError('예측 결과는 7개여야 합니다')
         current=rows[-1][1]
@@ -58,6 +90,7 @@ def _run(engine,item_id,base_date):
         factors=[{'name':'최근 가격','kind':'OBSERVATION','latestPrice':current,
                   'dataDate':rows[-1][0].isoformat(),'mean7Observed':round(mean(week),2) if week else None,
                   'description':'관측된 최근 가격 통계입니다. 모델의 인과적 기여도가 아닙니다.'}]
+        factors+=external_factors(covariates,base_date,result)
         with Session(engine,expire_on_commit=False) as db:
             db.execute(delete(PriceForecast).where(PriceForecast.item_id==item_id,PriceForecast.base_date==base_date))
             db.execute(delete(PriceInsight).where(PriceInsight.item_id==item_id,PriceInsight.base_date==base_date))

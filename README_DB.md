@@ -4,7 +4,7 @@
 테이블은 `db/migration/` 의 SQL 파일로만 만들고 바꿉니다. `docker compose up` 하면 Flyway 컨테이너가 이 파일을 자동 실행합니다.
 
 냉장고 OCR 선택 환경 변수는 `CLOVA_OCR_RECEIPT_URL`, `CLOVA_OCR_SECRET`입니다.
-최신 스키마는 앱 테이블 25개이며 날짜 기반 migration도 포함합니다.
+최신 스키마는 앱 테이블 26개이며 날짜 기반 migration도 포함합니다.
 시세 조회·예측 배치는 [시세 가이드](README_PRICES.md)를 참고합니다.
 냉장고 동작과 설정은 [냉장고 API 가이드](README_FRIDGE.md)를 참고합니다.
 
@@ -60,9 +60,16 @@ docker compose up -d          # PostgreSQL 실행
 
 로컬 MinIO는 `docker compose up -d`로 함께 뜨고 버킷이 자동 생성됩니다(읽기 공개). 웹 콘솔은 http://localhost:9001 입니다.
 
+가격 예측 Open API 변수. 수집 파이프라인만 사용하며 API 서버는 읽지 않습니다. 자세한 내용은 [시세 가이드](README_PRICES.md#외부-원천-통합)를 참고합니다.
+
+- `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`
+- `DATA_GO_KR_SERVICE_KEY`
+- `KOSIS_API_KEY`
+- `ECOS_API_KEY`
+
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 
-`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 25개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
+`postgres`가 뜬 뒤 `flyway` 컨테이너가 테이블 26개(`flyway_schema_history` 제외)를 만들고 종료됩니다. 잘 됐는지는 로그로 확인합니다.
 
 ```bash
 docker compose logs flyway    # 현재 SQL 파일 전체 적용 확인 (V1~V3 + 날짜 기반 V 파일)
@@ -80,7 +87,7 @@ DBeaver/DataGrip 접속 정보: host `localhost`, port `.env`의 DB_PORT, DB/계
    - V4부터 파일 이름은 `V{YYYYMMDD}_{HHMM}__설명.sql` 입니다. 예: `V20261006_1430__add_fridge_memo.sql`. 번호 충돌을 막기 위해서입니다.
    - 스키마를 바꾸는 PR은 dev를 먼저 pull 받은 뒤 만들고, 합친 뒤에는 `docker compose run --rm flyway` 로 적용합니다.
 3. API 서버(SQLAlchemy)는 `Base.metadata.create_all()` 을 호출하지 않습니다. 모델 클래스는 이미 있는 테이블에 맞춰 작성만 하고, 컬럼을 바꿨으면 모델도 같이 고칩니다.
-4. 배치는 테이블을 만들거나 바꾸지 않습니다. 데이터 조회·적재 및 시세 예측 결과의 원자적 교체만 수행합니다.
+4. 배치·수집 파이프라인은 테이블을 만들거나 바꾸지 않습니다. 데이터 조회·적재 및 시세 예측 결과의 원자적 교체만 수행합니다.
 5. DB 접속 주소는 코드에 쓰지 않고 `.env`의 `DATABASE_URL`에서 읽습니다.
 
 ### 스키마 바꾸는 순서
