@@ -85,6 +85,19 @@ def external_factors(covariates,base_date,result):
     return factors
 
 
+HISTORY_DAYS=1854
+
+
+def load_inputs(db,item_id,base_date):
+    """기준일까지의 전국 소매가와 외부 원천. 백테스트도 같은 함수를 써서 운영과 같은 입력을 만든다."""
+    rows=db.execute(select(PriceDaily.price_date,PriceDaily.price).where(PriceDaily.item_id==item_id,
+        PriceDaily.region=='NATIONAL',PriceDaily.price_date<=base_date,
+        PriceDaily.price_date>=base_date-timedelta(days=HISTORY_DAYS)).order_by(PriceDaily.price_date)).all()
+    # 외부 원천은 기준일까지(공휴일·명절 기간만 목표일까지) 읽는다. 공개지연은 특징 생성 단계에서 다시 적용한다.
+    covariates=covariate_repository.load(db,item_id,base_date-timedelta(days=HISTORY_DAYS),base_date,base_date+timedelta(days=7))
+    return [(d,p) for d,p in rows],covariates
+
+
 def _run(engine,item_id,base_date):
     if base_date>today():
         raise ValueError('미래 기준일로 실행할 수 없습니다')
@@ -97,11 +110,7 @@ def _run(engine,item_id,base_date):
             PriceModelRun.status=='SUCCESS').order_by(PriceModelRun.base_date.desc()).limit(1))
         if newest and base_date<newest:
             raise ValueError('최신 공개 기준일보다 과거인 배치는 실행할 수 없습니다')
-        rows=db.execute(select(PriceDaily.price_date,PriceDaily.price).where(PriceDaily.item_id==item_id,
-            PriceDaily.region=='NATIONAL',PriceDaily.price_date<=base_date,
-            PriceDaily.price_date>=base_date-timedelta(days=1854)).order_by(PriceDaily.price_date)).all()
-        # 외부 원천은 기준일까지(공휴일만 목표일까지) 읽는다. 공개지연은 특징 생성 단계에서 다시 적용한다.
-        covariates=covariate_repository.load(db,item_id,base_date-timedelta(days=1854),base_date,base_date+timedelta(days=7))
+        rows,covariates=load_inputs(db,item_id,base_date)
         run=PriceModelRun(item_id=item_id,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
         db.add(run)
         db.commit()

@@ -199,6 +199,19 @@ uv run --extra prices python -m app.price_pipeline --item-id 1 --predict-only
 `--item-id`는 반복 지정할 수 있고 생략하면 모든 KAMIS 원물 품목이 대상입니다.
 종료 코드: 0 성공, 1 예측 실패, 2 자료 부족 또는 일부 원천 수집 실패, 3 동일 품목 실행 중. 결과는 JSON 한 줄로 출력합니다.
 
+### 과거 기준일 재현 백테스트
+
+과거 기준일마다 그날까지의 자료로만 7일 예측을 만들고, 이후 실제 가격과 비교합니다. DB를 읽기만 하며 예측 결과를 저장하지 않습니다.
+운영 배치와 같은 입력 로딩(`price_batch_service.load_inputs`)·모델·공개지연 규칙을 씁니다.
+
+```bash
+uv run --extra prices python -m app.price_backtest --item-id 1 --start 2026-05-01 --end 2026-10-27 --every 7 --workers 4 --csv backtest.csv
+```
+
+출력 JSON의 `summary`에 전체·시점별·선택 모델별 MAPE/MAE, 직전 가격 유지(naive) 대비 개선율, 방향 적중률(실제로 움직인 날만), 예측구간 포함률이 있고,
+`runs`에 기준일별 선택 모델·검증 여부·외부변수 가중치가 있습니다. 기준일당 수십 초가 걸리므로 `--workers`로 병렬 실행합니다.
+원천 수정 이력은 최신 수정본으로 재현합니다.
+
 주산지 관측소는 근거를 확인한 뒤 직접 등록합니다. 검증 전에는 `CANDIDATE`로 두면 예측에 쓰이지 않습니다.
 
 ```sql

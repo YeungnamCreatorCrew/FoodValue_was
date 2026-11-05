@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import price_pipeline
+from app import price_backtest, price_pipeline
 from app.collectors import data_go_kr, ecos, kamis, kosis
 from app.repositories import covariate_repository
 from app.services import collection_service, warehouse_service
@@ -183,6 +183,22 @@ def test_full_pipeline_publishes_exogenous_forecast(pipeline):
     names = [factor['name'] for factor in client.get(f'/api/v1/prices/items/{item_id}/factors').json()['factors']]
     assert names[:3] == ['최근 가격', '도매가격', '주산지 기상']
     assert len(detail['forecast']['points']) == 7
+
+
+def test_backtest_reproduces_past_forecasts_read_only(pipeline):
+    _, engine, item_id, apis = pipeline
+    collect(engine, item_id, apis, start=apis.start)
+    with engine.connect() as conn:
+        runs_before = conn.scalar(text('SELECT count(*) FROM price_model_run WHERE item_id=:id'), {'id': item_id})
+    dates = [today() - timedelta(days=21), today() - timedelta(days=14)]
+    output, records = price_backtest.run(engine, item_id, dates, workers=2)
+    assert [run['status'] for run in output['runs']] == ['SUCCESS', 'SUCCESS']
+    assert output['summary']['overall']['points'] == len(records) == 14  # 가짜 자료는 매일 가격이 있음
+    # 기준일 이후 가격은 입력에 쓰지 않는다: 각 행의 현재가는 그 기준일의 가격이다.
+    first = date.fromisoformat(records[0]['baseDate'])
+    assert records[0]['currentPrice'] == apis.retail[(first - apis.start).days]
+    with engine.connect() as conn:
+        assert conn.scalar(text('SELECT count(*) FROM price_model_run WHERE item_id=:id'), {'id': item_id}) == runs_before
 
 
 GLOBAL_TABLES = ('weather_daily', 'calendar_day', 'calendar_event', 'exchange_rate_daily')
