@@ -27,30 +27,36 @@ def prices(api,monkeypatch):
         return None
     application.dependency_overrides[get_optional_user]=optional
     statements=[
-        '''CREATE TABLE price_daily(id INTEGER PRIMARY KEY,item_id INTEGER,region TEXT,price_date DATE,
-        price INTEGER,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
-        '''CREATE TABLE price_model_run(id INTEGER PRIMARY KEY,item_id INTEGER,base_date DATE,data_date DATE,
+        '''CREATE TABLE price_series(id INTEGER PRIMARY KEY,item_id INTEGER,source TEXT DEFAULT 'KAMIS',market TEXT,
+        item_code TEXT,kind_code TEXT,rank_code TEXT,unit_quantity NUMERIC,unit TEXT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE price_daily(id INTEGER PRIMARY KEY,series_id INTEGER,price_date DATE,price INTEGER,
+        observation_id INTEGER,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE price_model_run(id INTEGER PRIMARY KEY,series_id INTEGER,base_date DATE,data_date DATE,
         status TEXT,model_name TEXT,model_version TEXT,quality TEXT,metrics JSON,error_code TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,finished_at TIMESTAMP)''',
-        '''CREATE TABLE price_forecast(id INTEGER PRIMARY KEY,item_id INTEGER,base_date DATE,target_date DATE,
+        '''CREATE TABLE price_forecast(id INTEGER PRIMARY KEY,target_date DATE,
         predicted_price INTEGER,lower_price INTEGER,upper_price INTEGER,model_run_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
-        '''CREATE TABLE price_insight(id INTEGER PRIMARY KEY,item_id INTEGER,base_date DATE,recommendation TEXT,
+        '''CREATE TABLE price_insight(id INTEGER PRIMARY KEY,recommendation TEXT,
         buy_after_days INTEGER,expected_saving INTEGER,mape NUMERIC,factors JSON,model_run_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
-        "INSERT INTO item(id,name,category,default_unit,default_storage,food_type,price_source,price_code,price_unit_label) VALUES(2,'대파','VEGETABLE','단','FRIDGE','RAW','KAMIS','211-00-01','1kg')",
+        "INSERT INTO item(id,name,category,default_unit,default_storage,food_type,price_source,price_unit_label) VALUES(2,'대파','VEGETABLE','단','FRIDGE','RAW','KAMIS','1kg')",
+        # 계열 1: 대파 소매(가격·예측 있음), 계열 2: 두부 소매(자료 없음), 계열 3: 대파 도매(자료 없음)
+        "INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(1,2,'RETAIL','211','00','01',1,'kg')",
+        "INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(2,1,'RETAIL','999','00','01',300,'g')",
+        "INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(3,2,'WHOLESALE','211','00','01',1,'kg')",
         "INSERT INTO item_alias(item_id,alias) VALUES(2,'흙대파')",
-        "INSERT INTO price_model_run(id,item_id,base_date,data_date,status,model_name,model_version,quality,metrics,finished_at) VALUES(1,2,'2026-10-08','2026-10-08','SUCCESS','XGBOOST','test','VALIDATED','{}',CURRENT_TIMESTAMP)",
-        "INSERT INTO price_insight(item_id,base_date,recommendation,buy_after_days,expected_saving,mape,factors,model_run_id) VALUES(2,'2026-10-08','BUY_LATER',7,70,3,'[]',1)",
+        "INSERT INTO price_model_run(id,series_id,base_date,data_date,status,model_name,model_version,quality,metrics,finished_at) VALUES(1,1,'2026-10-08','2026-10-08','SUCCESS','XGBOOST','test','VALIDATED','{}',CURRENT_TIMESTAMP)",
+        "INSERT INTO price_insight(recommendation,buy_after_days,expected_saving,mape,factors,model_run_id) VALUES('BUY_LATER',7,70,3,'[]',1)",
     ]
     with engine.begin() as conn:
         for statement in statements:
             conn.execute(text(statement))
         for offset,price in ((0,1000),(-7,1100),(-10,1150)):
-            conn.execute(text("INSERT INTO price_daily(item_id,region,price_date,price) VALUES(2,'NATIONAL',:day,:p)"),{'day':DAY+timedelta(days=offset),'p':price})
+            conn.execute(text("INSERT INTO price_daily(series_id,price_date,price) VALUES(1,:day,:p)"),{'day':DAY+timedelta(days=offset),'p':price})
         for h in range(1,8):
-            conn.execute(text("INSERT INTO price_forecast(item_id,base_date,target_date,predicted_price,lower_price,upper_price,model_run_id) VALUES(2,:base,:target,:p,:low,:high,1)"),
-                         {'base':DAY,'target':DAY+timedelta(days=h),'p':1000-h*10,'low':900-h*10,'high':1100-h*10})
+            conn.execute(text("INSERT INTO price_forecast(target_date,predicted_price,lower_price,upper_price,model_run_id) VALUES(:target,:p,:low,:high,1)"),
+                         {'target':DAY+timedelta(days=h),'p':1000-h*10,'low':900-h*10,'high':1100-h*10})
     yield client,engine,actor
 
 
@@ -61,6 +67,7 @@ def test_public_list_filter_search_sort(prices):
     row=next(x for x in result['items'] if x['id']==2)
     assert row['currentPrice']==1000 and row['weeklyChangePercent']==-9.09
     assert row['forecastPrice']==930 and row['status']=='READY'
+    assert row['market']=='RETAIL' and row['seriesId']==1 and row['unitLabel']=='1kg'
     assert client.get(ROOT+'/items?keyword=흙대파').json()['total']==1
     assert client.get(ROOT+'/items',params={'keyword':'%'}).json()['total']==0
     assert client.get(ROOT+'/items?category=VEGETABLE&size=1').json()['total']==1
@@ -96,7 +103,7 @@ def test_empty_stale_partial_results(prices):
     assert client.get(ROOT+'/items/1').json()['item']['status']=='NO_DATA'
     assert client.get(ROOT+'/items/1/forecast').json()['points']==[]
     with engine.begin() as conn:
-        conn.execute(text("INSERT INTO price_model_run(id,item_id,base_date,status) VALUES(2,2,'2026-10-08','FAILED')"))
+        conn.execute(text("INSERT INTO price_model_run(id,series_id,base_date,status) VALUES(2,1,'2026-10-08','FAILED')"))
     result=client.get(ROOT+'/items/2/forecast').json()
     assert result['modelRunId']==1 and result['latestAttemptStatus']=='FAILED'
     with engine.begin() as conn:
@@ -120,6 +127,7 @@ def test_query_count_does_not_grow_per_item(prices):
     with engine.begin() as conn:
         for i in range(3,13):
             conn.execute(text("INSERT INTO item(id,name,category,default_unit,default_storage,food_type,price_source) VALUES(:id,:name,'VEGETABLE','g','FRIDGE','RAW','KAMIS')"),{'id':i,'name':f'품목{i}'})
+            conn.execute(text("INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(:id,:id,'RETAIL',:code,'00','01',1,'kg')"),{'id':i+10,'code':f'{i+100}'})
     assert count()==first
 
 
@@ -133,7 +141,7 @@ def test_snapshot_reads_one_consistent_statement(prices):
     event.listen(engine,'before_cursor_execute',listener)
     try:
         with Session(engine) as db:
-            run,points,guide=snapshot(db,2,DAY)
+            run,points,guide=snapshot(db,1,DAY)
             assert len(points)==7 and guide.model_run_id==run.id
             assert all(point.model_run_id==run.id for point in points)
         assert len(calls)==1
@@ -160,3 +168,13 @@ def test_stale_and_baseline_states(prices,monkeypatch):
     with engine.begin() as conn:
         conn.execute(text("UPDATE price_model_run SET quality='BASELINE' WHERE id=1"))
     assert client.get(ROOT+'/items/2/forecast').json()['status']=='BASELINE'
+
+
+def test_wholesale_market_is_separate_series(prices):
+    client,_,_=prices
+    rows=client.get(ROOT+'/items?market=WHOLESALE').json()['items']
+    assert [(r['id'],r['market'],r['seriesId'],r['status']) for r in rows]==[(2,'WHOLESALE',3,'NO_DATA')]
+    forecast=client.get(ROOT+'/items/2/forecast?market=WHOLESALE').json()
+    assert forecast['seriesId']==3 and forecast['points']==[]
+    assert client.get(ROOT+'/items/1?market=WHOLESALE').status_code==404
+    assert client.get(ROOT+'/items/2?market=FARM').status_code==400

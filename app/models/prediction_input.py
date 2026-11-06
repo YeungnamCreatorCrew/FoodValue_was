@@ -55,8 +55,7 @@ class CalendarEvent(Base):
 class PriceChangeHistory(Base):
     __tablename__ = 'price_change_history'
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    item_id: Mapped[int] = mapped_column(ForeignKey('item.id'))
-    region: Mapped[str] = mapped_column(String(20))
+    series_id: Mapped[int] = mapped_column(ForeignKey('price_series.id'))
     price_year: Mapped[int] = mapped_column(SmallInteger)
     month_day: Mapped[str] = mapped_column(String(5))
     horizon_days: Mapped[int] = mapped_column(SmallInteger)

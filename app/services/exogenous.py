@@ -1,7 +1,7 @@
 """외부 원천을 예측 시점 기준으로 특징화한다. DB에 의존하지 않는다.
 
 그룹(특징 묶음)과 원천:
-- WHOLESALE: KAMIS 전국 도매가(external_observation)
+- COUNTERPART: 상대 시장 가격(소매 예측이면 KAMIS 전국 도매가, 도매 예측이면 소매가). price_daily
 - WEATHER: 검증된 주산지 ASOS 관측소(external_observation)
 - CALENDAR: 천문연 공휴일(external_observation)
 - NATIONAL_WEATHER: weather_daily(ACTUAL) 전국 평균·폭염/호우/한파 관측소 비율
@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from statistics import mean, stdev
 
-WHOLESALE_LAG_DAYS = 1
+COUNTERPART_LAG_DAYS = 1
 WEATHER_LAG_DAYS = 1
 FX_LAG_DAYS = 1
 MAX_STALE_DAYS = 7
@@ -38,7 +38,7 @@ EVENT_SCALE = 0.10  # 7일 변동률 10%p 차이를 tanh(1)≈0.76 압력으로 
 PRODUCTION_AVAILABLE = (6, 30)  # Y년 생산량은 Y+1년 6월 30일부터
 NAN = float('nan')
 
-WHOLESALE_FEATURES = ['wholesaleLast', 'retailWholesaleRatio', 'wholesaleChange7', 'wholesaleChange28', 'wholesaleAge']
+COUNTERPART_FEATURES = ['counterLast', 'targetCounterRatio', 'counterChange7', 'counterChange28', 'counterAge']
 WEATHER_FEATURES = ['tempMean7', 'tempMax7', 'tempMin7', 'rainSum7', 'rainSum28', 'humidityMean7', 'sunshineSum7']
 CALENDAR_FEATURES = ['targetIsHoliday', 'daysToMajorHoliday', 'daysFromMajorHoliday']
 NATIONAL_WEATHER_FEATURES = ['natTempMean7', 'natRainSum28', 'natHeatIndex7', 'natHeatIndex28',
@@ -48,13 +48,13 @@ SEASONAL_FEATURES = ['seasonalChange']
 PRODUCTION_FEATURES = ['productionYoY']
 FX_FEATURES = ['usdKrwChange7', 'usdKrwChange28']
 
-GROUP_FEATURES = {'WHOLESALE': WHOLESALE_FEATURES, 'WEATHER': WEATHER_FEATURES, 'CALENDAR': CALENDAR_FEATURES,
+GROUP_FEATURES = {'COUNTERPART': COUNTERPART_FEATURES, 'WEATHER': WEATHER_FEATURES, 'CALENDAR': CALENDAR_FEATURES,
                   'NATIONAL_WEATHER': NATIONAL_WEATHER_FEATURES, 'EVENT': EVENT_FEATURES,
                   'SEASONAL': SEASONAL_FEATURES, 'PRODUCTION': PRODUCTION_FEATURES, 'FX': FX_FEATURES}
 # 목표일(시점)에 따라 값이 달라지는 그룹. 나머지는 예측 시작일에만 의존한다.
 TARGET_GROUPS = {'CALENDAR', 'EVENT', 'SEASONAL'}
 # 가중치 학습 단위. 서로 강하게 연관된 그룹은 하나의 묶음으로 같은 가중치를 받는다.
-BLOCKS = {'MARKET': ('WHOLESALE',), 'WEATHER': ('WEATHER', 'NATIONAL_WEATHER'), 'CALENDAR': ('CALENDAR', 'EVENT'),
+BLOCKS = {'MARKET': ('COUNTERPART',), 'WEATHER': ('WEATHER', 'NATIONAL_WEATHER'), 'CALENDAR': ('CALENDAR', 'EVENT'),
           'SEASONAL': ('SEASONAL',), 'MACRO': ('PRODUCTION', 'FX')}
 
 
@@ -69,7 +69,7 @@ class EventWindow:
 
 @dataclass
 class Covariates:
-    wholesale: dict[date, float] = field(default_factory=dict)
+    counterpart: dict[date, float] = field(default_factory=dict)
     # 날짜별 주산지 관측소 가중 평균. 키: avgTa, minTa, maxTa, sumRn, avgRhm, sumSsHr
     weather: dict[date, dict[str, float | None]] = field(default_factory=dict)
     holidays: dict[date, str] = field(default_factory=dict)
@@ -83,7 +83,7 @@ class Covariates:
     fx: dict[date, float] = field(default_factory=dict)  # 원/미국달러
 
     def empty(self):
-        return not (self.wholesale or self.weather or self.holiday_years or self.national_weather or self.events
+        return not (self.counterpart or self.weather or self.holiday_years or self.national_weather or self.events
                     or any(self.change_history.values()) or self.production or self.fx)
 
 
@@ -121,7 +121,7 @@ def event_weight(changes7: dict[date, float], windows: list[EventWindow], as_of:
 class ExogenousFeatures:
     def __init__(self, days: list[date], values: list[float | None], covariates: Covariates):
         self.days, self.values, self.cov = days, values, covariates
-        present = {'WHOLESALE': covariates.wholesale, 'WEATHER': covariates.weather,
+        present = {'COUNTERPART': covariates.counterpart, 'WEATHER': covariates.weather,
                    'CALENDAR': covariates.holiday_years, 'NATIONAL_WEATHER': covariates.national_weather,
                    'EVENT': covariates.events and covariates.holiday_years,
                    'SEASONAL': any(covariates.change_history.values()), 'PRODUCTION': covariates.production,
@@ -130,7 +130,7 @@ class ExogenousFeatures:
         self.names = [name for group in self.groups for name in GROUP_FEATURES[group]]
         self.blocks = {block: [g for g in members if g in self.groups] for block, members in BLOCKS.items()
                        if any(g in self.groups for g in members)}
-        self._wholesale = self._forward_fill(covariates.wholesale) if covariates.wholesale else {}
+        self._counterpart = self._forward_fill(covariates.counterpart) if covariates.counterpart else {}
         self._fx = self._forward_fill(covariates.fx) if covariates.fx else {}
         self._majors = sorted(day for day, name in covariates.holidays.items()
                               if any(key in name for key in MAJOR_HOLIDAYS))
@@ -156,14 +156,14 @@ class ExogenousFeatures:
         return hit[0] if hit else None
 
     # ------------------------------------------------------------ 예측 시작일에만 의존하는 그룹
-    def _wholesale_features(self, origin):
-        as_of = self.days[origin] - timedelta(days=WHOLESALE_LAG_DAYS)
-        hit = self._wholesale.get(as_of)
+    def _counterpart_features(self, origin):
+        as_of = self.days[origin] - timedelta(days=COUNTERPART_LAG_DAYS)
+        hit = self._counterpart.get(as_of)
         if not hit:
-            return [NAN] * len(WHOLESALE_FEATURES)
+            return [NAN] * len(COUNTERPART_FEATURES)
         price, observed = hit
-        week = self._filled(self._wholesale, as_of - timedelta(days=7))
-        month = self._filled(self._wholesale, as_of - timedelta(days=28))
+        week = self._filled(self._counterpart, as_of - timedelta(days=7))
+        month = self._filled(self._counterpart, as_of - timedelta(days=28))
         current = self.values[origin]
         return [price, current / price if current and price else NAN,
                 price / week - 1 if week else NAN, price / month - 1 if month else NAN,
@@ -268,7 +268,7 @@ class ExogenousFeatures:
     def _origin_group(self, group, origin):
         key = (group, origin)
         if key not in self._origin_cache:
-            self._origin_cache[key] = {'WHOLESALE': self._wholesale_features, 'WEATHER': self._weather_features,
+            self._origin_cache[key] = {'COUNTERPART': self._counterpart_features, 'WEATHER': self._weather_features,
                                        'NATIONAL_WEATHER': self._national_weather_features,
                                        'PRODUCTION': self._production_features, 'FX': self._fx_features}[group](origin)
         return self._origin_cache[key]

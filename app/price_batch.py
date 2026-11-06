@@ -1,4 +1,4 @@
-"""실행: python -m app.price_batch --item-id 1. OS 스케줄러에서 하루 1회 호출한다."""
+"""실행: python -m app.price_batch --item-id 1 [--market WHOLESALE]. OS 스케줄러에서 하루 1회 호출한다."""
 import argparse
 import json
 import os
@@ -12,8 +12,9 @@ from app.services.price_prediction import ModelDependencyError
 
 
 def main():
-    parser=argparse.ArgumentParser(description='KAMIS 원물 전국 소매가 7일 예측')
+    parser=argparse.ArgumentParser(description='KAMIS 가격 계열(소매·도매) 전국 가격 7일 예측')
     parser.add_argument('--item-id',type=int,required=True)
+    parser.add_argument('--market',choices=('RETAIL','WHOLESALE'),default='RETAIL')
     args=parser.parse_args()
     if not 1<=args.item_id<=ID_MAX:
         parser.error('item-id는 양의 BIGINT 범위여야 합니다')
@@ -23,7 +24,7 @@ def main():
         parser.error('DATABASE_URL 설정이 필요합니다')
     engine=create_engine(url,pool_pre_ping=True,hide_parameters=True)
     try:
-        result=price_batch_service.run(engine,args.item_id)
+        result=price_batch_service.run(engine,price_batch_service.series_id_for(engine,args.item_id,args.market))
         print(json.dumps(result,ensure_ascii=False))
         return 0 if result['status']=='SUCCESS' else 2
     except price_batch_service.BatchBusyError:

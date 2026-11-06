@@ -2,7 +2,8 @@
 
 - 수집 실행마다 external_collection_run에 상태·요청·수신·삽입 건수를 남긴다.
 - 같은 원천 키·같은 내용은 다시 저장하지 않고, 내용이 바뀌면 새 버전으로 보존한다.
-- KAMIS 소매 전국 평균만 price_daily(NATIONAL)에 반영한다. 도매가·기상·공휴일은 price_daily에 섞지 않는다.
+- KAMIS 가격은 품목의 가격 계열(price_series: 소매·도매)마다 수집한다. price_daily는 수집 직후
+  warehouse_service.refresh_price_daily가 원본 최신 버전에서 만든다(정제 단계와 같은 경로).
 - 인증키는 환경 변수에서만 읽고 실행 이력·로그에 기록하지 않는다.
 """
 import hashlib
@@ -12,15 +13,17 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select, update
+from sqlalchemy import exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.collectors import data_go_kr, ecos, kamis, kosis
-from app.collectors.http import CollectorError, fetch_json, number
+from app.collectors.http import CollectorError, fetch_json
 from app.models.external import ExternalCollectionRun, ExternalObservation, ItemWeatherStation
 from app.models.fridge import Item
-from app.models.price import PriceDaily
+from app.models.price import RETAIL, PriceSeries
+from app.repositories import series_repository
+from app.services import warehouse_service
 from app.services.fridge_service import today
 
 BACKFILL_DAYS = 1830  # 예측 모델이 사용하는 최대 5년
@@ -89,16 +92,7 @@ def _store(db, run_id, records):
     return inserted
 
 
-def _store_retail(db, item_id, records):
-    rows = [{'item_id': item_id, 'region': 'NATIONAL', 'price_date': r.observed_on,
-             'price': int(round(number(r.payload.get('price'))))} for r in records]
-    for offset in range(0, len(rows), INSERT_CHUNK):
-        statement = insert(PriceDaily).values(rows[offset:offset + INSERT_CHUNK])
-        db.execute(statement.on_conflict_do_update(constraint='uk_price_daily', set_={'price': statement.excluded.price},
-                                                   where=PriceDaily.price != statement.excluded.price))
-
-
-def run_dataset(engine, source, dataset, start, end, collect, *, retail_item_id=None):
+def run_dataset(engine, source, dataset, start, end, collect):
     """collect()가 Batch를 반환하면 한 트랜잭션으로 적재하고 실행 이력을 마무리한다."""
     if start > end:
         return {'source': source, 'dataset': dataset, 'status': 'SKIPPED', 'errorCode': 'EMPTY_RANGE'}
@@ -116,8 +110,6 @@ def run_dataset(engine, source, dataset, start, end, collect, *, retail_item_id=
         return {**summary, 'status': 'FAILED', 'errorCode': type(error).__name__}
     with Session(engine) as db:
         inserted = _store(db, run_id, batch.records)
-        if retail_item_id is not None and batch.records:
-            _store_retail(db, retail_item_id, batch.records)
         db.commit()
     status = 'PARTIAL' if batch.partial_error else 'SUCCESS' if batch.records else 'NO_DATA'
     _finish(engine, run_id, status, requests=batch.requests, received=len(batch.records),
@@ -170,7 +162,7 @@ def collect_kosis(engine, items, start, end, fetch, credentials):
 
 
 def collect_ecos(engine, start, end, fetch, credentials):
-    """일별 환율(조회·적재 확인용). 예측 모델 입력에는 사용하지 않는다."""
+    """일별 원/미국달러 환율. 예측 모델 MACRO 묶음의 FX 특징(7·28일 변화율)으로 쓴다."""
     if not credentials.ecos_key:
         return skipped(engine, ecos.SOURCE, ecos.DATASET, 'MISSING_ECOS_KEY')
     first = start or incremental_start(engine, ecos.SOURCE, ecos.DATASET, end)
@@ -185,36 +177,41 @@ def verified_stations(engine, item_ids):
 
 
 def prediction_items(engine, item_ids=None):
+    """예측 대상 = 소매 가격 계열이 있는 품목"""
     with Session(engine) as db:
-        query = select(Item).where(Item.price_source == 'KAMIS', Item.food_type == 'RAW')
+        query = select(Item).where(exists().where(PriceSeries.item_id == Item.id, PriceSeries.market == RETAIL))
         if item_ids:
             query = query.where(Item.id.in_(item_ids))
         return db.scalars(query.order_by(Item.id)).all()
 
 
 def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, credentials=None):
-    """품목별 KAMIS 소매·도매, 주산지 ASOS 기상, 공휴일을 차례로 수집하고 데이터셋별 결과를 반환한다."""
+    """품목별 KAMIS 소매·도매 계열, 주산지 ASOS 기상, 공휴일을 차례로 수집하고 데이터셋별 결과를 반환한다."""
     if engine.dialect.name != 'postgresql':
         raise ValueError('수집 적재에는 PostgreSQL이 필요합니다')
     credentials = credentials or Credentials.from_env()
     end = min(end or today(), today())
     items = prediction_items(engine, item_ids)
     if item_ids and len(items) != len(set(item_ids)):
-        raise ValueError('수집 대상은 KAMIS 원물 품목만 지정할 수 있습니다')
-    results = []
-    for item in items:
-        for dataset in (kamis.RETAIL, kamis.WHOLESALE):
-            if not (credentials.kamis_cert_key and credentials.kamis_cert_id):
-                results.append({**skipped(engine, kamis.SOURCE, dataset, 'MISSING_KAMIS_CREDENTIALS'), 'itemId': item.id})
-                continue
-            first = start or incremental_start(engine, kamis.SOURCE, dataset, end, item_id=item.id)
-            def call(dataset=dataset, first=first, item=item):
-                return kamis.collect(fetch, code=item.price_code, dataset=dataset, item_id=item.id,
-                                     unit_label=item.price_unit_label, start=first, end=end,
-                                     cert_key=credentials.kamis_cert_key, cert_id=credentials.kamis_cert_id)
-            result = run_dataset(engine, kamis.SOURCE, dataset, first, end, call,
-                                 retail_item_id=item.id if dataset == kamis.RETAIL else None)
-            results.append({**result, 'itemId': item.id})
+        raise ValueError('수집 대상은 소매 가격 계열이 있는 품목만 지정할 수 있습니다')
+    with Session(engine, expire_on_commit=False) as db:
+        series = series_repository.of_items(db, [item.id for item in items])
+    results, firsts = [], []
+    for row in series:
+        dataset = kamis.MARKET_DATASETS[row.market]
+        if not (credentials.kamis_cert_key and credentials.kamis_cert_id):
+            results.append({**skipped(engine, kamis.SOURCE, dataset, 'MISSING_KAMIS_CREDENTIALS'), 'itemId': row.item_id})
+            continue
+        first = start or incremental_start(engine, kamis.SOURCE, dataset, end, item_id=row.item_id)
+        def call(dataset=dataset, first=first, row=row):
+            return kamis.collect(fetch, code=row.code, dataset=dataset, item_id=row.item_id,
+                                 unit_label=row.unit_label, start=first, end=end,
+                                 cert_key=credentials.kamis_cert_key, cert_id=credentials.kamis_cert_id)
+        results.append({**run_dataset(engine, kamis.SOURCE, dataset, first, end, call), 'itemId': row.item_id})
+        firsts.append(first)
+    if firsts:
+        # 예측 대상 가격은 원본 최신 버전에서 다시 만든다(정제 단계와 같은 함수).
+        warehouse_service.refresh_price_daily(engine, [item.id for item in items], since=min(firsts))
     results.append(collect_kosis(engine, items, start, end, fetch, credentials))
     results.append(collect_ecos(engine, start, end, fetch, credentials))
     if not credentials.data_go_kr_key:

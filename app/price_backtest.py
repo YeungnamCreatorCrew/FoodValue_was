@@ -2,11 +2,13 @@
 
 실행 예:
     python -m app.price_backtest --item-id 1 --start 2026-05-01 --end 2026-10-27 --every 7 --workers 4
-    python -m app.price_backtest --item-id 1 --start 2026-05-01 --end 2026-10-27 --csv backtest.csv
+    python -m app.price_backtest --item-id 1 --market WHOLESALE --start 2026-05-01 --end 2026-10-27 --csv backtest.csv
+    python -m app.price_backtest --item-id 1 --start 2026-05-01 --end 2026-10-27 --save --note '기준선'
 
 - 운영 배치와 같은 입력 로딩(price_batch_service.load_inputs)과 모델(price_prediction.predict)을 쓴다.
   기준일 이후 가격·외부 원천은 읽지 않고, 공개지연 규칙도 그대로 적용된다.
-- DB를 읽기만 한다. price_forecast·price_model_run에 아무것도 쓰지 않는다.
+- 기본은 DB를 읽기만 한다. price_forecast·price_model_run에는 어떤 경우에도 쓰지 않는다.
+  --save를 주면 결과를 backtest_run·backtest_origin·backtest_point에 저장한다.
 - 비교 기준은 '직전 가격 유지'(기준일의 최신 관측가)다. 실제 가격이 없는 날(주말·공휴일)은 비교에서 빠진다.
 - 원천 수정 이력이 있으면 최신 수정본으로 재현한다(수정 전 값 복원은 하지 않음).
 """
@@ -15,18 +17,21 @@ import csv
 import json
 import multiprocessing
 import os
+import subprocess
 from concurrent.futures import ProcessPoolExecutor
 from datetime import date, timedelta
 from statistics import mean
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.core.constants import ID_MAX
-from app.models.price import PriceDaily
+from app.models.price import BacktestOrigin, BacktestPoint, BacktestRun
+from app.repositories import series_repository
 from app.services.price_batch_service import guidance, load_inputs
-from app.services.price_prediction import HORIZON, InsufficientDataError, ModelDependencyError, check_dependencies, predict
+from app.services.price_prediction import (HORIZON, MODEL_VERSION, InsufficientDataError, ModelDependencyError,
+                                          check_dependencies, predict)
 
 
 def base_dates(start: date, end: date, every: int):
@@ -102,15 +107,16 @@ def summarize(records):
     return summary
 
 
-def run(engine, item_id, dates, workers=1):
+def run(engine, item_id, dates, workers=1, market='RETAIL'):
     check_dependencies()  # 병렬 실행 전에 부모에서 확인해 원인 메시지를 그대로 보여 준다.
     tasks = []
-    with Session(engine) as db:
-        actual = dict(db.execute(select(PriceDaily.price_date, PriceDaily.price).where(
-            PriceDaily.item_id == item_id, PriceDaily.region == 'NATIONAL',
-            PriceDaily.price_date.between(dates[0], dates[-1] + timedelta(days=HORIZON)))).all())
+    with Session(engine, expire_on_commit=False) as db:
+        series = series_repository.get(db, item_id, market)
+        if series is None:
+            raise ValueError('품목에 해당 시장의 가격 계열이 없습니다')
+        actual = dict(series_repository.prices(db, series.id, dates[0], dates[-1] + timedelta(days=HORIZON)))
         for base_date in dates:
-            rows, covariates = load_inputs(db, item_id, base_date)
+            rows, covariates = load_inputs(db, series, base_date)
             if rows:
                 tasks.append((base_date, rows, covariates))
     runs, records = [], []
@@ -132,17 +138,51 @@ def run(engine, item_id, dates, workers=1):
                          'evaluationWindow': [metrics.get('evaluationStart'), metrics.get('evaluationEnd')],
                          'internalMape': {stage: {name: round(score['mape'], 3) for name, score in (metrics.get(stage) or {}).items() if score}
                                           for stage in ('selection', 'evaluation')}})
-    return {'itemId': item_id, 'baseDates': len(dates), 'runs': runs, 'summary': summarize(records)}, records
+    return {'itemId': item_id, 'market': series.market, 'seriesId': series.id, 'baseDates': len(dates), 'runs': runs,
+            'summary': summarize(records)}, records
+
+
+def _commit():
+    """실행한 코드의 커밋. 커밋하지 않은 변경이 있으면 '-dirty'를 붙여 그 커밋과 코드가 다름을 남긴다."""
+    try:
+        return subprocess.run(['git', 'describe', '--always', '--dirty', '--abbrev=12'], capture_output=True, text=True,
+                              timeout=5).stdout.strip()[:40] or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def save(engine, output, records, *, start, end, every, note=None):
+    """결과를 backtest_run·backtest_origin·backtest_point에 저장하고 실행 id를 반환한다."""
+    with Session(engine) as db:
+        row = BacktestRun(series_id=output['seriesId'], model_version=MODEL_VERSION, git_commit=_commit(),
+                          start_date=start, end_date=end, every_days=every, summary=output['summary'], note=note)
+        db.add(row)
+        db.flush()
+        for origin in output['runs']:
+            detail = {k: v for k, v in origin.items() if k not in ('baseDate', 'status', 'model', 'quality')}
+            db.add(BacktestOrigin(backtest_run_id=row.id, base_date=date.fromisoformat(origin['baseDate']),
+                                  status=origin['status'], model_name=origin.get('model'), quality=origin.get('quality'),
+                                  detail=detail or None))
+        db.add_all(BacktestPoint(backtest_run_id=row.id, base_date=date.fromisoformat(r['baseDate']),
+                                 target_date=date.fromisoformat(r['targetDate']), horizon=r['horizon'],
+                                 model_name=r['model'], quality=r['quality'], current_price=r['currentPrice'],
+                                 predicted_price=r['predicted'], lower_price=r['lower'], upper_price=r['upper'],
+                                 actual_price=r['actual']) for r in records)
+        db.commit()
+        return row.id
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='과거 기준일 재현 백테스트(DB 읽기 전용)')
     parser.add_argument('--item-id', type=int, required=True)
+    parser.add_argument('--market', choices=('RETAIL', 'WHOLESALE'), default='RETAIL', help='예측 대상 계열(기본 소매)')
     parser.add_argument('--start', type=date.fromisoformat, required=True, help='첫 기준일')
     parser.add_argument('--end', type=date.fromisoformat, required=True, help='마지막 기준일')
     parser.add_argument('--every', type=int, default=7, help='기준일 간격(일)')
     parser.add_argument('--workers', type=int, default=1)
     parser.add_argument('--csv', help='시점별 비교 행을 저장할 CSV 경로')
+    parser.add_argument('--save', action='store_true', help='결과를 backtest_run 등 DB 테이블에 저장')
+    parser.add_argument('--note', help='--save 때 함께 남길 메모(200자 이내)')
     args = parser.parse_args(argv)
     if not 1 <= args.item_id <= ID_MAX or args.every < 1 or args.workers < 1 or args.start > args.end:
         parser.error('item-id·every·workers·기간을 확인하세요')
@@ -152,7 +192,10 @@ def main(argv=None):
         parser.error('DATABASE_URL 설정이 필요합니다')
     engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
     try:
-        output, records = run(engine, args.item_id, base_dates(args.start, args.end, args.every), args.workers)
+        output, records = run(engine, args.item_id, base_dates(args.start, args.end, args.every), args.workers, args.market)
+        if args.save:
+            output['backtestRunId'] = save(engine, output, records, start=args.start, end=args.end, every=args.every,
+                                           note=(args.note or '')[:200] or None)
         if args.csv and records:
             with open(args.csv, 'w', newline='', encoding='utf-8') as handle:
                 writer = csv.DictWriter(handle, fieldnames=list(records[0]))

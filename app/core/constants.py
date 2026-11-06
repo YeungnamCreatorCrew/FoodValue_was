@@ -60,3 +60,8 @@ RECIPE_LIST_MAX_COUNT = 50  # 응답의 재료·양념 개수 상한
 RECIPE_SERVINGS_MAX = 100
 GEMINI_TIMEOUT_SECONDS = 30  # 호출 1회당 제한. 넘으면 504
 GEMINI_MAX_RETRIES = 1  # 호출 실패·JSON 검증 실패 시 추가 시도 횟수. 그래도 실패하면 502
+
+# 가격 예측 외부 수집 기준값 (weather_daily 극한 기상 관측소 비율)
+HEAT_MAX_TEMP = 33.0  # 폭염: 일 최고 33℃ 이상
+HEAVY_RAIN_MM = 80.0  # 호우: 일 강수 80mm 이상
+COLD_MIN_TEMP = -12.0  # 한파: 일 최저 -12℃ 이하

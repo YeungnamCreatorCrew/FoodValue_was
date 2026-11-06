@@ -1,7 +1,7 @@
-"""통합 파이프라인: Open API 수집 → 적재 → 정형 테이블 정제 → 품목별 7일 예측.
+"""통합 파이프라인: Open API 수집 → 적재 → 정형 테이블 정제 → 가격 계열(소매·도매)별 7일 예측.
 
 실행 예:
-    python -m app.price_pipeline                     # 모든 KAMIS 원물 품목, 증분 수집 후 예측
+    python -m app.price_pipeline                     # 가격 계열이 있는 모든 품목, 증분 수집 후 예측
     python -m app.price_pipeline --item-id 1 --item-id 2
     python -m app.price_pipeline --start 2022-01-01 --collect-only   # 과거 자료 백필
     python -m app.price_pipeline --predict-only
@@ -14,8 +14,10 @@ from datetime import date, timedelta
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from app.core.constants import ID_MAX
+from app.repositories import series_repository
 from app.services import collection_service, price_batch_service, warehouse_service
 from app.services.fridge_service import today
 from app.services.price_prediction import ModelDependencyError
@@ -25,7 +27,7 @@ COLLECTION_FAILURES = {'AUTH_ERROR', 'NETWORK_ERROR', 'FAILED', 'PARTIAL'}
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description='Open API 통합 수집과 농산물 7일 가격 예측')
-    parser.add_argument('--item-id', type=int, action='append', dest='item_ids', help='반복 지정 가능. 생략하면 모든 KAMIS 원물')
+    parser.add_argument('--item-id', type=int, action='append', dest='item_ids', help='반복 지정 가능. 생략하면 가격 계열이 있는 모든 품목')
     parser.add_argument('--start', type=date.fromisoformat, help='수집 시작일(YYYY-MM-DD). 생략하면 증분 수집')
     parser.add_argument('--end', type=date.fromisoformat, help='수집 종료일. 생략하면 오늘')
     mode = parser.add_mutually_exclusive_group()
@@ -43,10 +45,10 @@ def run(engine, args):
     output = {'collection': [], 'predictions': []}
     items = collection_service.prediction_items(engine, args.item_ids)
     if args.item_ids and len(items) != len(set(args.item_ids)):
-        raise ValueError('대상은 KAMIS 원물 품목만 지정할 수 있습니다')
+        raise ValueError('대상은 소매 가격 계열이 있는 품목만 지정할 수 있습니다')
     if not args.predict_only:
         output['collection'] = collection_service.collect(engine, args.item_ids, start=args.start, end=args.end)
-        # 수집 원천을 V2 정형 테이블(weather_daily·calendar_day·calendar_event·price_change_history)로 정제한다.
+        # 수집 원천을 정형 테이블(price_daily·weather_daily·calendar·price_change_history 등)로 정제한다.
         # 이번에 수집한 기간만 다시 계산한다. 변동률은 7일 뒤 가격을 쓰므로 기준일을 7일 앞당긴다.
         end = min(args.end or today(), today())
         starts = [date.fromisoformat(row['startDate']) for row in output['collection']
@@ -55,9 +57,11 @@ def run(engine, args):
         output['tables'] = warehouse_service.refresh(engine, [item.id for item in items], weather_start=since,
                                                      weather_end=end, since=since - timedelta(days=7))
     if not args.collect_only:
-        for item in items:
+        with Session(engine) as db:
+            targets = [(row.id, row.item_id, row.market) for row in series_repository.of_items(db, [item.id for item in items])]
+        for series_id, item_id, market in targets:
             try:
-                result = price_batch_service.run(engine, item.id)
+                result = price_batch_service.run(engine, series_id)
             except price_batch_service.BatchBusyError:
                 result = {'status': 'BUSY'}
             except ModelDependencyError as error:
@@ -65,7 +69,7 @@ def run(engine, args):
             except Exception as error:
                 # DB 주소·인증키가 포함될 수 있어 예외 원문은 출력하지 않는다.
                 result = {'status': 'FAILED', 'errorCode': type(error).__name__}
-            output['predictions'].append({'itemId': item.id, **result})
+            output['predictions'].append({'itemId': item_id, 'market': market, 'seriesId': series_id, **result})
     return output
 
 
