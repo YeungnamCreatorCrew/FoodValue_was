@@ -1,6 +1,6 @@
 """KAMIS 품목 가격. 소매가는 예측 대상, 도매가는 선행 지표로만 쓴다.
 
-item.price_code 형식: 품목코드-품종코드-등급코드 (예: 246-00-04). 부류코드는 품목코드 첫 자리로 정해진다.
+가격 계열(price_series) 코드 표기: 품목코드-품종코드-등급코드 (예: 246-00-04). 부류코드는 품목코드 첫 자리로 정해진다.
 
 - 최근 PERIOD_LIMIT_DAYS일: 기간별 품목 가격(periodProductList). 응답의 countyname '평균' 행을 전국 평균으로 쓴다.
   로컬 실측에서 이 API는 최근 1년치만 돌려주고 더 오래된 기간은 시간 초과가 났다.
@@ -20,6 +20,7 @@ SOURCE = 'KAMIS'
 RETAIL = 'RETAIL_DAILY'
 WHOLESALE = 'WHOLESALE_DAILY'
 CLASS_CODES = {RETAIL: '01', WHOLESALE: '02'}
+MARKET_DATASETS = {'RETAIL': RETAIL, 'WHOLESALE': WHOLESALE}  # price_series.market → 데이터셋
 NATIONAL_COUNTY = '평균'
 WINDOW_DAYS = 90
 PERIOD_LIMIT_DAYS = 364  # periodProductList로 받는 최근 기간
@@ -32,7 +33,7 @@ CODE_PATTERN = re.compile(r'^(\d{3})-(\d{2})-(\d{2})$')
 def parse_code(code: str):
     match = CODE_PATTERN.match(code or '')
     if not match:
-        raise ValueError('KAMIS price_code는 품목-품종-등급(예: 246-00-04) 형식이어야 합니다')
+        raise ValueError('KAMIS 계열 코드는 품목-품종-등급(예: 246-00-04) 형식이어야 합니다')
     item, kind, rank = match.groups()
     return {'category': item[0] + '00', 'item': item, 'kind': kind, 'rank': rank}
 

@@ -1,7 +1,8 @@
 """예측용 외부 원천을 읽는다.
 
-- external_observation: 도매가·주산지 기상·공휴일. 같은 원천 키의 여러 버전 중 최신 수집본을 사용한다.
-- V2 정형 테이블: weather_daily(ACTUAL)·calendar_event·price_change_history·item_production·exchange_rate_daily.
+- price_daily: 상대 시장 계열 가격(소매 예측이면 도매가, 도매 예측이면 소매가).
+- external_observation: 주산지 기상·공휴일. 같은 원천 키의 여러 버전 중 최신 수집본을 사용한다.
+- 정형 테이블: weather_daily(ACTUAL)·calendar_event·price_change_history·item_production·exchange_rate_daily.
 공개 시점 규칙은 exogenous에서 적용한다. 여기서는 기간만 자른다.
 """
 from collections import defaultdict
@@ -9,10 +10,12 @@ from datetime import date, timedelta
 
 from sqlalchemy import func, select
 
-from app.collectors import data_go_kr, kamis
+from app.collectors import data_go_kr
 from app.collectors.http import number
 from app.models.external import ExternalObservation, ItemWeatherStation
+from app.models.price import COUNTERPART, PriceSeries
 from app.models.prediction_input import CalendarEvent, ExchangeRateDaily, ItemProduction, PriceChangeHistory, WeatherDaily
+from app.repositories import series_repository
 from app.services.exogenous import SEASONAL_YEARS, Covariates, EventWindow
 
 WEATHER_KEYS = ('avgTa', 'minTa', 'maxTa', 'sumRn', 'avgRhm', 'sumSsHr')
@@ -28,15 +31,12 @@ def latest_versions(db, *conditions):
                       .where(ranked.c.rank == 1).order_by(ExternalObservation.observed_on)).all()
 
 
-def wholesale(db, item_id, start: date, end: date):
-    rows = latest_versions(db, ExternalObservation.source == kamis.SOURCE, ExternalObservation.dataset == kamis.WHOLESALE,
-                   ExternalObservation.item_id == item_id, ExternalObservation.observed_on.between(start, end))
-    result = {}
-    for row in rows:
-        price = number(row.payload.get('price'))
-        if price and price > 0:
-            result[row.observed_on] = price
-    return result
+def counterpart(db, series: PriceSeries, start: date, end: date):
+    """같은 품목의 상대 시장 계열 가격. 계열이 없으면 빈 값."""
+    other = series_repository.get(db, series.item_id, COUNTERPART[series.market])
+    if other is None:
+        return {}
+    return {day: float(price) for day, price in series_repository.prices(db, other.id, start, end)}
 
 
 def stations(db, item_id):
@@ -114,11 +114,11 @@ def events(db, start: date, end: date):
             for row in rows]
 
 
-def change_history(db, item_id, start: date, end: date):
+def change_history(db, series_id, start: date, end: date):
     """시점 → 기준일 → 변동률(분율). 02-28 행에는 윤년 02-29 기준이 합쳐져 있을 수 있다(같은 해 02-28 우선)."""
     rows = db.execute(select(PriceChangeHistory.price_year, PriceChangeHistory.month_day, PriceChangeHistory.horizon_days,
                              PriceChangeHistory.change_rate)
-                      .where(PriceChangeHistory.item_id == item_id, PriceChangeHistory.region == 'NATIONAL',
+                      .where(PriceChangeHistory.series_id == series_id,
                              PriceChangeHistory.price_year.between(start.year, end.year))).all()
     result = defaultdict(dict)
     for year, month_day, horizon, rate in rows:
@@ -141,13 +141,14 @@ def exchange_rate(db, start: date, end: date, currency='USD'):
     return {day: float(rate) for day, rate in rows}
 
 
-def load(db, item_id, start: date, end: date, horizon_end: date):
+def load(db, series: PriceSeries, start: date, end: date, horizon_end: date):
+    item_id = series.item_id
     holiday_map, years = holidays(db, start, horizon_end)
     # 과거 같은 시기 변동률·명절 효과는 학습 시작보다 최대 5년 이전 자료까지 참고한다.
     history_start = date(start.year - SEASONAL_YEARS, 1, 1)
-    return Covariates(wholesale=wholesale(db, item_id, start, end), weather=weather(db, item_id, start, end),
+    return Covariates(counterpart=counterpart(db, series, start, end), weather=weather(db, item_id, start, end),
                       holidays=holiday_map, holiday_years=years,
                       national_weather=national_weather(db, start, end),
                       events=events(db, history_start - timedelta(days=60), horizon_end),
-                      change_history=change_history(db, item_id, history_start, end),
+                      change_history=change_history(db, series.id, history_start, end),
                       production=production(db, item_id), fx=exchange_rate(db, start, end))

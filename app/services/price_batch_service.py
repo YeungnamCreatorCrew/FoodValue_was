@@ -1,14 +1,13 @@
-"""전국 소매가 예측 배치. 공개는 7일 예측과 가이드를 원자적으로 교체한다."""
+"""가격 계열(소매·도매)별 전국 가격 7일 예측 배치. 실행마다 예측 7개와 가이드를 한 트랜잭션으로 저장한다."""
 from datetime import datetime, timedelta
 from statistics import mean
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.models.fridge import Item
-from app.models.price import PriceDaily, PriceForecast, PriceInsight, PriceModelRun
-from app.repositories import covariate_repository
-from app.services.exogenous import WEATHER_LAG_DAYS, WHOLESALE_LAG_DAYS
+from app.models.price import COUNTERPART, RETAIL, PriceForecast, PriceInsight, PriceModelRun, PriceSeries
+from app.repositories import covariate_repository, series_repository
+from app.services.exogenous import WEATHER_LAG_DAYS, COUNTERPART_LAG_DAYS
 from app.services.fridge_service import today
 from app.services.price_prediction import InsufficientDataError, MODEL_VERSION, predict
 
@@ -30,7 +29,7 @@ def guidance(prices, current, quality):
     return 'STABLE',None,0
 
 
-BLOCK_LABELS = {'MARKET': '도매가격', 'WEATHER': '기상(주산지·전국)', 'CALENDAR': '공휴일·명절',
+BLOCK_LABELS = {'MARKET': '상대 시장 가격', 'WEATHER': '기상(주산지·전국)', 'CALENDAR': '공휴일·명절',
                 'SEASONAL': '과거 같은 시기 변동률', 'MACRO': '생산량·환율'}
 
 
@@ -43,7 +42,7 @@ def _usage(result):
     return (lambda block: result.model == 'XGBOOST_EXT'), {}
 
 
-def external_factors(covariates,base_date,result):
+def external_factors(covariates,base_date,result,market=RETAIL):
     """모델이 사용할 수 있었던 외부 원천의 최근 관측값. 영향 방향·기여도는 만들지 않는다."""
     used_by, weights = _usage(result)
 
@@ -56,12 +55,14 @@ def external_factors(covariates,base_date,result):
         return {'usedByModel': used_by(block), **({'modelWeight': round(weights.get(block, 0), 4)} if weights else {})}
 
     factors=[]
-    wholesale_as_of=base_date-timedelta(days=WHOLESALE_LAG_DAYS)
-    wholesale=[(d,p) for d,p in sorted(covariates.wholesale.items()) if wholesale_as_of-timedelta(days=7)<=d<=wholesale_as_of]
-    if wholesale:
-        day,price=wholesale[-1]
-        factors.append({'name':'도매가격','kind':'OBSERVATION','source':'KAMIS','latestWholesalePrice':round(price),
-            'dataDate':day.isoformat(),**tag('MARKET'),'description':'KAMIS 전국 평균 도매가격입니다. '+note('MARKET')})
+    counter_as_of=base_date-timedelta(days=COUNTERPART_LAG_DAYS)
+    counter=[(d,p) for d,p in sorted(covariates.counterpart.items()) if counter_as_of-timedelta(days=7)<=d<=counter_as_of]
+    if counter:
+        day,price=counter[-1]
+        label={'RETAIL':'소매','WHOLESALE':'도매'}[COUNTERPART[market]]
+        factors.append({'name':f'{label}가격','kind':'OBSERVATION','source':'KAMIS','market':COUNTERPART[market],
+            'latestPrice':round(price),'dataDate':day.isoformat(),**tag('MARKET'),
+            'description':f'KAMIS 전국 평균 {label}가격입니다. '+note('MARKET')})
     weather_as_of=base_date-timedelta(days=WEATHER_LAG_DAYS)
     week=[covariates.weather[d] for d in (weather_as_of-timedelta(days=k) for k in range(7)) if d in covariates.weather]
     if week:
@@ -88,30 +89,28 @@ def external_factors(covariates,base_date,result):
 HISTORY_DAYS=1854
 
 
-def load_inputs(db,item_id,base_date):
-    """기준일까지의 전국 소매가와 외부 원천. 백테스트도 같은 함수를 써서 운영과 같은 입력을 만든다."""
-    rows=db.execute(select(PriceDaily.price_date,PriceDaily.price).where(PriceDaily.item_id==item_id,
-        PriceDaily.region=='NATIONAL',PriceDaily.price_date<=base_date,
-        PriceDaily.price_date>=base_date-timedelta(days=HISTORY_DAYS)).order_by(PriceDaily.price_date)).all()
+def load_inputs(db,series,base_date):
+    """기준일까지의 계열 가격과 외부 원천. 백테스트도 같은 함수를 써서 운영과 같은 입력을 만든다."""
+    rows=series_repository.prices(db,series.id,base_date-timedelta(days=HISTORY_DAYS),base_date)
     # 외부 원천은 기준일까지(공휴일·명절 기간만 목표일까지) 읽는다. 공개지연은 특징 생성 단계에서 다시 적용한다.
-    covariates=covariate_repository.load(db,item_id,base_date-timedelta(days=HISTORY_DAYS),base_date,base_date+timedelta(days=7))
-    return [(d,p) for d,p in rows],covariates
+    covariates=covariate_repository.load(db,series,base_date-timedelta(days=HISTORY_DAYS),base_date,base_date+timedelta(days=7))
+    return rows,covariates
 
 
-def _run(engine,item_id,base_date):
+def _run(engine,series_id,base_date):
     if base_date>today():
         raise ValueError('미래 기준일로 실행할 수 없습니다')
     with Session(engine,expire_on_commit=False) as db:
-        item=db.get(Item,item_id)
-        if item is None or item.price_source!='KAMIS' or item.food_type!='RAW':
-            raise ValueError('예측 MVP는 KAMIS 원물만 지원합니다')
+        series=db.get(PriceSeries,series_id)
+        if series is None:
+            raise ValueError('가격 계열이 없습니다')
         # 과거 날짜를 다시 실행해 최신 결과를 뒤로 돌리지 않는다.
-        newest=db.scalar(select(PriceModelRun.base_date).where(PriceModelRun.item_id==item_id,
+        newest=db.scalar(select(PriceModelRun.base_date).where(PriceModelRun.series_id==series_id,
             PriceModelRun.status=='SUCCESS').order_by(PriceModelRun.base_date.desc()).limit(1))
         if newest and base_date<newest:
             raise ValueError('최신 공개 기준일보다 과거인 배치는 실행할 수 없습니다')
-        rows,covariates=load_inputs(db,item_id,base_date)
-        run=PriceModelRun(item_id=item_id,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
+        rows,covariates=load_inputs(db,series,base_date)
+        run=PriceModelRun(series_id=series_id,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
         db.add(run)
         db.commit()
         run_id=run.id
@@ -126,15 +125,14 @@ def _run(engine,item_id,base_date):
         factors=[{'name':'최근 가격','kind':'OBSERVATION','latestPrice':current,
                   'dataDate':rows[-1][0].isoformat(),'mean7Observed':round(mean(week),2) if week else None,
                   'description':'관측된 최근 가격 통계입니다. 모델의 인과적 기여도가 아닙니다.'}]
-        factors+=external_factors(covariates,base_date,result)
+        factors+=external_factors(covariates,base_date,result,series.market)
         with Session(engine,expire_on_commit=False) as db:
-            db.execute(delete(PriceForecast).where(PriceForecast.item_id==item_id,PriceForecast.base_date==base_date))
-            db.execute(delete(PriceInsight).where(PriceInsight.item_id==item_id,PriceInsight.base_date==base_date))
+            # 같은 날 다시 실행해도 이전 실행의 예측은 지우지 않는다. 공개는 최신 성공 실행을 고른다.
             for index,price in enumerate(result.prices):
-                db.add(PriceForecast(item_id=item_id,base_date=base_date,target_date=base_date+timedelta(days=index+1),
+                db.add(PriceForecast(target_date=base_date+timedelta(days=index+1),
                     predicted_price=price,lower_price=result.lower[index],upper_price=result.upper[index],model_run_id=run_id))
             score=result.metrics['evaluation'][result.model]
-            db.add(PriceInsight(item_id=item_id,base_date=base_date,recommendation=recommendation,
+            db.add(PriceInsight(recommendation=recommendation,
                 buy_after_days=after,expected_saving=saving,mape=score['mape'],factors=factors,model_run_id=run_id))
             run=db.get(PriceModelRun,run_id)
             run.status='SUCCESS'
@@ -158,18 +156,26 @@ def _run(engine,item_id,base_date):
         raise
 
 
-def run(engine,item_id,base_date=None):
+def series_id_for(engine,item_id,market=RETAIL):
+    with Session(engine) as db:
+        series=series_repository.get(db,item_id,market)
+    if series is None:
+        raise ValueError('품목에 해당 시장의 가격 계열이 없습니다')
+    return series.id
+
+
+def run(engine,series_id,base_date=None):
     if engine.dialect.name!='postgresql':
         raise ValueError('예측 공개에는 PostgreSQL이 필요합니다')
     # 잠금용 연결은 commit 후에도 풀에 반환하지 않는다. finally에서 명시적으로 해제한다.
-    name=f'foodvalue-price:{item_id}'
+    name=f'foodvalue-price-series:{series_id}'
     with engine.connect() as lock:
         acquired=lock.scalar(text('SELECT pg_try_advisory_lock(hashtextextended(:name,0))'),{'name':name})
         lock.commit()
         if not acquired:
-            raise BatchBusyError('이미 실행 중인 품목입니다')
+            raise BatchBusyError('이미 실행 중인 계열입니다')
         try:
-            return _run(engine,item_id,base_date or today())
+            return _run(engine,series_id,base_date or today())
         finally:
             lock.execute(text('SELECT pg_advisory_unlock(hashtextextended(:name,0))'),{'name':name})
             lock.commit()

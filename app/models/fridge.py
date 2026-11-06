@@ -19,7 +19,6 @@ class Item(Base):
     grams_per_unit: Mapped[Decimal | None] = mapped_column(Numeric(12, 3))
     density_g_per_ml: Mapped[Decimal | None] = mapped_column(Numeric(12, 3))
     price_source: Mapped[str | None] = mapped_column(String(10))
-    price_code: Mapped[str | None] = mapped_column(String(50))
     price_unit_label: Mapped[str | None] = mapped_column(String(30))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 

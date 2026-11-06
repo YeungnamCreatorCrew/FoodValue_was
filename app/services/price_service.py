@@ -4,7 +4,8 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from app.models.fridge import FridgeIngredient
-from app.models.price import PriceDaily, PriceModelRun
+from app.models.price import RETAIL, PriceModelRun
+from app.repositories import series_repository
 from app.repositories import price_repository as repo
 from app.schemas.common import Page
 from app.schemas.price import (ForecastPoint, ForecastResponse, FridgeHolding, HistoryPoint,
@@ -16,11 +17,11 @@ class NotFoundError(Exception):
     pass
 
 
-def require_item(db,item_id):
-    row = repo.item(db,item_id)
-    if row is None:
+def require_item(db,item_id,market=RETAIL):
+    item,series = repo.item(db,item_id,market)
+    if item is None:
         raise NotFoundError
-    return row
+    return item,series
 
 
 def change(current, previous):
@@ -37,9 +38,9 @@ def state(price, run, as_of):
     return 'READY' if run.quality=='VALIDATED' else 'BASELINE'
 
 
-def summary(item,price,previous,run,last,as_of):
-    return PriceSummary(id=item.id,name=item.name,category=item.category,
-        unit_label=item.price_unit_label,source=item.price_source,
+def summary(item,series,price,previous,run,last,as_of):
+    return PriceSummary(id=item.id,name=item.name,category=item.category,market=series.market,series_id=series.id,
+        unit_label=series.unit_label,source=series.source,
         price_date=price.price_date if price else None,current_price=price.price if price else None,
         weekly_change_percent=change(price.price,previous.price) if price and previous else None,
         forecast_price=last.predicted_price if last else None,
@@ -49,21 +50,22 @@ def summary(item,price,previous,run,last,as_of):
         status=state(price,run,as_of))
 
 
-def list_items(db,category,keyword,sort,page,size):
+def list_items(db,category,keyword,sort,page,size,market=RETAIL):
     as_of=today()
-    items=repo.catalog(db,category,keyword,as_of)
-    prices,previous,runs,forecasts=repo.overview_rows(db,items,as_of)
-    result=[summary(row,prices.get(row.id),previous.get(row.id),runs.get(row.id),forecasts.get(row.id),as_of) for row in items]
+    rows=repo.catalog(db,category,keyword,market)
+    prices,previous,runs,forecasts=repo.overview_rows(db,[s for _,s in rows],as_of)
+    result=[summary(item,s,prices.get(s.id),previous.get(s.id),runs.get(s.id),forecasts.get(s.id),as_of) for item,s in rows]
     if sort!='name':
         field='weekly_change_percent' if sort=='change' else 'forecast_change_percent'
         result.sort(key=lambda row:(getattr(row,field) is None,getattr(row,field) or 0,row.name,row.id))
     return Page(items=result[(page-1)*size:page*size],page=page,size=size,total=len(result))
 
 
-def forecast_result(db,item_id,as_of,run,points):
-    attempt=db.scalar(select(PriceModelRun).where(PriceModelRun.item_id==item_id,
+def forecast_result(db,item_id,series,as_of,run,points):
+    attempt=db.scalar(select(PriceModelRun).where(PriceModelRun.series_id==series.id,
         PriceModelRun.base_date<=as_of).order_by(PriceModelRun.base_date.desc(),PriceModelRun.id.desc()).limit(1))
-    result=ForecastResponse(item_id=item_id,status='NO_FORECAST',latest_attempt_status=attempt.status if attempt else None)
+    result=ForecastResponse(item_id=item_id,market=series.market,series_id=series.id,status='NO_FORECAST',
+                            latest_attempt_status=attempt.status if attempt else None)
     if not run:
         if attempt and attempt.status=='INSUFFICIENT_DATA':
             result.status='INSUFFICIENT_DATA'
@@ -81,18 +83,18 @@ def forecast_result(db,item_id,as_of,run,points):
     return result
 
 
-def forecast(db,item_id):
-    require_item(db,item_id)
+def forecast(db,item_id,market=RETAIL):
+    _,series=require_item(db,item_id,market)
     as_of=today()
-    run,points,_=repo.snapshot(db,item_id,as_of)
-    return forecast_result(db,item_id,as_of,run,points)
+    run,points,_=repo.snapshot(db,series.id,as_of)
+    return forecast_result(db,item_id,series,as_of,run,points)
 
 
-def detail(db,item_id,user):
-    item=require_item(db,item_id)
+def detail(db,item_id,user,market=RETAIL):
+    item,series=require_item(db,item_id,market)
     as_of=today()
-    prices,previous,runs,forecasts=repo.overview_rows(db,[item],as_of)
-    run,points,guide=repo.snapshot(db,item_id,as_of)
+    prices,previous,runs,forecasts=repo.overview_rows(db,[series],as_of)
+    run,points,guide=repo.snapshot(db,series.id,as_of)
     holdings=None
     if user:
         rows=db.scalars(select(FridgeIngredient).where(FridgeIngredient.user_id==user.id,
@@ -101,25 +103,23 @@ def detail(db,item_id,user):
         for row in rows:
             quantities[row.unit]=quantities.get(row.unit,Decimal(0))+row.quantity
         holdings=FridgeHolding(ingredient_count=len(rows),quantities={k:str(v) for k,v in quantities.items()})
-    return PriceDetail(item=summary(item,prices.get(item_id),previous.get(item_id),run,points[-1] if points else None,as_of),
-        forecast=forecast_result(db,item_id,as_of,run,points),
+    return PriceDetail(item=summary(item,series,prices.get(series.id),previous.get(series.id),run,points[-1] if points else None,as_of),
+        forecast=forecast_result(db,item_id,series,as_of,run,points),
         guide=PriceGuide.model_validate(guide) if guide else None,fridge=holdings)
 
 
-def history(db,item_id,days):
-    require_item(db,item_id)
+def history(db,item_id,days,market=RETAIL):
+    _,series=require_item(db,item_id,market)
     end=today()
     start=end-timedelta(days=days-1)
-    rows=db.scalars(select(PriceDaily).where(PriceDaily.item_id==item_id,PriceDaily.region=='NATIONAL',
-        PriceDaily.price_date.between(start,end)).order_by(PriceDaily.price_date)).all()
-    lookup={row.price_date:row.price for row in rows}
-    return PriceHistory(item_id=item_id,days=days,start_date=start,end_date=end,
+    lookup=dict(series_repository.prices(db,series.id,start,end))
+    return PriceHistory(item_id=item_id,market=series.market,days=days,start_date=start,end_date=end,
         points=[HistoryPoint(date=start+timedelta(days=i),price=lookup.get(start+timedelta(days=i))) for i in range(days)])
 
 
-def factors(db,item_id):
-    require_item(db,item_id)
-    run,points,guide=repo.snapshot(db,item_id,today())
-    result=forecast_result(db,item_id,today(),run,points)
-    return PriceFactors(item_id=item_id,base_date=result.base_date,status=result.status,
+def factors(db,item_id,market=RETAIL):
+    _,series=require_item(db,item_id,market)
+    run,points,guide=repo.snapshot(db,series.id,today())
+    result=forecast_result(db,item_id,series,today(),run,points)
+    return PriceFactors(item_id=item_id,market=series.market,base_date=result.base_date,status=result.status,
                         factors=guide.factors or [] if guide else [])

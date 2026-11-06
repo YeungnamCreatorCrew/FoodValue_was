@@ -1,6 +1,7 @@
 """원천 → V2 정형 테이블 정제 규칙. DB 없이 행 생성만 검증한다."""
 from datetime import date, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 
@@ -66,7 +67,7 @@ def test_price_change_history_carries_closed_days_without_fake_zero():
     assert rows[('01-10', 2)]['change_rate'] == Decimal('15.38')
     assert ('01-09', 1) not in rows and ('01-09', 2) not in rows  # 금→토·일
     assert rows[('01-09', 3)]['change_rate'] == Decimal('15.38')
-    assert all(r['region'] == 'NATIONAL' and r['item_id'] == 1 for r in rows.values())
+    assert all(r['series_id'] == 1 and 'region' not in r for r in rows.values())
     since = {r['month_day'] for r in warehouse.change_history_rows(1, prices, since=date(2026, 1, 9))}
     assert min(since) == '01-09'
 
@@ -125,3 +126,12 @@ def test_event_weight_rows_are_learned_and_bounded():
     assert rows == [{'event_code': 'CHUSEOK', 'item_id': 7, 'category': None, 'weight': Decimal('0.66'),
                      'weight_source': 'LEARNED'}]
     assert warehouse.event_weight_rows(7, changes, windows, date(2023, 10, 1)) == []  # 확인된 명절 1개뿐
+
+
+def test_price_rows_from_latest_kamis_observations():
+    rows = [SimpleNamespace(id=10, observed_on=date(2026, 1, 5), payload={'price': '1,930'}),
+            SimpleNamespace(id=11, observed_on=date(2026, 1, 6), payload={'price': '-'}),
+            SimpleNamespace(id=12, observed_on=None, payload={'price': '100'}),
+            SimpleNamespace(id=13, observed_on=date(2026, 1, 7), payload={'price': '0'})]
+    assert warehouse.price_rows(7, rows) == [{'series_id': 7, 'price_date': date(2026, 1, 5), 'price': 1930,
+                                              'observation_id': 10}]

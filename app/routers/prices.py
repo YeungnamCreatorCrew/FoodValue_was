@@ -8,13 +8,14 @@ from app.core.db import get_db
 from app.core.deps import get_optional_user
 from app.models.user import User
 from app.schemas.common import Page
-from app.schemas.price import ForecastResponse, PriceCategory, PriceDetail, PriceFactors, PriceHistory, PriceSort, PriceSummary
+from app.schemas.price import ForecastResponse, PriceCategory, PriceDetail, PriceFactors, PriceHistory, PriceMarket, PriceSort, PriceSummary
 from app.services import price_service as service
 
 router=APIRouter(prefix='/prices',tags=['prices'])
 Db=Annotated[Session,Depends(get_db)]
 Viewer=Annotated[User | None,Depends(get_optional_user)]
 Id=Annotated[int,Path(ge=1,le=ID_MAX)]
+Market=Annotated[PriceMarket,Query(description='RETAIL 소매(기본) 또는 WHOLESALE 도매')]
 
 
 def call(fn,*args):
@@ -27,27 +28,27 @@ def call(fn,*args):
 @router.get('/items',response_model=Page[PriceSummary])
 def listing(db:Db,viewer:Viewer,category:PriceCategory | None=None,
             keyword:str | None=Query(None,max_length=50),sort:PriceSort=PriceSort.NAME,
-            page:int=Query(1,ge=1),size:int=Query(20,ge=1,le=PAGE_MAX_SIZE)):
-    return service.list_items(db,category,keyword,sort,page,size)
+            page:int=Query(1,ge=1),size:int=Query(20,ge=1,le=PAGE_MAX_SIZE),market:Market=PriceMarket.RETAIL):
+    return service.list_items(db,category,keyword,sort,page,size,market)
 
 
 @router.get('/items/{item_id}',response_model=PriceDetail)
-def detail(item_id:Id,db:Db,viewer:Viewer):
-    return call(service.detail,db,item_id,viewer)
+def detail(item_id:Id,db:Db,viewer:Viewer,market:Market=PriceMarket.RETAIL):
+    return call(service.detail,db,item_id,viewer,market)
 
 
 @router.get('/items/{item_id}/history',response_model=PriceHistory)
-def history(item_id:Id,db:Db,viewer:Viewer,days:int=Query(14,ge=14,le=90)):
+def history(item_id:Id,db:Db,viewer:Viewer,days:int=Query(14,ge=14,le=90),market:Market=PriceMarket.RETAIL):
     if days not in (14,30,90):
         raise HTTPException(400,'기간은 14, 30, 90일 중 선택해 주세요')
-    return call(service.history,db,item_id,days)
+    return call(service.history,db,item_id,days,market)
 
 
 @router.get('/items/{item_id}/forecast',response_model=ForecastResponse)
-def forecast(item_id:Id,db:Db,viewer:Viewer):
-    return call(service.forecast,db,item_id)
+def forecast(item_id:Id,db:Db,viewer:Viewer,market:Market=PriceMarket.RETAIL):
+    return call(service.forecast,db,item_id,market)
 
 
 @router.get('/items/{item_id}/factors',response_model=PriceFactors)
-def factors(item_id:Id,db:Db,viewer:Viewer):
-    return call(service.factors,db,item_id)
+def factors(item_id:Id,db:Db,viewer:Viewer,market:Market=PriceMarket.RETAIL):
+    return call(service.factors,db,item_id,market)

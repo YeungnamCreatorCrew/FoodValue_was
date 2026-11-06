@@ -6,7 +6,7 @@ import pytest
 
 from app.services import price_prediction as model
 from app.services.exogenous import (CALENDAR_FEATURES, EVENT_FEATURES, NATIONAL_WEATHER_FEATURES, WEATHER_FEATURES,
-                                    WHOLESALE_FEATURES, Covariates, EventWindow, ExogenousFeatures, event_weight)
+                                    COUNTERPART_FEATURES, Covariates, EventWindow, ExogenousFeatures, event_weight)
 
 START = date(2024, 1, 1)
 
@@ -38,25 +38,25 @@ def weather_row(value):
 def test_external_inputs_respect_publication_lag():
     wholesale = {START + timedelta(days=i): 500.0 + i for i in range(120)}
     weather = {START + timedelta(days=i): weather_row(10.0) for i in range(120)}
-    days, values, features = build(Covariates(wholesale=wholesale, weather=weather))
+    days, values, features = build(Covariates(counterpart=wholesale, weather=weather))
     origin = 60
     before = features.vector(origin, 3)
     # 예측 시작일 당일 이후의 값은 공개 전이므로 바뀌어도 입력이 같아야 한다.
     for offset in range(origin, 120):
         wholesale[START + timedelta(days=offset)] = 99999.0
         weather[START + timedelta(days=offset)] = weather_row(40.0)
-    _, _, edited = build(Covariates(wholesale=wholesale, weather=weather))
+    _, _, edited = build(Covariates(counterpart=wholesale, weather=weather))
     assert edited.vector(origin, 3) == before
     assert before[0] == 500.0 + origin - 1  # 전일 도매가
-    assert before[WHOLESALE_FEATURES.index('wholesaleAge')] == 1.0
+    assert before[COUNTERPART_FEATURES.index('counterAge')] == 1.0
 
 
 def test_missing_external_values_stay_missing():
     wholesale = {START + timedelta(days=i): 500.0 for i in range(30)}  # 이후 장기 결측
-    _, _, features = build(Covariates(wholesale=wholesale))
-    assert features.names == WHOLESALE_FEATURES
+    _, _, features = build(Covariates(counterpart=wholesale))
+    assert features.names == COUNTERPART_FEATURES
     assert all(math.isnan(value) for value in features.vector(90, 1))
-    assert features.coverage([20, 90]) == {'WHOLESALE': 0.5}
+    assert features.coverage([20, 90]) == {'COUNTERPART': 0.5}
 
 
 def test_calendar_uses_target_date_and_only_collected_years():
@@ -85,7 +85,7 @@ def test_weather_requires_enough_days():
 def exogenous_prediction():
     pytest.importorskip('xgboost')
     retail, wholesale = leading_series()
-    return model.predict(retail, retail[-1][0], Covariates(wholesale=wholesale))
+    return model.predict(retail, retail[-1][0], Covariates(counterpart=wholesale))
 
 
 def test_informative_external_source_is_selected_and_validated(exogenous_prediction):
@@ -95,10 +95,10 @@ def test_informative_external_source_is_selected_and_validated(exogenous_predict
     assert evaluation[result.model]['mape'] < evaluation['XGBOOST']['mape']
     assert evaluation[result.model]['mape'] < evaluation['LAST_PRICE']['mape']
     assert result.metrics['candidates'] == ['LAST_PRICE', 'MEAN_7', 'XGBOOST', 'XGBOOST_EXT', 'XGBOOST_WEIGHTED']
-    assert result.metrics['featureSets']['XGBOOST_EXT'][-len(WHOLESALE_FEATURES):] == WHOLESALE_FEATURES
-    assert result.metrics['externalCoverage'] == {'WHOLESALE': 1.0}
+    assert result.metrics['featureSets']['XGBOOST_EXT'][-len(COUNTERPART_FEATURES):] == COUNTERPART_FEATURES
+    assert result.metrics['externalCoverage'] == {'COUNTERPART': 1.0}
     # 묶음이 하나면 전문가 모델은 XGBOOST_EXT와 같고, 도매가 묶음의 가중치가 학습된다.
-    assert result.metrics['weighting']['blocks'] == {'MARKET': ['WHOLESALE']}
+    assert result.metrics['weighting']['blocks'] == {'MARKET': ['COUNTERPART']}
     assert result.metrics['weighting']['weights']['MARKET'] > .5
     assert len(result.prices) == 7
 
@@ -108,7 +108,7 @@ def test_uninformative_external_source_is_not_forced():
     rows = [(START + timedelta(days=i), 1000) for i in range(480)]
     noise = random.Random(1)
     wholesale = {day: 500 + noise.random() * 100 for day, _ in rows}
-    result = model.predict(rows, rows[-1][0], Covariates(wholesale=wholesale))
+    result = model.predict(rows, rows[-1][0], Covariates(counterpart=wholesale))
     assert result.model == 'LAST_PRICE' and result.quality == 'BASELINE'
     assert 'XGBOOST_EXT' in result.metrics['evaluation']
     assert result.metrics['weighting']['weights'] == {'MARKET': 0.0}
@@ -125,9 +125,9 @@ def random_fx(days, seed=2):
 def test_noise_block_gets_zero_weight_while_signal_block_is_kept():
     pytest.importorskip('xgboost')
     retail, wholesale = leading_series()
-    result = model.predict(retail, retail[-1][0], Covariates(wholesale=wholesale, fx=random_fx([d for d, _ in retail])))
+    result = model.predict(retail, retail[-1][0], Covariates(counterpart=wholesale, fx=random_fx([d for d, _ in retail])))
     weighting = result.metrics['weighting']
-    assert weighting['blocks'] == {'MARKET': ['WHOLESALE'], 'MACRO': ['FX']}
+    assert weighting['blocks'] == {'MARKET': ['COUNTERPART'], 'MACRO': ['FX']}
     assert weighting['weights']['MARKET'] > .5 and weighting['weights']['MACRO'] == 0.0
     assert result.model in ('XGBOOST_EXT', 'XGBOOST_WEIGHTED') and result.quality == 'VALIDATED'
 

@@ -14,6 +14,11 @@ class PriceCategory(StrEnum):
     ETC = 'ETC'
 
 
+class PriceMarket(StrEnum):
+    RETAIL = 'RETAIL'
+    WHOLESALE = 'WHOLESALE'
+
+
 class PriceSort(StrEnum):
     NAME = 'name'
     CHANGE = 'change'
@@ -24,6 +29,8 @@ class PriceSummary(CamelModel):
     id: int
     name: str
     category: PriceCategory
+    market: PriceMarket
+    series_id: int
     unit_label: str | None
     source: str
     price_date: date | None
@@ -44,6 +51,7 @@ class HistoryPoint(CamelModel):
 
 class PriceHistory(CamelModel):
     item_id: int
+    market: PriceMarket
     region: str = 'NATIONAL'
     days: int
     start_date: date
@@ -60,6 +68,8 @@ class ForecastPoint(CamelModel):
 
 class ForecastResponse(CamelModel):
     item_id: int
+    market: PriceMarket
+    series_id: int
     status: str
     base_date: date | None = None
     data_date: date | None = None
@@ -95,6 +105,7 @@ class PriceDetail(CamelModel):
 
 class PriceFactors(CamelModel):
     item_id: int
+    market: PriceMarket
     base_date: date | None
     status: str
     factors: list[dict]
