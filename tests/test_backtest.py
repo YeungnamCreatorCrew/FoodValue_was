@@ -20,6 +20,10 @@ def test_records_compare_only_observed_targets_against_last_price():
     assert summary['naiveMape'] == round((100 / 1100 + 50 / 950 + 0) * 100 / 3, 3)
     # 실제로 움직인 2건 중 상승(10/5)만 맞힘. 변동 없는 10/9는 방향 평가에서 제외
     assert summary['directionAccuracy'] == 0.5 and summary['directionSamples'] == 2
+    assert summary['flatPredictionShare'] == 0.0
+    # 직전 가격 유지(평평한 예측)는 방향을 말하지 않으므로 오답으로 세지 않는다.
+    flat = [{**r, 'predicted': r['currentPrice']} for r in records]
+    assert summarize(flat)['overall']['directionAccuracy'] is None and summarize(flat)['overall']['flatPredictionShare'] == 1.0
     assert summary['intervalCoverage'] == round(2 / 3, 3)  # 950은 하한 990 밖
     assert summarize([]) == {'points': 0}
 

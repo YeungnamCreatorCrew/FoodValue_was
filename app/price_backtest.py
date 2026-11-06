@@ -76,9 +76,11 @@ def summarize(records):
         return {'points': 0}
 
     def block(rows):
-        moved = [r for r in rows if r['actual'] != r['currentPrice']]
-        hits = [((r['predicted'] > r['currentPrice']) == (r['actual'] > r['currentPrice'])) and r['predicted'] != r['currentPrice']
-                for r in moved]
+        # 방향 적중률은 모델이 움직임을 예측했고 실제로도 움직인 점만 센다. 직전 가격 유지(평평한 예측)는 방향을 말하지
+        # 않으므로 오답으로 세지 않고, 그 비율은 flatPredictionShare로 따로 보여 준다.
+        directional = [r for r in rows if r['actual'] != r['currentPrice'] and r['predicted'] != r['currentPrice']]
+        hits = [(r['predicted'] > r['currentPrice']) == (r['actual'] > r['currentPrice']) for r in directional]
+        flat = sum(r['predicted'] == r['currentPrice'] for r in rows)
         bounded = [r for r in rows if r['lower'] is not None and r['upper'] is not None]
         model_mape = mean(_ape(r['predicted'], r['actual']) for r in rows)
         naive_mape = mean(_ape(r['currentPrice'], r['actual']) for r in rows)
@@ -87,6 +89,7 @@ def summarize(records):
                 'naiveMae': round(mean(abs(r['currentPrice'] - r['actual']) for r in rows), 1),
                 'mapeImprovementPct': round((naive_mape - model_mape) / naive_mape * 100, 1) if naive_mape else None,
                 'directionAccuracy': round(mean(hits), 3) if hits else None, 'directionSamples': len(hits),
+                'flatPredictionShare': round(flat / len(rows), 3),
                 'intervalCoverage': round(mean(r['lower'] <= r['actual'] <= r['upper'] for r in bounded), 3) if bounded else None,
                 'intervalSamples': len(bounded)}
 
@@ -121,8 +124,14 @@ def run(engine, item_id, dates, workers=1):
             found = records_for(base_date, result, rows, actual)
             records += found
             weighting = (result.metrics.get('weighting') or {}).get('weights')
+            metrics = result.metrics
             runs.append({'baseDate': base_date.isoformat(), 'status': 'SUCCESS', 'model': result.model,
-                         'quality': result.quality, 'comparedPoints': len(found), 'weights': weighting})
+                         'quality': result.quality, 'comparedPoints': len(found), 'weights': weighting,
+                         # 모델 내부 검증: 어떤 후보가 선택 구간에서 뽑혔고 최종 평가 구간에서 기준 모델을 얼마나 이겼는지
+                         'selectedInSelection': metrics.get('selectedInSelection'), 'baselineModel': metrics.get('baselineModel'),
+                         'evaluationWindow': [metrics.get('evaluationStart'), metrics.get('evaluationEnd')],
+                         'internalMape': {stage: {name: round(score['mape'], 3) for name, score in (metrics.get(stage) or {}).items() if score}
+                                          for stage in ('selection', 'evaluation')}})
     return {'itemId': item_id, 'baseDates': len(dates), 'runs': runs, 'summary': summarize(records)}, records
 
 
