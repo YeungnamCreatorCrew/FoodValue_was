@@ -10,14 +10,14 @@
 - 전국 가격의 과거 14/30/90일 조회, 향후 달력 7일 예측
 - 구매 가이드·예측 평가 지표·구간 포함률·업데이트 지연 표시
 - 비로그인 조회 허용. 토큰을 보내면 검증하고, 로그인 사용자의 냉장고 잔량만 연결
-- 예측 MVP는 KAMIS 원물(처음 적재할 품목은 대파). 참가격 가공품은 현재 시세 조회 가능
+- 예측 대상은 KAMIS 가격 계열(소매·도매, 처음 적재한 품목은 대파). 참가격 가공품은 가격 계열이 없어 시세·예측 API에서 빠짐
 - Open API 수집기와 통합 파이프라인(`python -m app.price_pipeline`). 아래 [외부 원천 통합](#외부-원천-통합) 참고
 - 관심 품목·알림·지역별 확장·레시피 연결은 후속 작업
 
-DB의 NATIONAL 값은 수집기가 제공하는 전국 소매가입니다.
-도매가·소매가를 같은 item/region/date 키에 섞어 적재하지 않습니다.
-품목의 price_source/price_code/price_unit_label로 출처와 상품·단위를 식별합니다.
-KAMIS 실제 코드 조합과 지역 대응표는 실데이터 적재 전에 확정합니다.
+가격은 가격 계열(`price_series`) 단위로 저장·예측합니다. 계열 = 품목 × 시장(RETAIL 소매·WHOLESALE 도매)이며
+KAMIS 품목·품종·등급 코드(예: `246`-`00`-`04`)와 가격 단위(`unit_quantity`·`unit`, 예: 1 kg)를 가집니다.
+소매·도매 계열 모두 예측 대상이고, 각 계열은 같은 품목의 상대 시장 가격을 예측 변수(MARKET 묶음)로 씁니다.
+지역은 전국(KAMIS '평균')만 씁니다. API는 `market` 쿼리 파라미터(기본 RETAIL)로 계열을 고릅니다.
 
 ## 예측 알고리즘
 
@@ -64,7 +64,7 @@ XGBoost는 가격 수준이 아니라 시작일 가격 대비 변화율을 학�
 
 ## 구매 가이드·근거
 
-VALIDATED 결과에만 다음 규칙을 적용합니다. 가격 기준 단위는 price_unit_label입니다.
+VALIDATED 결과에만 다음 규칙을 적용합니다. 가격 기준 단위는 계열의 `unit_quantity`·`unit`입니다.
 
 - 7일 내 최저 예상가가 현재가보다 3% 이상 낮으면 BUY_LATER, 최초 최저가 날짜와 예상 절약액 반환
 - 위 조건이 아니고 D+7 가격이 현재가보다 3% 이상 높으면 BUY_NOW
@@ -72,7 +72,7 @@ VALIDATED 결과에만 다음 규칙을 적용합니다. 가격 기준 단위는
 
 추천은 예측에 따른 참고 정보이며 실제 절약을 보장하지 않습니다.
 factors는 현재 가격과 최근 관측 평균 등 확인 가능한 통계입니다.
-외부 원천은 도매가격·주산지 기상·예측 기간의 공휴일 관측값과 선택된 모델이 그 자료를 사용했는지(usedByModel)만 표시합니다.
+외부 원천은 상대 시장 가격·주산지 기상·예측 기간의 공휴일 관측값과 선택된 모델이 그 자료를 사용했는지(usedByModel)만 표시합니다.
 XGBOOST_WEIGHTED가 선택되면 원천별 `modelWeight`와 '외부변수 가중치'(kind=MODEL) 항목을 함께 표시합니다.
 이 값은 과거 예측 오차로 학습한 결합 비중이며 인과적 영향이 아닙니다.
 모델의 인과적 기여도·SHAP·날씨 영향 방향을 만들어 표시하지 않습니다.
@@ -140,12 +140,12 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 ## 외부 원천 통합
 
-`python -m app.price_pipeline`은 수집 → 적재 → 정형 테이블 정제 → 품목별 7일 예측을 한 번에 실행합니다.
+`python -m app.price_pipeline`은 수집 → 적재 → 정형 테이블 정제 → 가격 계열(소매·도매)별 7일 예측을 한 번에 실행합니다.
 
 | 기관 | API | dataset | 적재 위치 | 예측 사용 |
 | --- | --- | --- | --- | --- |
-| KAMIS | 최근 1년: 기간별 품목 가격 `periodProductList`, 그 이전: 일별 부류별 가격 `dailyPriceByCategoryList` 소매(01) | RETAIL_DAILY | `price_daily`(NATIONAL) + 원본 버전 | 예측 대상 |
-| KAMIS | 같은 API 도매(02) | WHOLESALE_DAILY | `external_observation` | 전일 도매가·소매/도매 비율·7/28일 변화율 |
+| KAMIS | 최근 1년: 기간별 품목 가격 `periodProductList`, 그 이전: 일별 부류별 가격 `dailyPriceByCategoryList` 소매(01) | RETAIL_DAILY | `external_observation` → `price_daily`(소매 계열) | 예측 대상. 도매 계열 예측에는 상대 시장 가격 |
+| KAMIS | 같은 API 도매(02) | WHOLESALE_DAILY | `external_observation` → `price_daily`(도매 계열) | 예측 대상. 소매 계열 예측에는 상대 시장 가격(전일 값·대상/상대 비율·7/28일 변화율) |
 | 기상청 | 지상(종관, ASOS) 일자료 `AsosDalyInfoService` | ASOS_DAILY | `external_observation` → `weather_daily` | 검증된 주산지 관측소의 7일 기온·최고/최저·습도·일조, 7/28일 강수. 전국 평균 7일 기온·28일 강수·폭염/호우/한파 지수 |
 | 한국천문연구원 | 특일 정보 `SpcdeInfoService/getRestDeInfo` | HOLIDAY | `external_observation` → `calendar_event` | 목표일 공휴일 여부, 설날·추석까지/이후 일수(최대 45), 목표일의 명절 영향기간 여부·명절 가격 압력 |
 | (파생) | `price_daily` | — | `price_change_history` | 과거 최대 5년 같은 시기(±3일)·같은 시점 변동률 평균 |
@@ -153,8 +153,9 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 | 한국은행 | ECOS 통계검색 `StatisticSearch` 731Y001 | EXCHANGE_RATE_DAILY | `external_observation` → `exchange_rate_daily` | 원/미국달러 7·28일 변화율(1일 지연) |
 | 기상청 | 단기예보 `VilageFcstInfoService_2.0/getVilageFcst` | VILAGE_FCST_DAILY | `external_observation` | 사용 안 함(과거 발표본이 없어 백테스트 불가). `weather_daily` FORECAST용 |
 
-- 품목은 `price_source='KAMIS'`, `food_type='RAW'`이고 `price_code`가 `품목-품종-등급`(예: `246-00-04`)이어야 합니다. 부류코드는 품목코드 첫 자리로 정합니다.
-- KAMIS 응답은 `countyname='평균'` 행만 전국 값으로 적재합니다. 도매가는 `price_daily`에 섞지 않습니다.
+- 수집·예측 대상은 `price_series`에 소매 계열이 있는 품목입니다. 계열 코드는 `품목-품종-등급`(예: `246-00-04`)이고 부류코드는 품목코드 첫 자리로 정합니다.
+- KAMIS 응답은 `countyname='평균'` 행만 전국 값으로 보존합니다. `price_daily`는 원본의 최신 버전에서 계열별로 다시 만들고
+  (`warehouse_service.refresh_price_daily`, 수집 직후와 정제 단계에서 같은 함수), 만든 원본 행을 `observation_id`로 남깁니다.
 - `periodProductList`는 로컬 실측에서 최근 1년치만 돌려주고 그 이전 기간은 시간 초과가 났습니다. 그래서 최근 364일만 이 API로 받고,
   더 오래된 날짜는 `dailyPriceByCategoryList`를 평일마다 1회(4개 병렬) 호출해 품목·품종·등급이 일치하는 행의 당일 가격(`dpr1`)을 씁니다.
   당일 열(`day1`)의 (월/일)이 요청일과 다르면 저장하지 않고, 코드 열(`item_code`·`kind_code`·`rank_code`)이 없는 응답은
@@ -171,10 +172,10 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 | 원천 | 공개지연 | 근거 |
 | --- | --- | --- |
-| KAMIS 도매가 | 1일 | 배치 시각에 당일 도매가가 공표되지 않았을 수 있어 보수적으로 둠 |
+| KAMIS 상대 시장 가격 | 1일 | 배치 시각에 당일 가격이 공표되지 않았을 수 있어 보수적으로 둠 |
 | ASOS 일자료 | 1일 | 기상청은 전일까지의 일자료를 제공 |
 | 공휴일·명절 영향기간 | 목표일 값 사용 | 법정공휴일은 미리 확정. 임시공휴일은 과거 백테스트에서 실제보다 일찍 알려진 것으로 취급됨 |
-| 전국 기상(`weather_daily`)·환율 | 1일 지연 | ASOS·도매가와 같은 보수적 가정 |
+| 전국 기상(`weather_daily`)·환율 | 1일 지연 | ASOS·상대 시장 가격과 같은 보수적 가정 |
 | 과거 변동률(`price_change_history`) | 기준일 b·시점 h 값은 b+h ≤ 예측 시작일 | 그 변동률을 만든 가격이 확인된 뒤에만 사용 |
 | 명절 가격 압력 | 영향기간의 7일 뒤 가격이 확인된 명절만 | 2개 연도 미만이면 결측 |
 | 연간 생산량 | Y년 값은 Y+1년 6월 30일부터 | KOSIS가 최초 공표일을 주지 않아 둔 가정 |
@@ -201,16 +202,19 @@ uv run --extra prices python -m app.price_pipeline                              
 uv run --extra prices python -m app.price_pipeline --item-id 1 --predict-only
 ```
 
-`--item-id`는 반복 지정할 수 있고 생략하면 모든 KAMIS 원물 품목이 대상입니다.
-종료 코드: 0 성공, 1 예측 실패, 2 자료 부족 또는 일부 원천 수집 실패, 3 동일 품목 실행 중. 결과는 JSON 한 줄로 출력합니다.
+`--item-id`는 반복 지정할 수 있고 생략하면 가격 계열이 있는 모든 품목이 대상입니다. 품목마다 소매·도매 계열을 각각 예측합니다.
+종료 코드: 0 성공, 1 예측 실패, 2 자료 부족 또는 일부 원천 수집 실패, 3 동일 계열 실행 중. 결과는 JSON 한 줄로 출력합니다.
 
 ### 과거 기준일 재현 백테스트
 
-과거 기준일마다 그날까지의 자료로만 7일 예측을 만들고, 이후 실제 가격과 비교합니다. DB를 읽기만 하며 예측 결과를 저장하지 않습니다.
+과거 기준일마다 그날까지의 자료로만 7일 예측을 만들고, 이후 실제 가격과 비교합니다. 기본은 DB를 읽기만 합니다.
+`--save`를 주면 결과를 `backtest_run`(조건·요약·커밋)·`backtest_origin`(기준일별 선택 모델)·`backtest_point`(시점별 비교)에 남깁니다.
+운영 예측 테이블(`price_model_run`·`price_forecast`)에는 어떤 경우에도 쓰지 않습니다.
 운영 배치와 같은 입력 로딩(`price_batch_service.load_inputs`)·모델·공개지연 규칙을 씁니다.
 
 ```bash
 uv run --extra prices python -m app.price_backtest --item-id 1 --start 2026-05-01 --end 2026-10-27 --every 7 --workers 4 --csv backtest.csv
+uv run --extra prices python -m app.price_backtest --item-id 1 --market WHOLESALE --start 2026-05-01 --end 2026-10-27 --save --note '도매 기준선'
 ```
 
 출력 JSON의 `summary`에 전체·시점별·선택 모델별 MAPE/MAE, 직전 가격 유지(naive) 대비 개선율, 방향 적중률(실제로 움직인 날만), 예측구간 포함률이 있고,
@@ -227,19 +231,20 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 
 ### 정형 테이블 정제
 
-수집 직후(`--predict-only` 제외) 원천을 V2 정형 테이블로 정제합니다. 같은 키는 갱신하므로 다시 실행해도 결과가 같습니다.
-원본은 계속 `external_observation`에 보존합니다. 도매가·주산지 기상·공휴일은 원본(관측소 단위)을, 전국 기상·명절 기간·과거 변동률·생산량·환율은 정형 테이블을 예측에 사용합니다.
+수집 직후(`--predict-only` 제외) 원천을 정형 테이블로 정제합니다. 같은 키는 갱신하므로 다시 실행해도 결과가 같습니다.
+원본은 계속 `external_observation`에 보존합니다. 주산지 기상·공휴일은 원본(관측소 단위)을, 계열 가격·전국 기상·명절 기간·과거 변동률·생산량·환율은 정형 테이블을 예측에 사용합니다.
 
 | 테이블 | 정제 규칙 |
 | --- | --- |
+| `price_daily` | 계열 코드로 저장된 KAMIS 원본(키 `{코드}:{날짜}`)의 최신 버전. 가격이 없거나 0 이하면 만들지 않음 |
 | `weather_daily` (ACTUAL) | 전국 ASOS 관측소(`data_go_kr.NATIONAL_STATIONS`, 97곳) 단순 평균. 폭염(최고 33℃↑)·호우(80mm↑)·한파(최저 −12℃↓) 관측소 비율(%), 자료가 있는 관측소 수 |
 | `weather_daily` (FORECAST) | 단기예보 17개 시·도 대표 격자의 최신 발표본 평균. 오늘 이후 날짜를 덮어쓰고 지난 날짜는 마지막 예보로 남김. 일조시간은 예보 항목이 없어 NULL |
 | `calendar_day` | 공휴일을 수집한 연도의 모든 날짜. 요일(1=월), 공휴일명(대체·임시 포함), 음력(천문연 자료 기반 `korean-lunar-calendar`), 휴장일 |
 | `calendar_event` | 공휴일명이 설날·추석인 연속 기간. 영향 기간은 시작 D−14 ~ 종료 D+3 |
 | `item_production` | KOSIS 농작물생산조사 연간 전국 생산량(PRODUCTION·YEAR·톤·확정치) |
 | `exchange_rate_daily` | ECOS 일별 원/미국달러 매매기준율(영업일만). `V20261105_1500` migration으로 추가 |
-| `price_change_history` | `price_daily`(NATIONAL)의 기준일 대비 1~7일 뒤 변동률(%) |
-| `event_item_weight` (LEARNED) | 품목별 설날·추석 가격 압력(−1~1). 예측의 EVENT 특징과 같은 함수(`exogenous.event_weight`)로 오늘 기준 계산. MANUAL 행은 덮어쓰지 않음 |
+| `price_change_history` | 계열별 `price_daily`의 기준일 대비 1~7일 뒤 변동률(%) |
+| `event_item_weight` (LEARNED) | 품목별(소매 계열 기준) 설날·추석 가격 압력(−1~1). 예측의 EVENT 특징과 같은 함수(`exogenous.event_weight`)로 오늘 기준 계산. MANUAL 행은 덮어쓰지 않음 |
 
 - 전국 관측소 97곳은 2026-11-03 자료로 지점번호 1~339를 전수 조회해 응답이 있는 지점만 남긴 목록입니다. 신설 지점은 설치 이전 기간이 무자료라 그 날짜 집계에서 빠집니다(`station_count`로 확인).
 - ASOS는 지점마다 기간 전체를 한 번에 요청하고 999행 단위로 페이지를 넘깁니다. 실측: 5년 백필 194회 요청·177,073행·약 6분, 매일 증분 97회·약 40초(4개 병렬).

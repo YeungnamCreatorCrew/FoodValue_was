@@ -100,8 +100,8 @@ DBeaver/DataGrip 접속 정보: host `localhost`, port `.env`의 DB_PORT, DB/계
 
 ## 팀 합의가 필요한 것
 
-- KAMIS price_code 형식(품목-품종-등급 조합): KAMIS는 품목·품종·등급 코드를 조합해야 특정 상품 시세가 나옵니다. 하나의 문자열로 어떻게 합칠지 정합니다 (예: `품목-품종-등급`).
-- `price_daily.region` 값: KAMIS 지역 코드 → `NATIONAL`, `SEOUL`, `DAEGU` ... 대응표.
+- (정함, `V20261106_1700`) KAMIS 코드는 `price_series`의 `item_code`·`kind_code`·`rank_code` 세 컬럼으로 나눠 저장합니다. 품목 × 시장(소매·도매)마다 계열 하나.
+- (정함, `V20261106_1700`) 지역은 전국만 씁니다. `price_daily.region` 컬럼은 없앴습니다.
 - 시세 적재 범위: 운영 DB(Supabase 무료 플랜)는 용량이 작으므로 지역 수와 기간을 먼저 정합니다.
 
 ## 운영 DB(Supabase)로 옮길 때

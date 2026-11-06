@@ -31,7 +31,7 @@
 
 | 묶음 | 포함 그룹 | 원천 테이블 | 특징 |
 | --- | --- | --- | --- |
-| MARKET | WHOLESALE | external_observation(KAMIS 도매) | 전일 도매가, 소매/도매 비율, 7·28일 변화율, 경과일 |
+| MARKET | COUNTERPART | `price_daily`의 상대 시장 계열(소매 예측이면 도매, 도매 예측이면 소매) | 전일 상대 가격, 대상/상대 비율, 7·28일 변화율, 경과일 |
 | WEATHER | WEATHER, NATIONAL_WEATHER | 주산지 ASOS, `weather_daily`(ACTUAL) | 주산지 7일 기온·강수·습도·일조, 전국 7일 기온, 28일 강수, 폭염·호우·한파 지수 |
 | CALENDAR | CALENDAR, EVENT | KASI 공휴일, `calendar_event`, `price_change_history` | 목표일 공휴일, 설·추석까지/이후 일수, 명절 영향기간 여부, 명절 가격 압력 |
 | SEASONAL | SEASONAL | `price_change_history` | 과거 최대 5년 같은 시기(±3일) 같은 시점 변동률의 평균 |
