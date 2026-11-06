@@ -9,8 +9,9 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import price_pipeline
+from app import price_backtest, price_pipeline
 from app.collectors import data_go_kr, ecos, kamis, kosis
+from app.collectors.records import windows
 from app.repositories import covariate_repository
 from app.services import collection_service, warehouse_service
 from app.services.collection_service import Credentials
@@ -25,7 +26,7 @@ CREDENTIALS = Credentials('kamis-key', 'kamis-id', 'portal-key', 'kosis-key', 'e
 class FakeApis:
     """도매가가 소매가를 5일 앞서는 합성 시장. 실제 시장 관계를 입증하지 않는다."""
 
-    def __init__(self, station):
+    def __init__(self, station, code='246-00-04'):
         self.start = today() - timedelta(days=DAYS - 1)
         rng = random.Random(3)
         level, drift, self.wholesale = 1000.0, 0, []
@@ -36,6 +37,7 @@ class FakeApis:
             self.wholesale.append(level)
         self.retail = [round(1.5 * self.wholesale[i] + rng.gauss(0, 3)) for i in range(DAYS)]
         self.station = station
+        self.code = code
         self.calls = []
         self.overrides = {}
 
@@ -47,6 +49,18 @@ class FakeApis:
 
     def __call__(self, url, params):
         self.calls.append(url)
+        if url == kamis.URL and params.get('action') == kamis.DAILY_ACTION:
+            assert params['p_cert_key'] == 'kamis-key'
+            day = date.fromisoformat(params['p_regday'])
+            index = (day - self.start).days
+            if not 0 <= index < DAYS:
+                return {'data': ['001']}
+            retail = params['p_product_cls_code'] == '01'
+            price = self.overrides.get(day, self.retail[index] if retail else round(self.wholesale[index + 5]))
+            row = {'item_name': '대파', 'item_code': params['p_item_category_code'][0] + '00', 'kind_code': '', 'rank_code': '',
+                   'day1': f'당일 ({day.month:02d}/{day.day:02d})', 'dpr1': f'{price:,}'}
+            return {'data': {'error_code': '000', 'item': [row, {**row, 'item_code': self.code[:3],
+                                                                 'kind_code': self.code[4:6], 'rank_code': self.code[7:]}]}}
         if url == kamis.URL:
             assert params['p_cert_key'] == 'kamis-key'
             retail = params['p_productclscode'] == '01'
@@ -93,13 +107,14 @@ def pipeline(local, monkeypatch):
         name = conn.scalar(text('SELECT name FROM item WHERE id=:id'), {'id': item_id})
     monkeypatch.setitem(kosis.PRODUCTION_SERIES, name, ('DT_1ET0291', 'T44'))  # 테스트 품목을 대파 시계열에 연결
     station = str(90000 + random.randint(0, 9999))
+    code = f'2{item_id % 100:02d}-00-04'
     with engine.begin() as conn:
         conn.execute(text("""UPDATE item SET food_type='RAW',price_source='KAMIS',price_code=:code,price_unit_label='1kg'
-            WHERE id=:id"""), {'id': item_id, 'code': f'2{item_id % 100:02d}-00-04'})
+            WHERE id=:id"""), {'id': item_id, 'code': code})
         conn.execute(text("""INSERT INTO item_weather_station(item_id,station_code,station_name,producing_region,
             mapping_status,share,rationale) VALUES(:id,:station,'테스트','테스트 주산지','VERIFIED',1,'통합 테스트')"""),
                      {'id': item_id, 'station': station})
-    apis = FakeApis(station)
+    apis = FakeApis(station, code)
     with engine.connect() as conn:
         before = conn.scalar(text('SELECT coalesce(max(id),0) FROM external_collection_run'))
     try:
@@ -110,8 +125,16 @@ def pipeline(local, monkeypatch):
             conn.execute(text('DELETE FROM external_observation WHERE collection_run_id > :before'), {'before': before})
             conn.execute(text('DELETE FROM external_collection_run WHERE id > :before'), {'before': before})
             for table in ('price_insight', 'price_forecast', 'price_model_run', 'price_daily', 'item_weather_station',
-                          'item_production', 'price_change_history'):
+                          'item_production', 'price_change_history', 'event_item_weight'):
                 conn.execute(text(f'DELETE FROM {table} WHERE item_id=:id'), {'id': item_id})
+
+
+def kamis_expectation(apis):
+    """(적재될 일수, 요청 수). 최근 PERIOD_LIMIT_DAYS일은 기간 API, 그 이전은 평일만 일별 API로 받는다."""
+    boundary = today() - timedelta(days=kamis.PERIOD_LIMIT_DAYS)
+    older = [d for d, _ in apis.days(apis.start, boundary - timedelta(days=1)) if d.weekday() < 5]
+    recent = [d for d, _ in apis.days(boundary, today())]
+    return len(older) + len(recent), len(older) + len(list(windows(boundary, today(), kamis.WINDOW_DAYS)))
 
 
 def collect(engine, item_id, apis, **kwargs):
@@ -126,16 +149,17 @@ def test_collect_store_dedupe_and_revision(pipeline):
         ('KAMIS', 'RETAIL_DAILY'): 'SUCCESS', ('KAMIS', 'WHOLESALE_DAILY'): 'SUCCESS',
         ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS',
         ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS', ('ECOS', 'EXCHANGE_RATE_DAILY'): 'SUCCESS'}
-    assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == DAYS
+    kamis_days, kamis_requests = kamis_expectation(apis)
+    assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == kamis_days
     # 주산지 관측소 + 전국 집계 관측소. ASOS는 전일까지
     assert first[('KMA', 'ASOS_DAILY')]['received'] == (len(data_go_kr.NATIONAL_STATIONS) + 1) * (DAYS - 1)
     with engine.connect() as conn:
-        assert conn.scalar(text("SELECT count(*) FROM price_daily WHERE item_id=:id AND region='NATIONAL'"), {'id': item_id}) == DAYS
+        assert conn.scalar(text("SELECT count(*) FROM price_daily WHERE item_id=:id AND region='NATIONAL'"), {'id': item_id}) == kamis_days
         latest = conn.scalar(text('SELECT price FROM price_daily WHERE item_id=:id AND price_date=:d'), {'id': item_id, 'd': today()})
         assert latest == apis.retail[-1]
         run = conn.execute(text('SELECT status,request_count,records_received,records_inserted,finished_at FROM external_collection_run WHERE id=:id'),
                            {'id': first[('KAMIS', 'WHOLESALE_DAILY')]['runId']}).one()
-        assert run[0] == 'SUCCESS' and run[1] == 6 and run[2] == run[3] == DAYS and run[4] is not None
+        assert run[0] == 'SUCCESS' and run[1] == kamis_requests and run[2] == run[3] == kamis_days and run[4] is not None
     # 같은 내용의 재수집은 새 행을 만들지 않는다.
     again = collect(engine, item_id, apis, start=apis.start)
     assert all(row['inserted'] == 0 for row in again.values())
@@ -150,7 +174,7 @@ def test_collect_store_dedupe_and_revision(pipeline):
                            {'id': item_id, 'd': today()}) == 2
     with Session(engine) as db:
         covariates = covariate_repository.load(db, item_id, apis.start, today(), today() + timedelta(days=7))
-    assert len(covariates.wholesale) == DAYS and len(covariates.weather) == DAYS - 1
+    assert len(covariates.wholesale) == kamis_days and len(covariates.weather) == DAYS - 1
     assert covariates.weather[today() - timedelta(days=1)]['sumRn'] in (0.0, 4.5)
     assert date(today().year, 9, 5) in covariates.holidays and today().year in covariates.holiday_years
 
@@ -173,14 +197,32 @@ def test_full_pipeline_publishes_exogenous_forecast(pipeline):
     with engine.connect() as conn:
         metrics = conn.scalar(text('SELECT metrics FROM price_model_run WHERE id=:id'), {'id': prediction['runId']})
     assert prediction['status'] == 'SUCCESS', prediction
-    assert prediction['model'] == 'XGBOOST_EXT' and prediction['quality'] == 'VALIDATED', metrics['evaluation']
+    assert prediction['model'] in ('XGBOOST_EXT', 'XGBOOST_WEIGHTED') and prediction['quality'] == 'VALIDATED', metrics['evaluation']
     detail = client.get(f'/api/v1/prices/items/{item_id}').json()
     metrics = detail['forecast']['metrics']
     assert metrics['externalGroups'] == ['WHOLESALE', 'WEATHER', 'CALENDAR']
     assert metrics['externalCoverage']['WHOLESALE'] == 1.0
+    assert metrics['weighting']['blocks'] == {'MARKET': ['WHOLESALE'], 'WEATHER': ['WEATHER'], 'CALENDAR': ['CALENDAR']}
+    assert all(0.0 <= value <= 1.0 for value in metrics['weighting']['weights'].values())
     names = [factor['name'] for factor in client.get(f'/api/v1/prices/items/{item_id}/factors').json()['factors']]
     assert names[:3] == ['최근 가격', '도매가격', '주산지 기상']
     assert len(detail['forecast']['points']) == 7
+
+
+def test_backtest_reproduces_past_forecasts_read_only(pipeline):
+    _, engine, item_id, apis = pipeline
+    collect(engine, item_id, apis, start=apis.start)
+    with engine.connect() as conn:
+        runs_before = conn.scalar(text('SELECT count(*) FROM price_model_run WHERE item_id=:id'), {'id': item_id})
+    dates = [today() - timedelta(days=21), today() - timedelta(days=14)]
+    output, records = price_backtest.run(engine, item_id, dates, workers=2)
+    assert [run['status'] for run in output['runs']] == ['SUCCESS', 'SUCCESS']
+    assert output['summary']['overall']['points'] == len(records) == 14  # 가짜 자료는 매일 가격이 있음
+    # 기준일 이후 가격은 입력에 쓰지 않는다: 각 행의 현재가는 그 기준일의 가격이다.
+    first = date.fromisoformat(records[0]['baseDate'])
+    assert records[0]['currentPrice'] == apis.retail[(first - apis.start).days]
+    with engine.connect() as conn:
+        assert conn.scalar(text('SELECT count(*) FROM price_model_run WHERE item_id=:id'), {'id': item_id}) == runs_before
 
 
 GLOBAL_TABLES = ('weather_daily', 'calendar_day', 'calendar_event', 'exchange_rate_daily')
@@ -227,9 +269,14 @@ def test_structured_tables_are_refreshed_idempotently(pipeline):
             assert rate[0] == weekdays == first['exchange_rate_daily'] and rate[2] == '원'
             history = conn.scalar(text('SELECT count(*) FROM price_change_history WHERE item_id=:id'), {'id': item_id})
             assert history == first['price_change_history'] and history > 0
+            # 가짜 자료는 추석이 해마다 하나뿐이고 기간이 짧아 2개 연도 이상의 명절 효과가 없을 수 있다.
+            learned = conn.scalar(text("SELECT count(*) FROM event_item_weight WHERE item_id=:id AND weight_source='LEARNED'"),
+                                  {'id': item_id})
+            assert learned == first['event_item_weight']
     finally:
         with engine.begin() as conn:
             for table in GLOBAL_TABLES:
                 conn.execute(text(f'DELETE FROM {table}'))
             conn.execute(text('DELETE FROM price_change_history WHERE item_id=:id'), {'id': item_id})
             conn.execute(text('DELETE FROM item_production WHERE item_id=:id'), {'id': item_id})
+            conn.execute(text('DELETE FROM event_item_weight WHERE item_id=:id'), {'id': item_id})

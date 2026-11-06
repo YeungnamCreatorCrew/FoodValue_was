@@ -18,6 +18,7 @@ from sqlalchemy import create_engine
 from app.core.constants import ID_MAX
 from app.services import collection_service, price_batch_service, warehouse_service
 from app.services.fridge_service import today
+from app.services.price_prediction import ModelDependencyError
 
 COLLECTION_FAILURES = {'AUTH_ERROR', 'NETWORK_ERROR', 'FAILED', 'PARTIAL'}
 
@@ -59,6 +60,8 @@ def run(engine, args):
                 result = price_batch_service.run(engine, item.id)
             except price_batch_service.BatchBusyError:
                 result = {'status': 'BUSY'}
+            except ModelDependencyError as error:
+                result = {'status': 'FAILED', 'errorCode': 'ModelDependencyError', 'message': str(error)}
             except Exception as error:
                 # DB 주소·인증키가 포함될 수 있어 예외 원문은 출력하지 않는다.
                 result = {'status': 'FAILED', 'errorCode': type(error).__name__}

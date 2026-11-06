@@ -9,8 +9,9 @@
 | exchange_rate_daily | ECOS 731Y001 일별 원/미국달러 매매기준율 |
 | item_production | KOSIS 농작물생산조사 연간 전국 생산량(톤, 확정치) |
 | price_change_history | price_daily(NATIONAL)의 같은 날 기준 1~7일 뒤 변동률 |
+| event_item_weight(LEARNED) | price_change_history(7일)와 calendar_event로 계산한 품목별 명절 가격 압력 |
 
-원천에 없는 값은 만들지 않는다. 가락 반입량(ARRIVAL)·KREI 전망·이벤트 가중치는 원천 수집기가 없어 적재하지 않는다.
+원천에 없는 값은 만들지 않는다. 가락 반입량(ARRIVAL)·KREI 전망은 원천 수집기가 없어 적재하지 않는다.
 """
 from collections import defaultdict
 from datetime import date, timedelta
@@ -25,9 +26,13 @@ from sqlalchemy.orm import Session
 from app.collectors import data_go_kr, ecos, kosis
 from app.collectors.http import number
 from app.models.external import ExternalObservation
-from app.models.prediction_input import CalendarDay, CalendarEvent, ExchangeRateDaily, ItemProduction, PriceChangeHistory, WeatherDaily
+from app.models.prediction_input import (CalendarDay, CalendarEvent, EventItemWeight, ExchangeRateDaily, ItemProduction,
+                                         PriceChangeHistory, WeatherDaily)
 from app.models.price import PriceDaily
+from app.repositories import covariate_repository
 from app.repositories.covariate_repository import latest_versions
+from app.services.exogenous import event_weight
+from app.services.fridge_service import today
 
 HEAT_MAX_TEMP = 33.0  # 폭염: 일 최고 33℃ 이상
 HEAVY_RAIN_MM = 80.0  # 호우: 일 강수 80mm 이상
@@ -311,6 +316,37 @@ def refresh_price_change_history(engine, item_ids, since: date | None = None):
     return total
 
 
+# ---------------------------------------------------------------- event_item_weight
+def event_weight_rows(item_id, changes7: dict[date, float], windows, as_of: date):
+    """예측 모델(EVENT 특징)과 같은 함수로 오늘 기준 명절 가격 압력을 계산한다. 2개 연도 미만이면 만들지 않는다."""
+    rows = []
+    for code in EVENTS.values():
+        weight = event_weight(changes7, [w for w in windows if w.code == code], as_of)
+        if weight is not None:
+            rows.append({'event_code': code, 'item_id': item_id, 'category': None,
+                         'weight': _decimal(weight, '0.01'), 'weight_source': 'LEARNED'})
+    return rows
+
+
+def refresh_event_item_weight(engine, item_ids, as_of: date | None = None):
+    """LEARNED 가중치만 갱신한다. 사람이 넣은 MANUAL 행은 덮어쓰지 않는다."""
+    as_of = as_of or today()
+    with Session(engine) as db:
+        windows = covariate_repository.events(db, date(1900, 1, 1), as_of)
+        rows = []
+        for item_id in item_ids:
+            changes = covariate_repository.change_history(db, item_id, date(1900, 1, 1), as_of).get(7, {})
+            rows += event_weight_rows(item_id, changes, windows, as_of)
+        if rows:
+            statement = insert(EventItemWeight).values(rows)
+            db.execute(statement.on_conflict_do_update(
+                constraint='uk_event_item_weight_item',
+                set_={'weight': statement.excluded.weight, 'weight_source': statement.excluded.weight_source},
+                where=EventItemWeight.weight_source == 'LEARNED'))
+        db.commit()
+    return len(rows)
+
+
 def refresh(engine, item_ids, *, weather_start: date, weather_end: date, since: date | None = None):
     """파이프라인에서 수집 직후 호출한다. 테이블별 적재 행 수를 반환한다."""
     result = {}
@@ -319,7 +355,8 @@ def refresh(engine, item_ids, *, weather_start: date, weather_end: date, since: 
                        ('calendar', lambda: dict(zip(('calendar_day', 'calendar_event'), refresh_calendar(engine)))),
                        ('item_production', lambda: refresh_item_production(engine, item_ids)),
                        ('exchange_rate_daily', lambda: refresh_exchange_rate(engine, weather_start, weather_end)),
-                       ('price_change_history', lambda: refresh_price_change_history(engine, item_ids, since))):
+                       ('price_change_history', lambda: refresh_price_change_history(engine, item_ids, since)),
+                       ('event_item_weight', lambda: refresh_event_item_weight(engine, item_ids))):
         try:
             value = task()
             result.update(value if isinstance(value, dict) else {name: value})

@@ -109,3 +109,19 @@ def test_exchange_rows():
                           units={'rate': '원'})
     assert warehouse.exchange_rows([row]) == [{'rate_date': date(2026, 11, 4), 'currency_code': 'USD',
                                                'rate': Decimal('1390.5000'), 'unit_label': '원', 'source': 'ECOS'}]
+
+
+def test_event_weight_rows_are_learned_and_bounded():
+    from app.services.exogenous import EventWindow
+    years = (2022, 2023, 2024)
+    windows = [EventWindow('CHUSEOK', date(y, 9, 20), date(y, 9, 22), date(y, 9, 6), date(y, 9, 25)) for y in years]
+    changes = {}
+    for year in years:
+        for k in range(120):
+            day = date(year, 7, 1) + timedelta(days=k)
+            changes[day] = .01 + (.08 if date(year, 9, 6) <= day <= date(year, 9, 25) else 0.0)
+    rows = warehouse.event_weight_rows(7, changes, windows, date(2025, 1, 1))
+    # 해마다 영향 기간의 7일 변동률이 8%p 높았다 → tanh(0.08 / 0.10) = 0.66. 설날은 기간 자료가 없어 만들지 않는다.
+    assert rows == [{'event_code': 'CHUSEOK', 'item_id': 7, 'category': None, 'weight': Decimal('0.66'),
+                     'weight_source': 'LEARNED'}]
+    assert warehouse.event_weight_rows(7, changes, windows, date(2023, 10, 1)) == []  # 확인된 명절 1개뿐

@@ -284,3 +284,72 @@ def test_ecos_pages_by_row_range():
         return {'StatisticSearch': {'list_total_count': 1500, 'row': rows}}
     batch = ecos.collect(fetch, key='K', start=date(2021, 1, 1), end=date(2026, 11, 4))
     assert batch.requests == 2 and '/1/1000/' in urls[0] and '/1001/2000/' in urls[1]
+
+
+def test_fetch_json_adds_no_trailing_question_mark_without_params(monkeypatch):
+    seen = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"ok": 1}'
+
+    monkeypatch.setattr(http.urllib.request, 'urlopen', lambda request, timeout: seen.append(request.full_url) or Response())
+    http.fetch_json('https://ecos.example/api/StatisticSearch/key/json/kr/1/10/731Y001/D/20260101/20260131/0000001', {})
+    http.fetch_json('https://kamis.example/api', {'a': 1, 'b': None})
+    assert seen == ['https://ecos.example/api/StatisticSearch/key/json/kr/1/10/731Y001/D/20260101/20260131/0000001',
+                    'https://kamis.example/api?a=1']
+
+
+def daily_row(item='246', kind='00', rank='04', label='당일 (10/07)', price='3,120'):
+    return {'item_name': '대파', 'item_code': item, 'kind_name': '대파(1kg)', 'kind_code': kind, 'rank': '상품',
+            'rank_code': rank, 'unit': '1kg', 'day1': label, 'dpr1': price, 'day2': '1일전 (10/06)', 'dpr2': '3,000'}
+
+
+def test_kamis_daily_picks_item_kind_rank_and_rejects_carried_values():
+    day = date(2025, 10, 7)
+    payload = kamis_payload([daily_row(rank='05', price='2,500'), daily_row(), daily_row(item='245', price='9,999')])
+    [record] = kamis.parse_daily(payload, CODE, kamis.RETAIL, 7, '1kg', day)
+    assert record.key == f'{CODE}:2025-10-07' and record.observed_on == day and record.payload['price'] == '3,120'
+    assert record.payload['api'] == kamis.DAILY_ACTION and record.item_id == 7
+    # 당일 열의 날짜가 요청일과 다르면(미조사일에 직전 값을 보여준 경우) 저장하지 않는다.
+    assert kamis.parse_daily(kamis_payload([daily_row(label='당일 (10/02)')]), CODE, kamis.RETAIL, 7, None, day) == []
+    assert kamis.parse_daily(kamis_payload([daily_row(price='-')]), CODE, kamis.RETAIL, 7, None, day) == []
+    assert kamis.parse_daily({'data': ['001']}, CODE, kamis.RETAIL, 7, None, day) == []
+    # 예상과 다른 응답 형식은 추측해서 저장하지 않는다.
+    with pytest.raises(http.CollectorError, match='KAMIS_UNEXPECTED_DAILY_RESPONSE'):
+        kamis.parse_daily(kamis_payload([kamis_row('평균', '10/07', '3,120')]), CODE, kamis.RETAIL, 7, None, day)
+    params = kamis.daily_params(CODE, kamis.WHOLESALE, day, 'k', 'i')
+    assert (params['action'], params['p_product_cls_code'], params['p_item_category_code'], params['p_regday']) == \
+        (kamis.DAILY_ACTION, '02', '200', '2025-10-07')
+
+
+def test_kamis_collect_uses_daily_api_only_beyond_period_limit():
+    actions = []
+
+    def fetch(url, params):
+        if params['action'] == kamis.DAILY_ACTION:
+            day = date.fromisoformat(params['p_regday'])
+            actions.append(('daily', day))
+            return kamis_payload([daily_row(label=f'당일 ({day.month:02d}/{day.day:02d})')])
+        actions.append(('period', params['p_startday'], params['p_endday']))
+        return kamis_payload([kamis_row('평균', params['p_startday'][5:].replace('-', '/'), '1,000')])
+    end = date(2026, 11, 5)
+    start = end - timedelta(days=kamis.PERIOD_LIMIT_DAYS + 7)  # 한도보다 7일 더 과거부터
+    batch = kamis.collect(fetch, code=CODE, dataset=kamis.RETAIL, item_id=1, unit_label=None,
+                          start=start, end=end, cert_key='k', cert_id='i')
+    daily = sorted(a[1] for a in actions if a[0] == 'daily')
+    period = sorted(a[1:] for a in actions if a[0] == 'period')
+    assert daily == [d for d in (start + timedelta(days=i) for i in range(7)) if d.weekday() < 5]  # 주말은 요청 안 함
+    assert period[0][0] == (end - timedelta(days=kamis.PERIOD_LIMIT_DAYS)).isoformat() and period[-1][1] == end.isoformat()
+    assert batch.requests == len(daily) + len(period) and len(batch.records) == len(daily) + len(period)
+    # 한도 안쪽 기간만 요청하면 기존과 같이 기간 API만 쓴다.
+    actions.clear()
+    kamis.collect(fetch, code=CODE, dataset=kamis.RETAIL, item_id=1, unit_label=None,
+                  start=end - timedelta(days=30), end=end, cert_key='k', cert_id='i')
+    assert {a[0] for a in actions} == {'period'}
