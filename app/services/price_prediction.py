@@ -18,7 +18,7 @@ HORIZON = 7
 MIN_TRAIN = 120
 MAX_BACKTEST_DAYS = 240
 MAX_FORWARD_FILL_DAYS = 7
-MODEL_VERSION = 'direct-xgb-v3-weighted-exog'
+MODEL_VERSION = 'direct-xgb-v4-tuned'
 REFIT_DAYS = 7
 EXPERT_REFIT_DAYS = 14  # 묶음별 전문가 모델은 수가 많아 2주마다 재학습한다
 MAX_PRICE = 2**31 - 1
@@ -113,8 +113,10 @@ def check_dependencies():
 
 
 # 튜닝할 수 있는 XGBoost 하이퍼파라미터의 기본값. 값을 바꾸면 운영 배치·백테스트에 모두 적용된다.
-XGB_PARAMS = {'n_estimators': 80, 'max_depth': 3, 'learning_rate': .05, 'subsample': 1, 'colsample_bytree': 1,
-              'min_child_weight': 1, 'reg_lambda': 1}
+# v4: 대파 실데이터 튜닝(app/price_tuning.py) 결과, 얕은 트리 + 강한 규제가 평가 구간에서 가장 덜 과적합했다. README_MODEL.md 참고.
+# (v3까지: n_estimators=80, max_depth=3, min_child_weight=1, reg_lambda=1)
+XGB_PARAMS = {'n_estimators': 60, 'max_depth': 2, 'learning_rate': .05, 'subsample': 1, 'colsample_bytree': 1,
+              'min_child_weight': 10, 'reg_lambda': 10}
 # 튜닝 실험용: 이 환경변수에 JSON을 넣으면 위 기본값을 덮어쓴다(예: {"n_estimators": 200}). 백테스트 병렬 작업에도 전달된다.
 XGB_PARAMS_ENV = 'FOODVALUE_XGB_PARAMS'
 
