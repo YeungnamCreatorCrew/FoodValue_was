@@ -99,3 +99,15 @@ def test_native_library_failure_is_reported_with_hint(monkeypatch):
     monkeypatch.setitem(sys.modules, 'xgboost', Broken('xgboost'))
     with pytest.raises(model.ModelDependencyError, match='libomp'):
         model.check_dependencies()
+
+
+def test_xgb_params_env_override(monkeypatch):
+    import pytest
+    from app.services import price_prediction as pp
+    monkeypatch.delenv(pp.XGB_PARAMS_ENV, raising=False)
+    assert pp.xgb_params() == pp.XGB_PARAMS
+    monkeypatch.setenv(pp.XGB_PARAMS_ENV, '{"n_estimators": 200, "max_depth": 4}')
+    assert pp.xgb_params() == {**pp.XGB_PARAMS, 'n_estimators': 200, 'max_depth': 4}
+    monkeypatch.setenv(pp.XGB_PARAMS_ENV, '{"booster": "gblinear"}')
+    with pytest.raises(ValueError):
+        pp.xgb_params()
