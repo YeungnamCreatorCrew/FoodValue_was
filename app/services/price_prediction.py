@@ -4,7 +4,9 @@
 XGBOOST_WEIGHTED(가격 모델 + 외부변수 묶음별 전문가 모델의 가중 결합, 가중치는 weighting 참고).
 외부 원천은 시간순 백테스트에서 가격만 쓴 모델과 같은 기준으로 비교해 이길 때만 선택된다.
 """
+import json
 import math
+import os
 from dataclasses import dataclass
 from datetime import date, timedelta
 from statistics import mean
@@ -16,7 +18,7 @@ HORIZON = 7
 MIN_TRAIN = 120
 MAX_BACKTEST_DAYS = 240
 MAX_FORWARD_FILL_DAYS = 7
-MODEL_VERSION = 'direct-xgb-v3-weighted-exog'
+MODEL_VERSION = 'direct-xgb-v4-tuned'
 REFIT_DAYS = 7
 EXPERT_REFIT_DAYS = 14  # 묶음별 전문가 모델은 수가 많아 2주마다 재학습한다
 MAX_PRICE = 2**31 - 1
@@ -110,6 +112,26 @@ def check_dependencies():
     _model()
 
 
+# 튜닝할 수 있는 XGBoost 하이퍼파라미터의 기본값. 값을 바꾸면 운영 배치·백테스트에 모두 적용된다.
+# v4: 대파 실데이터 튜닝(app/price_tuning.py) 결과, 얕은 트리 + 강한 규제가 평가 구간에서 가장 덜 과적합했다. README_MODEL.md 참고.
+# (v3까지: n_estimators=80, max_depth=3, min_child_weight=1, reg_lambda=1)
+XGB_PARAMS = {'n_estimators': 60, 'max_depth': 2, 'learning_rate': .05, 'subsample': 1, 'colsample_bytree': 1,
+              'min_child_weight': 10, 'reg_lambda': 10}
+# 튜닝 실험용: 이 환경변수에 JSON을 넣으면 위 기본값을 덮어쓴다(예: {"n_estimators": 200}). 백테스트 병렬 작업에도 전달된다.
+XGB_PARAMS_ENV = 'FOODVALUE_XGB_PARAMS'
+
+
+def xgb_params():
+    raw = os.getenv(XGB_PARAMS_ENV)
+    if not raw:
+        return dict(XGB_PARAMS)
+    override = json.loads(raw)
+    unknown = set(override) - set(XGB_PARAMS)
+    if unknown:
+        raise ValueError(f'{XGB_PARAMS_ENV}에 튜닝 대상이 아닌 값이 있습니다: {sorted(unknown)}')
+    return {**XGB_PARAMS, **override}
+
+
 def _model():
     try:
         from xgboost import XGBRegressor
@@ -118,9 +140,7 @@ def _model():
     except Exception as error:  # 설치는 됐지만 네이티브 라이브러리를 못 불러온 경우(XGBoostError)
         raise ModelDependencyError('xgboost 라이브러리를 불러오지 못했습니다. macOS는 brew install libomp가 필요합니다 '
                                    f'({type(error).__name__})') from None
-    return XGBRegressor(n_estimators=80, max_depth=3, learning_rate=.05,
-                        objective='reg:squarederror', tree_method='hist', n_jobs=1,
-                        random_state=42, subsample=1, colsample_bytree=1)
+    return XGBRegressor(**xgb_params(), objective='reg:squarederror', tree_method='hist', n_jobs=1, random_state=42)
 
 
 def _score(records):
