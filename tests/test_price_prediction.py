@@ -111,3 +111,14 @@ def test_xgb_params_env_override(monkeypatch):
     monkeypatch.setenv(pp.XGB_PARAMS_ENV, '{"booster": "gblinear"}')
     with pytest.raises(ValueError):
         pp.xgb_params()
+
+
+def test_default_objective_is_pseudo_huber(monkeypatch):
+    from app.services import price_prediction as pp
+    monkeypatch.delenv(pp.XGB_PARAMS_ENV, raising=False)
+    monkeypatch.delenv(pp.DAMPING_ENV, raising=False)
+    model = pp._model()
+    assert model.get_params()['objective'] == 'reg:pseudohubererror'
+    assert pp.damping() == 1
+    monkeypatch.setenv(pp.DAMPING_ENV, '0.5')
+    assert pp._from_change(1000, .1) == pp._price(1050)

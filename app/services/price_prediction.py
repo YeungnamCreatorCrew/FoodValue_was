@@ -18,7 +18,7 @@ HORIZON = 7
 MIN_TRAIN = 120
 MAX_BACKTEST_DAYS = 240
 MAX_FORWARD_FILL_DAYS = 7
-MODEL_VERSION = 'direct-xgb-v4-tuned'
+MODEL_VERSION = 'direct-xgb-v5-huber'
 REFIT_DAYS = 7
 EXPERT_REFIT_DAYS = 14  # 묶음별 전문가 모델은 수가 많아 2주마다 재학습한다
 MAX_PRICE = 2**31 - 1
@@ -99,8 +99,16 @@ def _training(vector, values, observed, cutoff, horizon):
     return inputs, targets
 
 
+# 실험용: XGBoost 계열이 예측한 변화율 중 이 비율만 반영한다(1 = 그대로, 0.5 = 절반). 직전가 쪽으로 당겨 과한 예측을 줄인다.
+DAMPING_ENV = 'FOODVALUE_CHANGE_DAMPING'
+
+
+def damping():
+    return float(os.getenv(DAMPING_ENV) or 1)
+
+
 def _from_change(current, change):
-    return _price(current * (1 + float(change)))
+    return _price(current * (1 + damping() * float(change)))
 
 
 def training_data(days, values, observed, ages, cutoff, horizon):
@@ -115,10 +123,14 @@ def check_dependencies():
 # 튜닝할 수 있는 XGBoost 하이퍼파라미터의 기본값. 값을 바꾸면 운영 배치·백테스트에 모두 적용된다.
 # v4: 대파 실데이터 튜닝(app/price_tuning.py) 결과, 얕은 트리 + 강한 규제가 평가 구간에서 가장 덜 과적합했다. README_MODEL.md 참고.
 # (v3까지: n_estimators=80, max_depth=3, min_child_weight=1, reg_lambda=1)
+# v5: 손실 함수를 제곱오차 → Pseudo-Huber(huber_slope 0.02 = 변화율 2%p)로 바꿨다. 가끔 튀는 가격 변화에 덜 끌려가
+#     계절 전체에서 직전가 대비 개선율이 6.6% → 8.4%로 올랐다. README_MODEL.md 참고.
 XGB_PARAMS = {'n_estimators': 60, 'max_depth': 2, 'learning_rate': .05, 'subsample': 1, 'colsample_bytree': 1,
-              'min_child_weight': 10, 'reg_lambda': 10}
+              'min_child_weight': 10, 'reg_lambda': 10, 'objective': 'reg:pseudohubererror', 'huber_slope': .02}
 # 튜닝 실험용: 이 환경변수에 JSON을 넣으면 위 기본값을 덮어쓴다(예: {"n_estimators": 200}). 백테스트 병렬 작업에도 전달된다.
 XGB_PARAMS_ENV = 'FOODVALUE_XGB_PARAMS'
+# 기본값 밖에서 더 받을 수 있는 값(현재 없음)
+EXTRA_PARAMS = set()
 
 
 def xgb_params():
@@ -126,7 +138,7 @@ def xgb_params():
     if not raw:
         return dict(XGB_PARAMS)
     override = json.loads(raw)
-    unknown = set(override) - set(XGB_PARAMS)
+    unknown = set(override) - set(XGB_PARAMS) - EXTRA_PARAMS
     if unknown:
         raise ValueError(f'{XGB_PARAMS_ENV}에 튜닝 대상이 아닌 값이 있습니다: {sorted(unknown)}')
     return {**XGB_PARAMS, **override}
@@ -140,7 +152,7 @@ def _model():
     except Exception as error:  # 설치는 됐지만 네이티브 라이브러리를 못 불러온 경우(XGBoostError)
         raise ModelDependencyError('xgboost 라이브러리를 불러오지 못했습니다. macOS는 brew install libomp가 필요합니다 '
                                    f'({type(error).__name__})') from None
-    return XGBRegressor(**xgb_params(), objective='reg:squarederror', tree_method='hist', n_jobs=1, random_state=42)
+    return XGBRegressor(**xgb_params(), tree_method='hist', n_jobs=1, random_state=42)
 
 
 def _score(records):

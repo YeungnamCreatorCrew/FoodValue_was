@@ -2,7 +2,7 @@
 
 실행 예:
     python -m app.price_tuning --item-id 1 --anchor 2026-11-06 --anchor 2025-11-06 --anchor 2024-11-06 \
-        --only default current conservative --workers 4 --out tuning.json
+        --only default v4 huber --workers 4 --out tuning.json
 
 - predict()는 기준일마다 최근 최대 240개 예측 시작일로 시간순 백테스트를 한다(선택 구간 → 보정 → 최종 평가 구간).
   이 스크립트는 후보 파라미터마다 그 내부 백테스트를 실행하고, 후보 모델별 선택·평가 구간 MAPE를 모은다.
@@ -26,12 +26,12 @@ from sqlalchemy.orm import Session
 
 from app.repositories import series_repository
 from app.services.price_batch_service import load_inputs
-from app.services.price_prediction import XGB_PARAMS, XGB_PARAMS_ENV, check_dependencies, predict
+from app.services.price_prediction import DAMPING_ENV, XGB_PARAMS, XGB_PARAMS_ENV, check_dependencies, predict
 
 # 후보 값은 v3 기본값(V3_PARAMS) 대비 바뀌는 부분만 적는다. 이름은 v4 튜닝 기록(README_MODEL.md)과 같다.
 # 'current'는 v4 튜닝 당시의 기본값, 즉 v3 설정이다. 지금 코드의 기본값(XGB_PARAMS)과 비교하려면 'default'를 쓴다.
 V3_PARAMS = {'n_estimators': 80, 'max_depth': 3, 'learning_rate': .05, 'subsample': 1, 'colsample_bytree': 1,
-             'min_child_weight': 1, 'reg_lambda': 1}
+             'min_child_weight': 1, 'reg_lambda': 1, 'objective': 'reg:squarederror'}
 CANDIDATES = {
     'default': None,
     'current': {},
@@ -51,16 +51,33 @@ CANDIDATES = {
     'conservative_sub': {'n_estimators': 60, 'max_depth': 2, 'learning_rate': .05, 'min_child_weight': 10,
                          'reg_lambda': 10, 'subsample': .8, 'colsample_bytree': .8},
 }
+# v5 실험(README_MODEL.md): v4 설정 위에서 손실 함수·변화폭 축소(damping)를 바꾼다. 값: (파라미터 덮어쓰기, damping)
+V4_PARAMS = {**V3_PARAMS, 'n_estimators': 60, 'max_depth': 2, 'min_child_weight': 10, 'reg_lambda': 10,
+             'objective': 'reg:squarederror'}
+HUBER = {'objective': 'reg:pseudohubererror'}
+VARIANTS = {
+    'v4': ({}, 1),
+    'damp_0.7': ({}, .7),
+    'damp_0.5': ({}, .5),
+    'huber': ({**HUBER, 'huber_slope': .02}, 1),
+    'huber_damp_0.7': ({**HUBER, 'huber_slope': .02}, .7),
+    'huber_0.01': ({**HUBER, 'huber_slope': .01}, 1),
+    'huber_0.05': ({**HUBER, 'huber_slope': .05}, 1),
+}
 MARKETS = ('RETAIL', 'WHOLESALE')
 LEARNERS = ('XGBOOST', 'XGBOOST_EXT', 'XGBOOST_WEIGHTED')
 
 
 def full_params(name):
+    if name in VARIANTS:
+        return {**V4_PARAMS, **VARIANTS[name][0], 'damping': VARIANTS[name][1]}
     return dict(XGB_PARAMS) if CANDIDATES[name] is None else {**V3_PARAMS, **CANDIDATES[name]}
 
 
 def _job(task):
     name, params, market, anchor, rows, covariates = task
+    params = dict(params)
+    os.environ[DAMPING_ENV] = str(params.pop('damping', 1))
     os.environ[XGB_PARAMS_ENV] = json.dumps(params)
     started = time.monotonic()
     try:
@@ -120,7 +137,7 @@ def main(argv=None):
     parser.add_argument('--anchor', type=date.fromisoformat, action='append', required=True,
                         help='예측 기준일. 여러 번 줄 수 있음')
     parser.add_argument('--workers', type=int, default=2)
-    parser.add_argument('--only', nargs='*', choices=list(CANDIDATES), help='일부 후보만 실행')
+    parser.add_argument('--only', nargs='*', choices=list(CANDIDATES) + list(VARIANTS), help='일부 후보만 실행')
     parser.add_argument('--out', default='tuning.json')
     args = parser.parse_args(argv)
     load_dotenv()
