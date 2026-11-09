@@ -10,6 +10,7 @@
   응답에 품목·품종·등급 코드 열이 없으면 형식이 예상과 다른 것이므로 추측해서 저장하지 않고 오류로 남긴다.
 """
 import re
+import threading
 from datetime import date, timedelta
 
 from app.collectors.http import AuthError, CollectorError, as_list, number, text_value
@@ -120,6 +121,40 @@ def parse_daily(payload, code: str, dataset: str, item_id: int, unit_label: str 
                    units={'price': 'KRW', 'unitLabel': unit_label}, item_id=item_id)]
 
 
+# 일별 부류별 가격은 한 번 호출로 부류의 모든 품목을 돌려준다. 같은 실행에서 여러 계열(품목·시장)을 받을 때
+# (시장, 부류, 날짜)마다 한 번만 호출하도록 응답을 기억한다. 필요한 열만 남겨 메모리를 줄인다.
+DAILY_KEEP = ('item_code', 'kind_code', 'rank_code', 'item_name', 'kind_name', 'rank', 'unit', 'day1', 'dpr1')
+_daily_cache: dict[tuple, dict] = {}
+_daily_lock = threading.Lock()
+
+
+def _trim(payload):
+    data = payload.get('data') if isinstance(payload, dict) else None
+    if not isinstance(data, dict):
+        return payload
+    rows = [{key: row.get(key) for key in DAILY_KEEP if key in row} if isinstance(row, dict) else row
+            for row in as_list(data.get('item'))]
+    return {'data': {'error_code': data.get('error_code'), 'item': rows}}
+
+
+def fetch_daily(fetch, code: str, dataset: str, day: date, cert_key: str, cert_id: str):
+    key = (CLASS_CODES[dataset], parse_code(code)['category'], day)
+    with _daily_lock:
+        hit = _daily_cache.get(key)
+    if hit is not None:
+        return hit
+    payload = _trim(fetch(URL, daily_params(code, dataset, day, cert_key, cert_id)))
+    _rows(payload)  # 오류 응답은 기억하지 않고 바로 알린다.
+    with _daily_lock:
+        _daily_cache[key] = payload
+    return payload
+
+
+def clear_daily_cache():
+    with _daily_lock:
+        _daily_cache.clear()
+
+
 def survey_days(start: date, end: date):
     day = start
     while day <= end:
@@ -134,7 +169,7 @@ def collect(fetch, *, code, dataset, item_id, unit_label, start, end, cert_key, 
     calls = [lambda first=first, last=last: parse(fetch(URL, params(code, dataset, first, last, cert_key, cert_id)),
                                                   code, dataset, item_id, unit_label)
              for first, last in windows(recent, end, WINDOW_DAYS)]
-    calls += [lambda day=day: parse_daily(fetch(URL, daily_params(code, dataset, day, cert_key, cert_id)),
+    calls += [lambda day=day: parse_daily(fetch_daily(fetch, code, dataset, day, cert_key, cert_id),
                                           code, dataset, item_id, unit_label, day)
               for day in survey_days(start, recent - timedelta(days=1))]
     return gather(calls, workers=DAILY_WORKERS if len(calls) > 20 else 1)

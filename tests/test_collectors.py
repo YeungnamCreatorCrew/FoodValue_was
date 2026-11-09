@@ -353,3 +353,31 @@ def test_kamis_collect_uses_daily_api_only_beyond_period_limit():
     kamis.collect(fetch, code=CODE, dataset=kamis.RETAIL, item_id=1, unit_label=None,
                   start=end - timedelta(days=30), end=end, cert_key='k', cert_id='i')
     assert {a[0] for a in actions} == {'period'}
+
+
+def test_kamis_daily_category_response_is_fetched_once_per_day():
+    from datetime import date
+    from app.collectors import kamis
+    calls = []
+
+    def fake_fetch(url, params):
+        if params['action'] != kamis.DAILY_ACTION:
+            return {'data': ['001']}  # 최근 1년 기간 조회는 이 테스트와 무관
+        calls.append(params['p_regday'])
+        return {'data': {'error_code': '000', 'item': [
+            {'item_code': '246', 'kind_code': '00', 'rank_code': '04', 'item_name': '대파', 'kind_name': '대파(일반)',
+             'rank': '상품', 'unit': '1kg', 'day1': '당일 (01/06)', 'dpr1': '2,500', 'extra': 'x' * 100},
+            {'item_code': '211', 'kind_code': '01', 'rank_code': '04', 'item_name': '배추', 'kind_name': '봄',
+             'rank': '상품', 'unit': '1포기', 'day1': '당일 (01/06)', 'dpr1': '3,000'}]}}
+
+    kamis.clear_daily_cache()
+    day = date(2016, 1, 6)
+    first = kamis.collect(fake_fetch, code='246-00-04', dataset=kamis.RETAIL, item_id=1, unit_label='1kg',
+                          start=day, end=day + timedelta(days=400), cert_key='k', cert_id='i')
+    daily_calls = len([c for c in calls if c == '2016-01-06'])
+    second = kamis.collect(fake_fetch, code='211-01-04', dataset=kamis.RETAIL, item_id=2, unit_label='1포기',
+                           start=day, end=day + timedelta(days=400), cert_key='k', cert_id='i')
+    assert daily_calls == 1 and len([c for c in calls if c == '2016-01-06']) == 1
+    assert any(r.payload['price'] == '2,500' for r in first.records)
+    assert any(r.payload['price'] == '3,000' for r in second.records)
+    kamis.clear_daily_cache()
