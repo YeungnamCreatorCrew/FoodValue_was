@@ -197,7 +197,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 ```bash
 uv sync --extra prices   # macOS는 XGBoost용 OpenMP가 필요: brew install libomp
 docker compose run --rm flyway
-uv run --extra prices python -m app.price_pipeline --start 2016-01-01 --collect-only   # 최초 백필(10년치, 1시간 안팎. README_MODEL.md 학습 기간 실험 참고)
+uv run --extra prices python -m app.price_pipeline --start 2016-01-01 --collect-only   # 최초 백필(1시간 안팎. 학습은 최근 5년, 그 이전은 과거 동기 변동률에 사용. README_MODEL.md 참고)
 uv run --extra prices python -m app.price_pipeline                                     # 매일: 증분 수집 + 예측
 uv run --extra prices python -m app.price_pipeline --item-id 1 --predict-only
 ```
