@@ -186,7 +186,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 - 공개지연 값은 기관 공지 기준의 가정입니다. 원천에서 공표 시각을 받지 못해 `publication_status`는 UNKNOWN으로 저장됩니다.
 
 `metrics`에는 `candidates`, `featureSets`, `externalGroups`, `externalCoverage`(최종 평가 시점에서 그룹별 값이 채워진 비율),
-`weighting`(묶음 구성·공개 가중치·κ·평가 구간 평균 가중치)이 함께 저장됩니다. 모델 버전은 `direct-xgb-v5-huber`입니다(버전별 변경은 [모델 변경 기록](README_MODEL.md)).
+`weighting`(묶음 구성·공개 가중치·κ·평가 구간 평균 가중치)이 함께 저장됩니다. 모델 버전은 `direct-xgb-v5-huber`입니다(버전별 변경은 [모델 변경 기록](model_comparison/xgboost/README_MODEL.md)).
 합성 자료 테스트(도매가가 소매가를 5일 앞서는 자료)에서 외부 원천 모델(XGBOOST_EXT 또는 XGBOOST_WEIGHTED)이 선택·검증되고, 무관한 환율 묶음의 가중치는 0이 되는 것을 확인했습니다. 실제 시장에서의 효과는 실데이터 백테스트로만 판단합니다.
 
 ### 실행
@@ -197,7 +197,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 ```bash
 uv sync --extra prices   # macOS는 XGBoost용 OpenMP가 필요: brew install libomp
 docker compose run --rm flyway
-uv run --extra prices python -m app.price_pipeline --start 2016-01-01 --collect-only   # 최초 백필(1시간 안팎. 학습은 최근 5년, 그 이전은 과거 동기 변동률에 사용. README_MODEL.md 참고)
+uv run --extra prices python -m app.price_pipeline --start 2016-01-01 --collect-only   # 최초 백필(1시간 안팎. 학습은 최근 5년, 그 이전은 과거 동기 변동률에 사용. model_comparison/xgboost/README_MODEL.md 참고)
 uv run --extra prices python -m app.price_pipeline                                     # 매일: 증분 수집 + 예측
 uv run --extra prices python -m app.price_pipeline --item-id 1 --predict-only
 ```

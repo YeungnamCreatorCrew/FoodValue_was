@@ -28,7 +28,7 @@ from app.repositories import series_repository
 from app.services.price_batch_service import load_inputs
 from app.services.price_prediction import DAMPING_ENV, XGB_PARAMS, XGB_PARAMS_ENV, check_dependencies, predict
 
-# 후보 값은 v3 기본값(V3_PARAMS) 대비 바뀌는 부분만 적는다. 이름은 v4 튜닝 기록(README_MODEL.md)과 같다.
+# 후보 값은 v3 기본값(V3_PARAMS) 대비 바뀌는 부분만 적는다. 이름은 v4 튜닝 기록(model_comparison/xgboost/README_MODEL.md)과 같다.
 # 'current'는 v4 튜닝 당시의 기본값, 즉 v3 설정이다. 지금 코드의 기본값(XGB_PARAMS)과 비교하려면 'default'를 쓴다.
 V3_PARAMS = {'n_estimators': 80, 'max_depth': 3, 'learning_rate': .05, 'subsample': 1, 'colsample_bytree': 1,
              'min_child_weight': 1, 'reg_lambda': 1, 'objective': 'reg:squarederror'}
@@ -51,7 +51,7 @@ CANDIDATES = {
     'conservative_sub': {'n_estimators': 60, 'max_depth': 2, 'learning_rate': .05, 'min_child_weight': 10,
                          'reg_lambda': 10, 'subsample': .8, 'colsample_bytree': .8},
 }
-# v5 실험(README_MODEL.md): v4 설정 위에서 손실 함수·변화폭 축소(damping)를 바꾼다. 값: (파라미터 덮어쓰기, damping)
+# v5 실험(model_comparison/xgboost/README_MODEL.md): v4 설정 위에서 손실 함수·변화폭 축소(damping)를 바꾼다. 값: (파라미터 덮어쓰기, damping)
 V4_PARAMS = {**V3_PARAMS, 'n_estimators': 60, 'max_depth': 2, 'min_child_weight': 10, 'reg_lambda': 10,
              'objective': 'reg:squarederror'}
 HUBER = {'objective': 'reg:pseudohubererror'}
