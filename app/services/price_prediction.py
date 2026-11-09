@@ -121,10 +121,10 @@ def check_dependencies():
 
 
 # 튜닝할 수 있는 XGBoost 하이퍼파라미터의 기본값. 값을 바꾸면 운영 배치·백테스트에 모두 적용된다.
-# v4: 대파 실데이터 튜닝(app/price_tuning.py) 결과, 얕은 트리 + 강한 규제가 평가 구간에서 가장 덜 과적합했다. README_MODEL.md 참고.
+# v4: 대파 실데이터 튜닝(app/price_tuning.py) 결과, 얕은 트리 + 강한 규제가 평가 구간에서 가장 덜 과적합했다. model_comparison/xgboost/README_MODEL.md 참고.
 # (v3까지: n_estimators=80, max_depth=3, min_child_weight=1, reg_lambda=1)
 # v5: 손실 함수를 제곱오차 → Pseudo-Huber(huber_slope 0.02 = 변화율 2%p)로 바꿨다. 가끔 튀는 가격 변화에 덜 끌려가
-#     계절 전체에서 직전가 대비 개선율이 6.6% → 8.4%로 올랐다. README_MODEL.md 참고.
+#     계절 전체에서 직전가 대비 개선율이 6.6% → 8.4%로 올랐다. model_comparison/xgboost/README_MODEL.md 참고.
 XGB_PARAMS = {'n_estimators': 60, 'max_depth': 2, 'learning_rate': .05, 'subsample': 1, 'colsample_bytree': 1,
               'min_child_weight': 10, 'reg_lambda': 10, 'objective': 'reg:pseudohubererror', 'huber_slope': .02}
 # 튜닝 실험용: 이 환경변수에 JSON을 넣으면 위 기본값을 덮어쓴다(예: {"n_estimators": 200}). 백테스트 병렬 작업에도 전달된다.
