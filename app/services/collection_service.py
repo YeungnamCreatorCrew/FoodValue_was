@@ -209,6 +209,7 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, cr
                                  cert_key=credentials.kamis_cert_key, cert_id=credentials.kamis_cert_id)
         results.append({**run_dataset(engine, kamis.SOURCE, dataset, first, end, call), 'itemId': row.item_id})
         firsts.append(first)
+    kamis.clear_daily_cache()
     if firsts:
         # 예측 대상 가격은 원본 최신 버전에서 다시 만든다(정제 단계와 같은 함수).
         warehouse_service.refresh_price_daily(engine, [item.id for item in items], since=min(firsts))
