@@ -1,0 +1,11 @@
+{
+  "model": "naive",
+  "owner": "공통",
+  "class": "tools.baselines:Naive",
+  "params": {},
+  "feature_set": "base_v1",
+  "extra_features": [],
+  "target_transform": "none",
+  "strategy": "last_value",
+  "seed": 42
+}

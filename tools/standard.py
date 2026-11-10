@@ -64,6 +64,15 @@ PREDICTION_COLUMNS = ('experiment_id', 'model', 'config_id', 'data_version', 'se
 STATUSES = ('OK', 'NO_INPUT', 'FIT_FAILED', 'PREDICT_FAILED', 'INVALID_VALUE', 'TIMEOUT')
 TUNING_COLUMNS = ('trial', 'config_id', 'params', 'macro_mape', 'seconds', 'status')
 BASE_FEATURE_SET = 'base_v1'
+# §5.1 1차 기본 특징(순서 고정). 저장소 PRICE_FEATURES 13개 + horizon, days_since_kind_switch
+BASE_FEATURES = ('current', 'lag1', 'lag7', 'lag14', 'lag28', 'mean7', 'mean28', 'change7', 'volatility7', 'price_age',
+                 'target_weekday', 'target_season_sin', 'target_season_cos', 'horizon', 'days_since_kind_switch')
+FEATURE_LOOKBACK_DAYS = 28  # v[d-28..d]에 빈 값이 있으면 특징을 만들지 않는다
+KIND_SWITCH_CAP_DAYS = 90
+FORWARD_FILL_DAYS = 7
+BOOTSTRAP = {'iterations': 1000, 'seed': 0}
+SEASONS = {3: 'spring', 4: 'spring', 5: 'spring', 6: 'summer', 7: 'summer', 8: 'summer',
+           9: 'autumn', 10: 'autumn', 11: 'autumn', 12: 'winter', 1: 'winter', 2: 'winter'}
 
 # §8.4 채택 기준
 ADOPTION = {'min_relative_improvement_pct': 5.0, 'max_macro_rmae': 1.0, 'min_success_rate': 0.99,

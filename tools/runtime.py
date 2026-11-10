@@ -26,10 +26,10 @@ class TrainingData:
     """재학습 시점에 볼 수 있는 학습 표본. 공통 로더가 만든다. 모델은 이 객체로만 학습한다."""
     series_id: int
     as_of: date
-    features: list[list[float]] = field(default_factory=list)  # 표본별 특징(§5)
-    targets: list[float] = field(default_factory=list)  # 목표일 가격(원)
-    horizons: list[int] = field(default_factory=list)
-    origins: list[date] = field(default_factory=list)
+    features: object = field(default_factory=list)  # numpy (표본 수 × 15), 열 = feature_names (§5.1)
+    targets: object = field(default_factory=list)  # numpy, 목표일 실제 가격(원)
+    horizons: object = field(default_factory=list)  # numpy, 1~7
+    origins: list[date] = field(default_factory=list)  # 표본 기준일
     feature_names: list[str] = field(default_factory=list)
     prices: list[tuple[date, int]] = field(default_factory=list)  # AutoARIMA 등 계열 모델용 원 계열
 
@@ -39,7 +39,7 @@ class OriginInputs:
     """기준일 d 시점에 볼 수 있는 입력. 공통 로더가 만든다."""
     series_id: int
     origin: date
-    features: dict[int, list[float]] = field(default_factory=dict)  # 시점 h → 특징
+    features: dict[int, object] = field(default_factory=dict)  # 시점 h → numpy 특징 한 줄
     feature_names: list[str] = field(default_factory=list)
     prices: list[tuple[date, int]] = field(default_factory=list)
 
