@@ -90,8 +90,18 @@ def check_config(config, folder, report):
             report.error(f'{config.get("model")} 결정적 실행 옵션 {key}={expected!r} 필요: {params.get(key)!r}')
     if config.get('model') == 'Ridge' and params.get('solver') in (None, 'auto'):
         report.error("Ridge는 solver를 명시해야 함('auto' 금지)")
-    if config.get('extra_features'):
-        report.warn('기본 특징 세트 밖의 특징 사용: 1차 순위에는 기본 세트 결과만 쓴다(§5.1)')
+    extra = config.get('extra_features') or []
+    if extra:
+        unknown = [b for b in extra if b not in standard.EXTRA_BUNDLES]
+        if unknown:
+            report.error(f'모르는 외부변수 묶음 {unknown}. 가능: {list(standard.EXTRA_BUNDLES)}(§5.2)')
+        expected_set = '+'.join([standard.BASE_FEATURE_SET] + [b for b in standard.EXTRA_BUNDLES if b in extra])
+        if config.get('feature_set') != expected_set:
+            report.error(f'feature_set은 extra_features와 맞게 {expected_set!r}이어야 함')
+        if phase == 'p1':
+            report.warn('기본 특징 세트 밖의 특징 사용: 1차 순위에는 기본 세트 결과만 쓴다(§5.1)')
+        if config.get('model') == 'AutoARIMA' and set(extra) - {'EVENT'}:
+            report.error('AutoARIMA 2차는 EVENT 묶음만 쓸 수 있음(§5.2)')
     elif config.get('feature_set') != standard.BASE_FEATURE_SET:
         report.error(f'extra_features가 없으면 feature_set은 {standard.BASE_FEATURE_SET!r}이어야 함')
     if '-pooled-' in config['experiment_id']:

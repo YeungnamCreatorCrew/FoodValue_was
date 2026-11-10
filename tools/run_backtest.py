@@ -190,7 +190,7 @@ def prediction_rows(values, status, error):
     return rows
 
 
-def run_series(cls, params, seed, snap, series_id, days, log):
+def run_series(cls, params, seed, snap, series_id, days, log, bundles=()):
     """한 계열의 모든 기준일. 반환: [(기준일, [(raw, price, status, error) × 7])], 통계."""
     results, stats = [], {'refits': 0, 'fit_seconds': 0.0, 'predict_seconds': 0.0, 'timeouts': 0}
     model, fit_state, week = None, ('FIT_FAILED', 'NOT_FITTED'), None
@@ -201,7 +201,7 @@ def run_series(cls, params, seed, snap, series_id, days, log):
             stats['refits'] += 1
             started = time.perf_counter()
             try:
-                history = snap.training_data(series_id, d)
+                history = snap.training_data(series_id, d, bundles)
                 model = cls(**params)
                 model.fit(history, seed)
                 fit_state = ('OK', '')
@@ -219,7 +219,7 @@ def run_series(cls, params, seed, snap, series_id, days, log):
             continue
         started = time.perf_counter()
         try:
-            inputs = snap.origin_inputs(series_id, d)
+            inputs = snap.origin_inputs(series_id, d, bundles)
             values, status, error = model.predict(inputs), 'OK', ''
         except loader.NoInput as reason:
             values, status, error = None, 'NO_INPUT', 'STALE_OR_GAP'
@@ -259,6 +259,13 @@ def run(args) -> Path:
         unknown = set(series_ids) - set(snap.series_ids)
         if unknown:
             raise RunError(f'스냅샷에 없는 계열: {sorted(unknown)}')
+    try:
+        bundles = loader.check_bundles(user['extra_features'])
+    except ValueError as error:
+        raise RunError(str(error)) from error
+    expected_set = '+'.join((standard.BASE_FEATURE_SET, *bundles))
+    if user['feature_set'] != expected_set:
+        raise RunError(f'feature_set은 extra_features와 맞게 {expected_set!r}이어야 함')
     cls = load_class(user['class'])
     trials, tuning = tuning_summary(args.tuning_log)
 
@@ -301,7 +308,7 @@ def run(args) -> Path:
         for sid in series_ids:
             s = snap.series[sid]
             t0 = time.perf_counter()
-            results, stats = run_series(cls, config['params'], config['seed'], snap, sid, days, log)
+            results, stats = run_series(cls, config['params'], config['seed'], snap, sid, days, log, bundles)
             stats['seconds'] = round(time.perf_counter() - t0, 3)
             per_series[sid] = stats
             ok = 0

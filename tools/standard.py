@@ -67,6 +67,18 @@ BASE_FEATURE_SET = 'base_v1'
 # §5.1 1차 기본 특징(순서 고정). 저장소 PRICE_FEATURES 13개 + horizon, days_since_kind_switch
 BASE_FEATURES = ('current', 'lag1', 'lag7', 'lag14', 'lag28', 'mean7', 'mean28', 'change7', 'volatility7', 'price_age',
                  'target_weekday', 'target_season_sin', 'target_season_cos', 'horizon', 'days_since_kind_switch')
+# §5.2 2차 외부변수 묶음(순서 고정). 설정 파일 extra_features에 묶음 이름을 넣으면 base_v1 뒤에 이 순서로 붙는다.
+EXTRA_BUNDLES = {
+    'MARKET': ('counter_price', 'target_counter_ratio', 'counter_change7', 'counter_change28'),
+    'NATIONAL_WEATHER': ('nat_temp_mean7', 'nat_rain_sum28', 'nat_heat_index7', 'nat_heat_index28',
+                         'nat_heavy_rain_index28', 'nat_cold_index28'),
+    'EVENT': ('days_to_major_holiday', 'days_from_major_holiday', 'target_in_event_window',
+              'target_prev_day_holiday'),
+    'MACRO': ('usd_krw_change7', 'usd_krw_change28'),
+    'PRODUCTION': ('production_yoy',),
+}
+EXTRA_LAG_DAYS = 1  # 상대 시장·기상·환율은 d−1까지(§3.1)
+HOLIDAY_WINDOW_DAYS = 45
 FEATURE_LOOKBACK_DAYS = 28  # v[d-28..d]에 빈 값이 있으면 특징을 만들지 않는다
 KIND_SWITCH_CAP_DAYS = 90
 FORWARD_FILL_DAYS = 7
