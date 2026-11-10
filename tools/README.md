@@ -8,9 +8,10 @@
 | `origins.py` | 완료 | `calendar_day`로 검증·튜닝·시험 기준일 목록 생성, `guard(phase, origins)`로 단계 밖 기준일 차단(§7.2) |
 | `runtime.py` | 완료 | `apply_environment()`(스레드·시드 환경변수 강제), 모델 인터페이스 `Model`·`TrainingData`·`OriginInputs`(§9) |
 | `validate_experiment.py` | 완료 | 실험 결과 폴더의 §10 형식·고정값 검사. CI가 PR마다 실행 |
-| `export_snapshot` | 담당: 스냅샷 담당 | §2.2 CSV·manifest 생성, §2.3 작형 이어 붙이기 결과 |
-| `check_snapshot` | 담당: 스냅샷 담당 | SHA-256·행 수·계열 기간·이어 붙이기 재계산 대조 |
-| `loader` | 담당: ____ | `load_as_of(series_id, d)`, §5 특징, 이어 붙이기 함수(하나만) |
+| `snapshot.py` | 완료 | 스냅샷 파일 형식(열), CSV 쓰기(UTF-8·LF라 OS와 무관하게 SHA-256 같음), 계열 품질(§2.1) 계산 |
+| `export_snapshot.py` | 완료 | §2.2 CSV·manifest 생성. 스냅샷 담당(공유 DB 보유자)만 실행 |
+| `check_snapshot.py` | 완료 | SHA-256·행 수·열·마감일·계열 기간·기준일 목록·이어 붙이기 재계산·연도별 전환 횟수 대조. **받은 사람 모두 실행** |
+| `loader.py` | 일부 | 완료: `merge_kinds`(§2.3 작형 이어 붙이기, 이 함수 하나만 씀), 스냅샷 읽기. 남음(담당 ____): `load_as_of(series_id, d)`, §5 특징 |
 | `run_backtest` | 담당: ____ | 기준일·주 1회 재학습 일정으로 `fit`/`predict` 호출. **시작할 때 `runtime.apply_environment()`와 `origins.guard(phase, 기준일)`을 반드시 부른다** |
 | `evaluate` | 담당: ____ | §8 지표(`policy`·`model_only`·`common_success`, 부트스트랩), `metrics.json` |
 
@@ -20,3 +21,24 @@
 - 실행 진입점은 맨 처음 `runtime.apply_environment()`를 부른다.
 - 기준일을 받는 모든 실행은 `origins.guard()`를 거친다. test 단계가 아니면 최종 시험 기준일을 거부한다.
 - 모델 코드는 스냅샷 파일·DB를 직접 읽지 않고 `TrainingData`·`OriginInputs`만 받는다.
+
+## 스냅샷 만들기·받기
+
+스냅샷 담당(공유 DB 보유자, `.env`에 `DATABASE_URL`·`KOSIS_API_KEY` 필요):
+
+```powershell
+uv run --extra prices python -m tools.export_snapshot
+# 품질 REVIEW/FAIL 계열을 팀이 빼기로 했으면: --exclude-item 깐마늘
+```
+
+`data/snapshots/fv-snap-20261031-v1/`이 생긴다(Git에 올리지 않음). 폴더째 압축해 공유 드라이브에 올리고, 화면 끝의
+`manifest SHA-256`을 팀 채팅에 함께 남긴다. DB에 마감일(2026-10-31) 뒤 자료가 있어도 내보낼 때 잘리므로 다시 수집하지 않는다.
+
+받는 사람:
+
+```powershell
+# 압축을 풀어 레포의 data/snapshots/fv-snap-20261031-v1/ 에 둔 뒤
+uv run python -m tools.check_snapshot data/snapshots/fv-snap-20261031-v1
+```
+
+`결과: 통과`이고 마지막 줄 `manifest SHA-256`이 담당자가 남긴 값과 같아야 실험을 시작한다.

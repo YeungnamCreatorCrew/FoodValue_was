@@ -22,6 +22,6 @@ jobs:
       - name: 확정 lock 그대로 설치 (lock과 pyproject가 어긋나면 실패)
         run: uv sync --locked --group dev --extra prices
       - name: 공통 도구 테스트
-        run: uv run --group dev --extra prices pytest tests/test_standard_tools.py -q -p no:cacheprovider
+        run: uv run --group dev --extra prices pytest tests/test_standard_tools.py tests/test_snapshot_tools.py -q -p no:cacheprovider
       - name: 실험 결과·기준서 판 검사
         run: uv run --extra prices python -m tools.validate_experiment --all
