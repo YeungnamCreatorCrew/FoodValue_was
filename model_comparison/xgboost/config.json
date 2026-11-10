@@ -1,0 +1,23 @@
+{
+  "model": "XGBoost",
+  "owner": "A",
+  "class": "model_comparison.xgboost.model:XGBModel",
+  "params": {
+    "n_estimators": 60,
+    "max_depth": 2,
+    "learning_rate": 0.05,
+    "subsample": 1.0,
+    "colsample_bytree": 1.0,
+    "min_child_weight": 10,
+    "reg_lambda": 10.0,
+    "objective": "reg:pseudohubererror",
+    "huber_slope": 0.02,
+    "tree_method": "hist",
+    "n_jobs": 4
+  },
+  "feature_set": "base_v1",
+  "extra_features": [],
+  "target_transform": "change_ratio",
+  "strategy": "direct_per_horizon",
+  "seed": 42
+}
