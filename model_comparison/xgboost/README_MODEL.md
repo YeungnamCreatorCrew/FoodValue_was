@@ -32,6 +32,38 @@
 | 학습 창 5년 → 10년 | 2026-11-09 | 8.86% → 8.01%로 나빠지고 실행 시간 36% 증가 | 미채택(5년 유지) |
 | 가락시장 반입물량(경매후) | 2026-11-09 | 8.44% → 8.46%, 20개 중 선택 모델 모두 동일 | 미채택 |
 
+## 모델 비교 실험(기준서 v1) 제출 모델
+
+운영 모델과 별도로, 4개 모델 비교([기준서 v1](../MODEL_TRAINING_STANDARD.md))에 내는 XGBoost는 `model_comparison/xgboost/`에 있다. 운영 코드(`app/services/price_prediction.py`)는 바꾸지 않는다.
+
+| 파일 | 내용 |
+| --- | --- |
+| `model.py` | `XGBModel`: 시점별 직접 모델 7개, 변화율 대상, 공통 특징 15개 중 `horizon` 제외 14개, v5 기본값, `tree_method='hist'`·`n_jobs=4`·`random_state=시드` |
+| `config.json` | v5 기본 설정(튜닝 1회째) |
+| `tune.py` | 1차 튜닝: 튜닝 목록만, 최대 40회·3시간, Optuna TPE(시드 42), 중단 후 이어 하기, 상위 3개 시드 42·43·44 재현 |
+| `config_p1.json` | 튜닝 결과 최고 설정(`tune.py`가 생성) |
+
+운영 모델과 다른 점: 후보 선택·VALIDATED 관문·naive 복귀·외부변수 가중 결합이 없다(실패 시 naive 대체는 공통 평가기가 함). 특징은 공통 로더의 정의를 쓰며 저장소 `features()` 13개와 값이 같고 `days_since_kind_switch`가 더해졌다.
+
+```powershell
+# 점검
+uv run --extra prices python -m tools.run_backtest --config model_comparison/xgboost/config.json --phase smoke --month 2025-01 --out runs
+# 1차 튜닝(최대 40회). 중간에 끊겨도 다시 실행하면 이어 감
+uv run --extra prices python -m model_comparison.xgboost.tune
+uv run --extra prices python -m model_comparison.xgboost.tune --seeds
+# 1차 제출(검증 전체 + 튜닝 기록) → experiments/xgb-p1-…/ 를 PR
+uv run --extra prices python -m tools.run_backtest --config model_comparison/xgboost/config_p1.json --phase p1 --tuning-log runs/xgb-p1-tuning.csv
+```
+
+v5 기본값 참고 결과(스냅샷 `fv-snap-20261031-v1`, 10계열, 기준서 공통 평가기, 2026-11-10):
+
+| 기준일 목록 | policy macro MAPE | naive | 개선율 | rMAE | 승 | Δ 95% CI |
+| --- | --- | --- | --- | --- | --- | --- |
+| 튜닝 목록(53개) | 4.437% | 4.607% | +3.69% | 0.965 | 8/10 | [0.055, 0.300] |
+| 검증 전체(244개) | 4.782% | 4.913% | +2.65% | 0.973 | 7/10 | [0.033, 0.222] |
+
+검증 관문은 1번(개선율 5% 이상)만 미달. 운영 모델 기록의 8.4%(대파·내부 백테스트·선택 포함)와 평가 방식·대상이 달라 직접 비교하지 않는다. 배추·무 도매(9002·9012)와 무 소매(9011)에서 naive보다 조금 나쁘다.
+
 ## 상세 기록
 
 ### direct-xgb-v1 (2026-10-08)
