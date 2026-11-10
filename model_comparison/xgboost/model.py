@@ -27,6 +27,8 @@ class XGBModel:
         if unknown:
             raise ValueError(f'모르는 파라미터: {sorted(unknown)}')
         self.params = {**DEFAULT_PARAMS, **params}
+        if self.params['objective'] != 'reg:pseudohubererror':
+            self.params.pop('huber_slope')  # 다른 손실에서는 쓰지 않는 값(경고만 나고 결과는 같음)
 
     def fit(self, history, seed: int) -> None:
         from xgboost import XGBRegressor
