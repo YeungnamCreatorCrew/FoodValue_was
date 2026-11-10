@@ -189,18 +189,9 @@ def check_predictions(config, phase, folder, report):
         report.error(f'계열마다 기준일 수가 달라 N × 기준일 × 7 행 수가 맞지 않음: {dict(origins_per_series)}')
     if phase != 'smoke' and len(series) != standard.DEFAULT_SERIES_COUNT:
         report.warn(f'계열 수 {len(series)}개(기본 N={standard.DEFAULT_SERIES_COUNT}). manifest의 N과 같은지 확인')
-    # 채택 기준 4번의 성공률은 평가 대상(정답·naive가 있는 점) 기준이라 evaluate가 metrics.json에 낸 값을 본다.
-    # 행 기준 비율은 정답이 없는 날(원천 결측 구간)의 NO_INPUT까지 포함해 더 낮게 나온다.
-    rate = None
-    try:
-        rate = json.loads((folder / 'metrics.json').read_text(encoding='utf-8')).get('success_rate')
-    except (OSError, ValueError, AttributeError):
-        pass
-    if rate is None:
-        total = sum(statuses.values())
-        rate = statuses['OK'] / total if total else None
-    if rate is not None and rate < standard.ADOPTION['min_success_rate']:
-        report.warn(f'성공률 {rate:.2%} < 99% → 채택 기준 4번 미달(§8.4)')
+    total = sum(statuses.values())
+    if total and statuses['OK'] / total < standard.ADOPTION['min_success_rate']:
+        report.warn(f'성공률 {statuses["OK"] / total:.2%} < 99% → 채택 기준 4번 미달(§8.4)')
 
 
 def validate(folder: Path) -> Report:
