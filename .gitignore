@@ -16,3 +16,4 @@ docs/
 # 모델 비교 실험 (기준서 v1 §2.2): 스냅샷은 팀 공유 드라이브로만 배포, 학습된 모델 파일은 올리지 않음
 data/snapshots/
 experiments/*/model/
+runs/
