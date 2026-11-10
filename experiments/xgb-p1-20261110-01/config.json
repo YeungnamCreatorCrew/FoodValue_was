@@ -1,0 +1,52 @@
+{
+  "model": "XGBoost",
+  "owner": "A",
+  "class": "model_comparison.xgboost.model:XGBModel",
+  "params": {
+    "colsample_bytree": 0.9442750673835311,
+    "learning_rate": 0.029112705300410987,
+    "max_depth": 3,
+    "min_child_weight": 3.712084913349947,
+    "n_estimators": 68,
+    "n_jobs": 4,
+    "objective": "reg:squarederror",
+    "reg_lambda": 1.3359944936963393,
+    "subsample": 0.6994006535699706,
+    "tree_method": "hist"
+  },
+  "feature_set": "base_v1",
+  "extra_features": [],
+  "target_transform": "change_ratio",
+  "strategy": "direct_per_horizon",
+  "seed": 42,
+  "experiment_id": "xgb-p1-20261110-01",
+  "standard_version": "v1",
+  "git_sha": "0307a82d3fda3c02821b45414c93e333863b69a0",
+  "data_version": "fv-snap-20261031-v1",
+  "phase": "p1",
+  "origins": "validation",
+  "origin_list": "validation",
+  "month": null,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "refit": "weekly_first_origin",
+  "runtime": {
+    "where": "local",
+    "threads": 4
+  },
+  "tuning": {
+    "trials_used": 32,
+    "seconds_used": 11514
+  },
+  "config_id": "c34304ae"
+}
