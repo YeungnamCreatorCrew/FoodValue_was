@@ -7,12 +7,13 @@
 | calendar_day | 공휴일(KASI)을 수집한 연도의 모든 날짜. 음력은 천문연 자료 기반 korean-lunar-calendar로 변환 |
 | calendar_event | 공휴일 이름이 설날·추석인 연속 기간 |
 | exchange_rate_daily | ECOS 731Y001 일별 원/미국달러 매매기준율 |
-| item_production | KOSIS 농작물생산조사 연간 전국 생산량(톤, 확정치) |
+| item_production(PRODUCTION) | KOSIS 농작물생산조사 연간 전국 생산량(톤, 확정치) |
+| item_production(ARRIVAL) | 가락시장 일별 반입물량(경매후) 품목 합계(SUM_TOT, 톤) |
 | price_daily | 가격 계열(소매·도매)별 KAMIS 원본(external_observation)의 최신 버전 |
 | price_change_history | 계열별 price_daily의 같은 날 기준 1~7일 뒤 변동률 |
 | event_item_weight(LEARNED) | 소매 계열 price_change_history(7일)와 calendar_event로 계산한 품목별 명절 가격 압력 |
 
-원천에 없는 값은 만들지 않는다. 가락 반입량(ARRIVAL)·KREI 전망은 원천 수집기가 없어 적재하지 않는다.
+원천에 없는 값은 만들지 않는다. KREI 전망은 원천 수집기가 없어 적재하지 않는다.
 """
 from collections import defaultdict
 from datetime import date, timedelta
@@ -24,7 +25,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors import data_go_kr, ecos, kamis, kosis
+from app.collectors import data_go_kr, ecos, garak, kamis, kosis
 from app.collectors.http import number
 from app.models.external import ExternalObservation
 from app.models.prediction_input import (CalendarDay, CalendarEvent, EventItemWeight, ExchangeRateDaily, ItemProduction,
@@ -235,6 +236,36 @@ def refresh_item_production(engine, item_ids):
     return len(rows)
 
 
+def arrival_rows(observations):
+    """가락시장 반입량 원본 최신 버전 → item_production(ARRIVAL, DAY, 톤, 실적).
+
+    NUMERIC(14,1)이라 0.1톤(100kg) 단위로 반올림한다. 반입이 없는 날(일요일·휴장일)은 행을 만들지 않는다.
+    """
+    rows = []
+    for row in observations:
+        volume = number(row.payload.get('SUM_TOT'))
+        if row.observed_on is None or volume is None or volume < 0 or (row.units or {}).get('volume') != garak.VOLUME_UNIT:
+            continue
+        rows.append({'item_id': row.item_id, 'measure_type': 'ARRIVAL', 'period_type': 'DAY',
+                     'period_start': row.observed_on, 'period_end': row.observed_on, 'volume': _decimal(volume),
+                     'volume_unit': 'TON', 'is_estimate': False, 'source': 'GARAK'})
+    return rows
+
+
+def refresh_item_arrival(engine, item_ids, since: date | None = None):
+    conditions = [ExternalObservation.source == garak.SOURCE, ExternalObservation.dataset == garak.DATASET,
+                  ExternalObservation.item_id.in_(item_ids)]
+    if since:
+        conditions.append(ExternalObservation.observed_on >= since)
+    with Session(engine) as db:
+        rows = arrival_rows(latest_versions(db, *conditions))
+        if rows:
+            _upsert(db, ItemProduction, rows, 'uk_item_production',
+                    {'item_id', 'measure_type', 'period_type', 'period_start', 'is_estimate'})
+        db.commit()
+    return len(rows)
+
+
 # ---------------------------------------------------------------- exchange_rate_daily
 def exchange_rows(observations):
     rows = []
@@ -373,14 +404,16 @@ def refresh_event_item_weight(engine, item_ids, as_of: date | None = None):
     return len(rows)
 
 
-def refresh(engine, item_ids, *, weather_start: date, weather_end: date, since: date | None = None):
-    """파이프라인에서 수집 직후 호출한다. 테이블별 적재 행 수를 반환한다."""
+def refresh(engine, item_ids, *, weather_start: date, weather_end: date, since: date | None = None,
+            arrival_since: date | None = None):
+    """파이프라인에서 수집 직후 호출한다. 테이블별 적재 행 수를 반환한다. arrival_since가 없으면 since를 쓴다."""
     result = {}
     for name, task in (('price_daily', lambda: refresh_price_daily(engine, item_ids, since)),
                        ('weather_daily', lambda: refresh_weather_daily(engine, weather_start, weather_end)),
                        ('weather_forecast', lambda: refresh_weather_forecast(engine)),
                        ('calendar', lambda: dict(zip(('calendar_day', 'calendar_event'), refresh_calendar(engine)))),
                        ('item_production', lambda: refresh_item_production(engine, item_ids)),
+                       ('item_arrival', lambda: refresh_item_arrival(engine, item_ids, arrival_since or since)),
                        ('exchange_rate_daily', lambda: refresh_exchange_rate(engine, weather_start, weather_end)),
                        ('price_change_history', lambda: refresh_price_change_history(engine, item_ids, since)),
                        ('event_item_weight', lambda: refresh_event_item_weight(engine, item_ids))):

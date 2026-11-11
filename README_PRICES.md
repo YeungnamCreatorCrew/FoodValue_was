@@ -152,6 +152,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 | KOSIS | 농작물생산조사 통계표 `statisticsParameterData` | CROP_PRODUCTION | `external_observation` → `item_production` | 최신 공개 연도 생산량의 전년 대비 증감(Y년 값은 Y+1년 6월 30일부터) |
 | 한국은행 | ECOS 통계검색 `StatisticSearch` 731Y001 | EXCHANGE_RATE_DAILY | `external_observation` → `exchange_rate_daily` | 원/미국달러 7·28일 변화율(1일 지연) |
 | 기상청 | 단기예보 `VilageFcstInfoService_2.0/getVilageFcst` | VILAGE_FCST_DAILY | `external_observation` | 사용 안 함(과거 발표본이 없어 백테스트 불가). `weather_daily` FORECAST용 |
+| 서울시농수산식품공사 | 가락시장 반입물량(경매후) `dataOpen.do` `dataid=data21` | ARRIVAL_DAILY | `external_observation` → `item_production`(ARRIVAL·DAY) | 사용 안 함(2026-11-09 실험에서 효과 없음, [모델 변경 기록](model_comparison/xgboost/README_MODEL.md)) |
 
 - 수집·예측 대상은 `price_series`에 소매 계열이 있는 품목입니다. 계열 코드는 `품목-품종-등급`(예: `246-00-04`)이고 부류코드는 품목코드 첫 자리로 정합니다.
 - KAMIS 응답은 `countyname='평균'` 행만 전국 값으로 보존합니다. `price_daily`는 원본의 최신 버전에서 계열별로 다시 만들고
@@ -191,7 +192,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 
 ### 실행
 
-`.env`에 `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`, `DATA_GO_KR_SERVICE_KEY`, `KOSIS_API_KEY`, `ECOS_API_KEY`를 추가합니다. 공공데이터포털 키는 인코딩·디코딩 키 모두 사용할 수 있습니다.
+`.env`에 `KAMIS_CERT_KEY`, `KAMIS_CERT_ID`, `DATA_GO_KR_SERVICE_KEY`, `KOSIS_API_KEY`, `ECOS_API_KEY`, `GARAK_API_ID`, `GARAK_API_PASSWORD`를 추가합니다. 공공데이터포털 키는 인코딩·디코딩 키 모두 사용할 수 있습니다.
 공공데이터포털에서 기상청 ASOS 일자료·단기예보와 한국천문연구원 특일 정보 활용신청이 각각 필요합니다.
 
 ```bash
@@ -260,7 +261,17 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 - ECOS는 경로형 URL이라 끝에 `?`가 붙으면 무자료(INFO-200)를 돌려줍니다. 파라미터가 없으면 `?`를 붙이지 않습니다(로컬 실측으로 확인된 문제).
 - KAMIS·ECOS는 해외 서버(클라우드 개발 환경)에서는 연결이 끊깁니다. 국내 IP에서 실행합니다. 서버에서 아래로 확인합니다.
   `uv run --extra prices python -c "from app.collectors import ecos; from app.collectors.http import fetch_json; import os, datetime as d; print(ecos.collect(fetch_json, key=os.environ['ECOS_API_KEY'], start=d.date(2026,10,1), end=d.date.today()).records[:3])"`
-- `item_production`의 가락시장 반입량(ARRIVAL·DAY)·KREI 전망치는 아직 채우지 않습니다.
+- 가락시장 반입량은 `item.name`이 `garak.ITEM_CODES`의 키(대파 24500·양파·배추·무·사과 등 30개)와 같은 품목만 연결합니다.
+  2026-11-10 응답에서 이름이 정확히 같은 품목만 넣었고, 이름이 다른 품목(풋고추 ↔ 생고추 등)은 추측해서 연결하지 않습니다.
+  - 한 번 요청에 그날 모든 품목(약 120행)이 오고 한 페이지는 최대 100행이라, 품목 수와 관계없이 날짜당 2회 요청합니다(일요일 제외, 4개 병렬).
+  - 2021년 이전 날짜는 HTTP 400("검색가능 년도는 2021년 부터 입니다")이므로 처음 수집은 2021-01-01부터 받습니다.
+  - 값은 품목 합계 `SUM_TOT`(톤)를 0.1톤 단위로 적재합니다. 도매법인별 값(`CORP_CD_1~6`)은 원본(`external_observation.payload`)에만 둡니다.
+    톤 단위는 2026-11 실측(전체 합계 하루 약 8천 톤, 대파 약 400톤)으로 판단했습니다.
+  - 일요일·휴장일은 합계 행만 빈 값으로 와서 행을 만들지 않습니다.
+  - 인증 정보가 틀리면 HTTP 500 HTML이 옵니다. 날짜마다 같은 실패를 반복하지 않도록 가장 최근 날짜를 먼저 한 번 요청하고, 실패하면 `NETWORK_ERROR`(`HTTP_500`)로 중단합니다.
+  - 클라우드 개발 환경(해외 IP)에서도 호출되는 것을 확인했습니다(2026-11-11).
+  - 반입량은 예측 입력으로 쓰지 않습니다. KAMIS 도매가에 이미 상당 부분 반영되어 있어 2026-11-09 실험에서 효과가 없었습니다.
+- `item_production`의 KREI 전망치는 아직 채우지 않습니다.
 
 ```bash
 uv run --group dev --extra prices pytest tests/test_collectors.py tests/test_exogenous.py tests/test_weighting.py tests/test_warehouse.py tests/test_price_prediction.py -p no:cacheprovider

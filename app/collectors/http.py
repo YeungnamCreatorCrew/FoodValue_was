@@ -32,17 +32,17 @@ def service_key(value: str) -> str:
     return urllib.parse.unquote(value) if '%' in value else value
 
 
-def fetch_json(url: str, params: dict, *, timeout: float = TIMEOUT_SECONDS, retries: int = RETRIES, sleep=time.sleep):
+def fetch_bytes(url: str, params: dict, *, accept: str = 'application/json', timeout: float = TIMEOUT_SECONDS,
+                retries: int = RETRIES, sleep=time.sleep) -> bytes:
     query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
     # 파라미터가 없으면 '?'를 붙이지 않는다. ECOS는 경로형 URL 끝의 '?' 때문에 무자료(INFO-200)를 돌려준다.
     request = urllib.request.Request(f'{url}?{query}' if query else url,
-                                     headers={'User-Agent': USER_AGENT, 'Accept': 'application/json'})
+                                     headers={'User-Agent': USER_AGENT, 'Accept': accept})
     last = 'UNKNOWN'
     for attempt in range(retries):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                body = response.read()
-            break
+                return response.read()
         except urllib.error.HTTPError as error:
             if error.code in (401, 403):
                 raise AuthError(f'HTTP_{error.code}') from None
@@ -53,9 +53,16 @@ def fetch_json(url: str, params: dict, *, timeout: float = TIMEOUT_SECONDS, retr
             last = type(error).__name__
         if attempt + 1 < retries:
             sleep(2 ** attempt)
-    else:
-        raise NetworkError(last)
-    return decode(body)
+    raise NetworkError(last)
+
+
+def fetch_json(url: str, params: dict, **kwargs):
+    return decode(fetch_bytes(url, params, **kwargs))
+
+
+def fetch_text(url: str, params: dict, **kwargs) -> str:
+    """XML 등 JSON이 아닌 응답(가락시장)을 문자열로 받는다. 해석은 각 수집기가 한다."""
+    return fetch_bytes(url, params, accept='application/xml, text/xml', **kwargs).decode('utf-8', errors='replace')
 
 
 def decode(body: bytes):
