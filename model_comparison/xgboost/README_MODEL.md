@@ -42,6 +42,7 @@
 | `config.json` | v5 기본 설정(튜닝 1회째) |
 | `tune.py` | 1차 튜닝: 튜닝 목록만, 최대 40회·3시간, Optuna TPE(시드 42), 중단 후 이어 하기, 상위 3개 시드 42·43·44 재현 |
 | `config_p1.json` | 튜닝 결과 최고 설정(`tune.py`가 생성) |
+| `p2.py` | 2차 비교: `config_p1.json` params 고정, 외부변수 묶음 5개를 하나씩 → 효과 있던 묶음 전체. 결과 `experiments/xgb-p2-…`, 요약 `runs/xgb-p2-summary.json`, 끊겨도 이어 하기 |
 
 운영 모델과 다른 점: 후보 선택·VALIDATED 관문·naive 복귀·외부변수 가중 결합이 없다(실패 시 naive 대체는 공통 평가기가 함). 특징은 공통 로더의 정의를 쓰며 저장소 `features()` 13개와 값이 같고 `days_since_kind_switch`가 더해졌다.
 
@@ -53,6 +54,8 @@ uv run --extra prices python -m model_comparison.xgboost.tune
 uv run --extra prices python -m model_comparison.xgboost.tune --seeds
 # 1차 제출(검증 전체 + 튜닝 기록) → experiments/xgb-p1-…/ 를 PR
 uv run --extra prices python -m tools.run_backtest --config model_comparison/xgboost/config_p1.json --phase p1 --tuning-log runs/xgb-p1-tuning.csv
+# 2차 비교(공통 로더의 외부변수 묶음 필요) → experiments/xgb-p2-…/ 6개 이하를 PR
+uv run --extra prices python -m model_comparison.xgboost.p2
 ```
 
 v5 기본값 참고 결과(스냅샷 `fv-snap-20261031-v1`, 10계열, 기준서 공통 평가기, 2026-11-10):
