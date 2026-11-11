@@ -7,7 +7,7 @@
     "transform": "log",
     "seasonal": false,
     "season_length": 7,
-    "calendar_exog": "none",
+    "calendar_exog": "weekday",
     "event_exog": false,
     "window_days": 1825,
     "max_p": 5,
