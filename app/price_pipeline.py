@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from app.collectors import garak
 from app.core.constants import ID_MAX
 from app.repositories import series_repository
 from app.services import collection_service, price_batch_service, warehouse_service
@@ -51,11 +52,16 @@ def run(engine, args):
         # 수집 원천을 정형 테이블(price_daily·weather_daily·calendar·price_change_history 등)로 정제한다.
         # 이번에 수집한 기간만 다시 계산한다. 변동률은 7일 뒤 가격을 쓰므로 기준일을 7일 앞당긴다.
         end = min(args.end or today(), today())
+        # 가락 반입량은 다른 원천과 백필 시작일(2021년)이 달라 기간을 따로 잡는다. 처음 수집할 때 다른 표까지
+        # 2021년부터 다시 계산하지 않게 한다.
         starts = [date.fromisoformat(row['startDate']) for row in output['collection']
-                  if row.get('startDate') and row['dataset'] != 'HOLIDAY']
+                  if row.get('startDate') and row['dataset'] not in ('HOLIDAY', garak.DATASET)]
         since = min(starts) if starts else end - timedelta(days=collection_service.OVERLAP_DAYS)
+        arrival = [date.fromisoformat(row['startDate']) for row in output['collection']
+                   if row.get('startDate') and row['dataset'] == garak.DATASET]
         output['tables'] = warehouse_service.refresh(engine, [item.id for item in items], weather_start=since,
-                                                     weather_end=end, since=since - timedelta(days=7))
+                                                     weather_end=end, since=since - timedelta(days=7),
+                                                     arrival_since=min(arrival) if arrival else since)
     if not args.collect_only:
         with Session(engine) as db:
             targets = [(row.id, row.item_id, row.market) for row in series_repository.of_items(db, [item.id for item in items])]

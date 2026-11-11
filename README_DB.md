@@ -66,6 +66,7 @@ docker compose up -d          # PostgreSQL 실행
 - `DATA_GO_KR_SERVICE_KEY`
 - `KOSIS_API_KEY`
 - `ECOS_API_KEY`
+- `GARAK_API_ID`, `GARAK_API_PASSWORD` (가락시장 공공데이터 신청 시 받은 발급 ID와 신청 게시글 비밀번호)
 
 앞으로 API 키 등이 추가되면 이 목록에 변수 이름을 더합니다.
 

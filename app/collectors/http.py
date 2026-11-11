@@ -47,8 +47,7 @@ def fetch_bytes(url: str, params: dict | None = None, *, timeout: float = TIMEOU
     for attempt in range(retries):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
-                body = response.read()
-            break
+                return response.read()
         except urllib.error.HTTPError as error:
             if error.code in (401, 403):
                 raise AuthError(f'HTTP_{error.code}') from None
@@ -62,6 +61,11 @@ def fetch_bytes(url: str, params: dict | None = None, *, timeout: float = TIMEOU
     else:
         raise NetworkError(last)
     return body
+
+
+def fetch_text(url: str, params: dict, **kwargs) -> str:
+    """XML 등 JSON이 아닌 응답(가락시장)을 문자열로 받는다. 해석은 각 수집기가 한다."""
+    return fetch_bytes(url, params, accept='application/xml, text/xml', **kwargs).decode('utf-8', errors='replace')
 
 
 def decode(body: bytes):
