@@ -1,0 +1,44 @@
+{
+  "model": "Ridge",
+  "owner": "D",
+  "class": "model_comparison.ridge.model:RidgeModel",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "feature_set": "base_v1",
+  "extra_features": [],
+  "target_transform": "raw_price",
+  "strategy": "direct_pooled",
+  "seed": 42,
+  "experiment_id": "ridge-p1-20261111-07",
+  "standard_version": "v1",
+  "git_sha": "9e73e593738267c3779a9199b1256f2a93d860db",
+  "data_version": "fv-snap-20261031-v1",
+  "phase": "p1",
+  "origins": "validation",
+  "origin_list": "validation",
+  "month": null,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "refit": "weekly_first_origin",
+  "runtime": {
+    "where": "local",
+    "threads": 4
+  },
+  "tuning": {
+    "trials_used": 6,
+    "seconds_used": 84
+  },
+  "config_id": "bfc463b0"
+}
