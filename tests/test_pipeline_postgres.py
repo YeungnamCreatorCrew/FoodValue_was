@@ -161,7 +161,8 @@ def test_collect_store_dedupe_and_revision(pipeline):
     assert {key: row['status'] for key, row in first.items()} == {
         ('KAMIS', 'RETAIL_DAILY'): 'SUCCESS', ('KAMIS', 'WHOLESALE_DAILY'): 'SUCCESS',
         ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS',
-        ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS', ('ECOS', 'EXCHANGE_RATE_DAILY'): 'SUCCESS'}
+        ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS', ('ECOS', 'EXCHANGE_RATE_DAILY'): 'SUCCESS',
+        ('GARAK', 'ARRIVAL_DAILY'): 'SKIPPED'}  # 가락 인증 정보 없음 → 다른 원천과 예측은 계속
     kamis_days, kamis_requests = kamis_expectation(apis)
     assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == kamis_days
     # 주산지 관측소 + 전국 집계 관측소. ASOS는 전일까지
@@ -178,7 +179,7 @@ def test_collect_store_dedupe_and_revision(pipeline):
         assert run[0] == 'SUCCESS' and run[1] == kamis_requests and run[2] == run[3] == kamis_days and run[4] is not None
     # 같은 내용의 재수집은 새 행을 만들지 않는다.
     again = collect(engine, item_id, apis, start=apis.start)
-    assert all(row['inserted'] == 0 for row in again.values())
+    assert all(row.get('inserted', 0) == 0 for row in again.values())
     # 원천이 값을 수정하면 새 버전을 보존하고 예측 대상 가격도 갱신한다.
     apis.overrides[today()] = 4321
     revised = collect(engine, item_id, apis)
@@ -199,7 +200,7 @@ def test_missing_credentials_are_recorded_as_skipped(pipeline):
     _, engine, item_id, apis = pipeline
     results = collection_service.collect(engine, [item_id], fetch=apis, credentials=Credentials())
     assert {row['status'] for row in results} == {'SKIPPED'} and apis.calls == []
-    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY', 'MISSING_KOSIS_KEY',
+    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY', 'MISSING_KOSIS_KEY', 'MISSING_GARAK_CREDENTIALS',
                                                     'MISSING_ECOS_KEY'}
 
 
