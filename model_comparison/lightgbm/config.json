@@ -1,0 +1,31 @@
+{
+  "model": "LightGBM",
+  "owner": "B",
+  "class": "model_comparison.lightgbm.model:LGBMModel",
+  "params": {
+    "target_transform": "log_ratio",
+    "strategy": "direct_per_horizon",
+    "objective": "regression",
+    "n_estimators": 60,
+    "learning_rate": 0.05,
+    "num_leaves": 4,
+    "min_child_samples": 100,
+    "bagging_fraction": 1.0,
+    "bagging_freq": 0,
+    "feature_fraction": 1.0,
+    "lambda_l2": 10.0,
+    "early_stopping_rounds": 0,
+    "drop_features": [],
+    "deterministic": true,
+    "force_row_wise": true,
+    "num_threads": 4,
+    "max_depth": 2,
+    "relative_features": true,
+    "keep_current": false
+  },
+  "feature_set": "base_v1",
+  "extra_features": [],
+  "target_transform": "log_ratio",
+  "strategy": "direct_per_horizon",
+  "seed": 42
+}
