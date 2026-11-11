@@ -1,0 +1,7 @@
+trial,config_id,params,macro_mape,seconds,status
+1,eeccea32,"{""alpha"": 1.0, ""solver"": ""lsqr""}",4.789801,15.6,OK
+2,5c11ea5c,"{""alpha"": 0.1, ""solver"": ""lsqr""}",4.797184,10.8,OK
+3,a7cb6b1b,"{""alpha"": 0.01, ""solver"": ""lsqr""}",4.798315,17.7,OK
+4,bfc463b0,"{""alpha"": 10, ""solver"": ""lsqr""}",4.785119,14.3,OK
+5,33af5014,"{""alpha"": 100, ""solver"": ""lsqr""}",5.039178,13.3,OK
+6,9ef98252,"{""alpha"": 1000, ""solver"": ""lsqr""}",5.483619,11.8,OK
