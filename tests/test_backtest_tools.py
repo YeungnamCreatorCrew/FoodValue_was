@@ -6,6 +6,7 @@ import math
 from datetime import date, timedelta
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tests.test_snapshot_tools import fake_raw
@@ -186,3 +187,67 @@ def test_bootstrap_is_reproducible(snap):
     first = evaluate.bootstrap(points, lambda p: p['pred'])
     assert first == evaluate.bootstrap(points, lambda p: p['pred'])
     assert first['ci_low'] <= first['delta'] <= first['ci_high']
+
+
+# ---- 2차 외부변수 묶음(§5.2) ----------------------------------------------------------------------
+
+ALL_BUNDLES = list(standard.EXTRA_BUNDLES)
+
+
+def test_bundle_names_are_ordered_and_validated():
+    names = loader.feature_names(['MACRO', 'MARKET'])
+    assert names[len(standard.BASE_FEATURES):] == [*standard.EXTRA_BUNDLES['MARKET'], *standard.EXTRA_BUNDLES['MACRO']]
+    with pytest.raises(ValueError, match='모르는'):
+        loader.check_bundles(['WEATHER'])  # 주산지 기상은 쓰지 않음
+
+
+def _drop_from(folder, name, column, first_day):
+    path = folder / name
+    rows = read_csv(path)
+    with open(path, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator='\n')
+        writer.writeheader()
+        writer.writerows(r for r in rows if r[column] < first_day.isoformat())
+
+
+def test_bundles_use_only_data_up_to_d_minus_1(tmp_path, snap_dir):
+    """d일과 그 뒤의 상대 시장·기상·환율을 지워도 기준일 d의 외부변수는 같아야 한다(§3.1)."""
+    import shutil
+    d = date(2016, 1, 29)  # 가짜 스냅샷의 기상·환율이 있는 기간
+    cut = tmp_path / 'cut'
+    shutil.copytree(snap_dir, cut)
+    _drop_from(cut, 'weather_daily.csv', 'weather_date', d)
+    _drop_from(cut, 'exchange_rate_daily.csv', 'rate_date', d)
+    rows = read_csv(cut / 'price_daily.csv')
+    with open(cut / 'price_daily.csv', 'w', encoding='utf-8', newline='') as f:  # 상대 계열(2)만 d부터 삭제
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator='\n')
+        writer.writeheader()
+        writer.writerows(r for r in rows if not (r['series_id'] == '2' and r['price_date'] >= d.isoformat()))
+    full = loader.Snapshot(snap_dir).origin_inputs(1, d, ALL_BUNDLES).features
+    part = loader.Snapshot(cut).origin_inputs(1, d, ALL_BUNDLES).features
+    for h in standard.HORIZONS:
+        a, b = full[h], part[h]
+        assert ((a == b) | (np.isnan(a) & np.isnan(b))).all(), h
+
+
+def test_market_and_event_values(snap):
+    d = date(2025, 9, 26)
+    names = loader.feature_names(ALL_BUNDLES)
+    row = dict(zip(names, snap.origin_inputs(1, d, ALL_BUNDLES).features[1]))
+    counter = snap.series[2].filled[snap.series[2].index(d - timedelta(days=1))]
+    assert row['counter_price'] == counter
+    assert row['target_counter_ratio'] == pytest.approx(snap.series[1].filled[snap.series[1].index(d)] / counter)
+    # 가짜 명절: 2025-10-05~07, 영향 2025-09-25~10-07 → 목표일 9/27까지 8일, 영향 기간 안
+    assert (row['days_to_major_holiday'], row['days_from_major_holiday'], row['target_in_event_window']) == (8, 45, 1)
+    inside = dict(zip(names, snap.origin_inputs(1, date(2025, 10, 3), ALL_BUNDLES).features[3]))
+    assert inside['days_to_major_holiday'] == inside['days_from_major_holiday'] == 0
+    data = snap.training_data(1, date(2025, 3, 3), ['MARKET'])
+    assert data.features.shape[1] == len(standard.BASE_FEATURES) + 4 and data.feature_names[-1] == 'counter_change28'
+
+
+def test_p2_config_must_name_feature_set(tmp_path, snap_dir):
+    config = {**NAIVE, 'extra_features': ['MARKET']}
+    with pytest.raises(run_backtest.RunError, match='base_v1\\+MARKET'):
+        run(tmp_path, snap_dir, config, phase='p2')
+    folder = run(tmp_path, snap_dir, {**config, 'feature_set': 'base_v1+MARKET'}, phase='p2', series='1,2')
+    assert validate(folder).errors == []

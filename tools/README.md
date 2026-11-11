@@ -83,3 +83,28 @@ uv run python -m tools.check_snapshot data/snapshots/fv-snap-20261031-v1
    ```powershell
    uv run --extra prices python -m tools.evaluate --compare experiments/xgb-p1-... experiments/lgbm-p1-... --out comparison.json
    ```
+
+## 2차 비교(p2): 외부변수 묶음
+
+설정 파일의 `extra_features`에 묶음 이름을 넣고, `feature_set`을 `base_v1+<묶음…>`(아래 순서)으로 적는다. 1차에서 확정한 `params`는 그대로 둔다(§5.2).
+
+| 묶음 | 특징(기본 15개 뒤에 이 순서로 붙음) | 이용 시점 |
+| --- | --- | --- |
+| `MARKET` | `counter_price`, `target_counter_ratio`(배추·무는 작형이 다르면 NaN), `counter_change7`, `counter_change28` | ≤ d−1 |
+| `NATIONAL_WEATHER` | `nat_temp_mean7`, `nat_rain_sum28`, `nat_heat_index7`, `nat_heat_index28`, `nat_heavy_rain_index28`, `nat_cold_index28` (지수 = 기간 중 관측소 비율의 일별 합) | ≤ d−1 |
+| `EVENT` | `days_to_major_holiday`, `days_from_major_holiday`(설·추석 기간 중 0, 최대 45), `target_in_event_window`, `target_prev_day_holiday`(평일 공휴일만) | 목표일 |
+| `MACRO` | `usd_krw_change7`, `usd_krw_change28` | ≤ d−1 |
+| `PRODUCTION` | `production_yoy`(최신 공개 연도 생산량 전년 대비) | Y+1년 6/30부터 |
+
+```json
+{"...": "1차와 같음", "feature_set": "base_v1+MARKET", "extra_features": ["MARKET"]}
+```
+
+```powershell
+uv run --extra prices python -m tools.run_backtest --config my_p2_market.json --phase p2
+```
+
+- 진행(§5.2): 묶음 하나씩 5번(`base_v1+MARKET`, …) → 효과 있던 묶음 전체 1번. 각 실행이 `experiments/<접두어>-p2-…` 하나
+- 값이 없으면 NaN(채우지 않음). Ridge는 결측 처리 방법을 학습 표본 기준으로 정해 기록
+- AutoARIMA는 `EVENT`만 허용(검사기가 막음)
+- 특징 이름은 `history.feature_names`로 찾는다. 위치(번호)로 쓰지 말 것
