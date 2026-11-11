@@ -1,0 +1,14 @@
+{
+  "model": "Ridge",
+  "owner": "D",
+  "class": "model_comparison.ridge.model:RidgeModel",
+  "params": {
+    "alpha": 1000,
+    "solver": "lsqr"
+  },
+  "feature_set": "base_v1",
+  "extra_features": [],
+  "target_transform": "raw_price",
+  "strategy": "direct_pooled",
+  "seed": 42
+}
