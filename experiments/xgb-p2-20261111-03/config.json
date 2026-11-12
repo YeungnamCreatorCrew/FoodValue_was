@@ -1,0 +1,54 @@
+{
+  "model": "XGBoost",
+  "owner": "A",
+  "class": "model_comparison.xgboost.model:XGBModel",
+  "params": {
+    "colsample_bytree": 0.9442750673835311,
+    "learning_rate": 0.029112705300410987,
+    "max_depth": 3,
+    "min_child_weight": 3.712084913349947,
+    "n_estimators": 68,
+    "n_jobs": 4,
+    "objective": "reg:squarederror",
+    "reg_lambda": 1.3359944936963393,
+    "subsample": 0.6994006535699706,
+    "tree_method": "hist"
+  },
+  "feature_set": "base_v1+EVENT",
+  "extra_features": [
+    "EVENT"
+  ],
+  "target_transform": "change_ratio",
+  "strategy": "direct_per_horizon",
+  "seed": 42,
+  "experiment_id": "xgb-p2-20261111-03",
+  "standard_version": "v1",
+  "git_sha": "9249ad8700ce961d4c793f5ed0c24dcd06466c28",
+  "data_version": "fv-snap-20261031-v1",
+  "phase": "p2",
+  "origins": "validation",
+  "origin_list": "validation",
+  "month": null,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "refit": "weekly_first_origin",
+  "runtime": {
+    "where": "local",
+    "threads": 4
+  },
+  "tuning": {
+    "trials_used": 0,
+    "seconds_used": 0
+  },
+  "config_id": "797981af"
+}
