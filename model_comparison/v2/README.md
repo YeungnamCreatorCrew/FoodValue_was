@@ -26,6 +26,7 @@ uv run python -m model_comparison.v2.snapshot check
 | --- | --- | --- | --- |
 | v1 기본 | 15 | 가격 이력·달력 | d |
 | v1 §5.2 묶음 | 최대 17 | 상대 시장, 전국 기상, 명절, 환율, 생산량 | d−1 / 목표일 / 공개일 |
+| `WEATHER_ANOM` | 26 | 주산지 날씨의 평년(지난 1~5년 같은 날) 대비 편차, 과거 13개 4주 블록 | d−1 |
 | `ORIGIN_WEATHER` | 130 | 주산지 평균 날씨: 과거 52주 각 주의 평균기온·강수합 + 과거 13개 4주 블록의 최저·최고기온 | d−1 |
 | `GARAK` | 10 | 반입량 과거 8주 각 주 합, 최근 7·28일 전년 대비 | d−1 |
 | `CROSS_ITEM` | 10 | 다른 품목(같은 시장) 가격 7·28일 변화율 | d−1 |
@@ -50,6 +51,9 @@ uv run --extra prices python -m model_comparison.v2.run_pooled --config model_co
 | `v1feat.json` | 통합 학습 + v1에서 효과 있던 묶음(MARKET·전국 기상·명절)만 — 통합 학습 자체의 효과 |
 | `all.json` | 모든 자료 |
 | `no_ow.json`, `no_garak.json`, `no_cross.json` | 모든 자료에서 하나씩 빼기 — 무엇이 기여했는지 |
+| `v1feat_garak.json`, `v1feat_cross.json`, `v1feat_anom.json` | v1 효과 묶음에 하나씩 더하기 |
+
+첫 결과는 [RESULTS.md](RESULTS.md).
 
 결과: `experiments_v2/<설정>-<기준일 목록>-날짜-번호/` (`importance.json`에 특징 중요도). v1 CI 검사 대상이 아니다.
 최종 시험 기준일은 쓰지 않는다(팀 합의 후 별도).
