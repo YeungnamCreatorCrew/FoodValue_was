@@ -1,0 +1,16 @@
+{
+  "class": "model_comparison.ridge.model_p2:RidgeP2Model",
+  "extra_features": [
+    "MACRO"
+  ],
+  "feature_set": "base_v1+MACRO",
+  "model": "Ridge",
+  "owner": "D",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "seed": 42,
+  "strategy": "direct_pooled",
+  "target_transform": "raw_price"
+}
