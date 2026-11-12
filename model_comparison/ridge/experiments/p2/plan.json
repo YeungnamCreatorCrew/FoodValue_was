@@ -1,0 +1,240 @@
+{
+  "alpha": 10,
+  "baseline": "ridge-p1-20261111-07",
+  "experiments": [
+    {
+      "bundles": [],
+      "decision": null,
+      "executed_at": null,
+      "experiment_id": null,
+      "feature_count": 15,
+      "feature_names": [
+        "current",
+        "lag1",
+        "lag7",
+        "lag14",
+        "lag28",
+        "mean7",
+        "mean28",
+        "change7",
+        "volatility7",
+        "price_age",
+        "target_weekday",
+        "target_season_sin",
+        "target_season_cos",
+        "horizon",
+        "days_since_kind_switch"
+      ],
+      "metrics": null,
+      "plan_id": "ridge-p2-v1-control",
+      "reason_and_hypothesis": [
+        "??? ??? ??",
+        ""
+      ],
+      "state": "PLANNED"
+    },
+    {
+      "bundles": [
+        "MARKET"
+      ],
+      "decision": null,
+      "executed_at": null,
+      "experiment_id": null,
+      "feature_count": 19,
+      "feature_names": [
+        "current",
+        "lag1",
+        "lag7",
+        "lag14",
+        "lag28",
+        "mean7",
+        "mean28",
+        "change7",
+        "volatility7",
+        "price_age",
+        "target_weekday",
+        "target_season_sin",
+        "target_season_cos",
+        "horizon",
+        "days_since_kind_switch",
+        "counter_price",
+        "target_counter_ratio",
+        "counter_change7",
+        "counter_change28"
+      ],
+      "metrics": null,
+      "plan_id": "ridge-p2-v1-market",
+      "reason_and_hypothesis": [
+        "?? ??? ????? ?? ??? ??",
+        "?? ?? ??? ??, ?? ??? ?? ??? ??"
+      ],
+      "state": "PLANNED"
+    },
+    {
+      "bundles": [
+        "NATIONAL_WEATHER"
+      ],
+      "decision": null,
+      "executed_at": null,
+      "experiment_id": null,
+      "feature_count": 21,
+      "feature_names": [
+        "current",
+        "lag1",
+        "lag7",
+        "lag14",
+        "lag28",
+        "mean7",
+        "mean28",
+        "change7",
+        "volatility7",
+        "price_age",
+        "target_weekday",
+        "target_season_sin",
+        "target_season_cos",
+        "horizon",
+        "days_since_kind_switch",
+        "nat_temp_mean7",
+        "nat_rain_sum28",
+        "nat_heat_index7",
+        "nat_heat_index28",
+        "nat_heavy_rain_index28",
+        "nat_cold_index28"
+      ],
+      "metrics": null,
+      "plan_id": "ridge-p2-v1-national_weather",
+      "reason_and_hypothesis": [
+        "?? ?? ??? ??? ?? ???? ??",
+        "?? ??? ?? ?? ?? ? ?????? ?? ??"
+      ],
+      "state": "PLANNED"
+    },
+    {
+      "bundles": [
+        "EVENT"
+      ],
+      "decision": null,
+      "executed_at": null,
+      "experiment_id": null,
+      "feature_count": 19,
+      "feature_names": [
+        "current",
+        "lag1",
+        "lag7",
+        "lag14",
+        "lag28",
+        "mean7",
+        "mean28",
+        "change7",
+        "volatility7",
+        "price_age",
+        "target_weekday",
+        "target_season_sin",
+        "target_season_cos",
+        "horizon",
+        "days_since_kind_switch",
+        "days_to_major_holiday",
+        "days_from_major_holiday",
+        "target_in_event_window",
+        "target_prev_day_holiday"
+      ],
+      "metrics": null,
+      "plan_id": "ridge-p2-v1-event",
+      "reason_and_hypothesis": [
+        "??? ??? ?? ?? ??? ??",
+        "?? ??? ?? ? ??? ?? ??"
+      ],
+      "state": "PLANNED"
+    },
+    {
+      "bundles": [
+        "MACRO"
+      ],
+      "decision": null,
+      "executed_at": null,
+      "experiment_id": null,
+      "feature_count": 17,
+      "feature_names": [
+        "current",
+        "lag1",
+        "lag7",
+        "lag14",
+        "lag28",
+        "mean7",
+        "mean28",
+        "change7",
+        "volatility7",
+        "price_age",
+        "target_weekday",
+        "target_season_sin",
+        "target_season_cos",
+        "horizon",
+        "days_since_kind_switch",
+        "usd_krw_change7",
+        "usd_krw_change28"
+      ],
+      "metrics": null,
+      "plan_id": "ridge-p2-v1-macro",
+      "reason_and_hypothesis": [
+        "?? ??? ??? ?? ???? ??",
+        "?? ?? ? ?? ?? ???? ??"
+      ],
+      "state": "PLANNED"
+    },
+    {
+      "bundles": [
+        "PRODUCTION"
+      ],
+      "decision": null,
+      "executed_at": null,
+      "experiment_id": null,
+      "feature_count": 16,
+      "feature_names": [
+        "current",
+        "lag1",
+        "lag7",
+        "lag14",
+        "lag28",
+        "mean7",
+        "mean28",
+        "change7",
+        "volatility7",
+        "price_age",
+        "target_weekday",
+        "target_season_sin",
+        "target_season_cos",
+        "horizon",
+        "days_since_kind_switch",
+        "production_yoy"
+      ],
+      "metrics": null,
+      "plan_id": "ridge-p2-v1-production",
+      "reason_and_hypothesis": [
+        "??? ?? ?? ?? ??? ??",
+        "?? ?? ???? ?? ????? ?? ???"
+      ],
+      "state": "PLANNED"
+    },
+    {
+      "bundles": null,
+      "decision": null,
+      "executed_at": null,
+      "experiment_id": null,
+      "feature_count": null,
+      "feature_names": null,
+      "metrics": null,
+      "plan_id": "ridge-p2-v1-combination",
+      "reason_and_hypothesis": [
+        "5? ?? ?? ? p1?? ??? ?? ??",
+        "2? ??? ?? ??"
+      ],
+      "state": "PLANNED"
+    }
+  ],
+  "seed": 42,
+  "solver": "lsqr",
+  "state": "PLANNED",
+  "strategy": "direct_pooled",
+  "target_transform": "raw_price",
+  "version": "ridge-p2-v1"
+}

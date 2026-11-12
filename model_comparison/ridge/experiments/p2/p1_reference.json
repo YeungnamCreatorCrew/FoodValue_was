@@ -1,0 +1,16 @@
+{
+  "artifacts_sha256": {
+    "README.md": "aae5bd8767606ada36e4567b429c8cf971dc40856995f4ebe99d1b9869cc7000",
+    "config.json": "6a9b547da766ec0750f801e3a327ec459a792b314d5b52e1465843bd4c06219e",
+    "environment.txt": "a7c5f88dc049435e23672889b61b798765c8582d1c81549ecf54acf398090b89",
+    "invocation.json": "1b67c99c04a7d78199b0d70be6cabcd9e4f8df1c6052bc89e1e844a2ecbf1a0f",
+    "metrics.json": "d50f1601e9d6b680fc0fa72b4725a2388d557d62b393f0c5001f959428be7775",
+    "model_source.py": "a73fc3692db47834121c716c41d9ca72dc5ddb536089a6af96a07e34770d934f",
+    "predictions.csv": "3e7f9c97e7d79666af01d0ab51510198fccdb98d601b1c325a223971419c667c",
+    "run.log": "32693ae628e5af9b8c7238bf610cc025aaa1281a30882a88d0db7b09a4e423e0",
+    "tuning_log.csv": "ff6e2adbd5f71f46254dfb5749dee5fb1e478be78d046cfd43507c6087f7653c"
+  },
+  "experiment_id": "ridge-p1-20261111-07",
+  "snapshot_id": "fv-snap-20261031-v1",
+  "snapshot_manifest_sha256": "3297209f59afbe96faa1e93d22f267fcc653d107cf42082f10018dee4eb81aa0"
+}
