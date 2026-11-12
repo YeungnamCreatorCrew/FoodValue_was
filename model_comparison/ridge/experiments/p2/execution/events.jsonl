@@ -1,0 +1,15 @@
+{"at":"2026-11-12T06:54:17.925288+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065417-ca43f64be57e","event":"STARTED","experiment_id":"ridge-p2-20261112-01"}
+{"at":"2026-11-12T06:55:21.948964+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065417-ca43f64be57e","event":"COMPLETED"}
+{"at":"2026-11-12T06:56:51.031224+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065417-ca43f64be57e","event":"REUSED","identity_sha256":"89400808866b908513f8d0ccbfd54aeddaf51db8085b7eaecce0968b93577dc3"}
+{"at":"2026-11-12T06:56:56.775214+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065656-111045917e59","event":"STARTED","experiment_id":"ridge-p2-20261112-02"}
+{"at":"2026-11-12T06:58:03.989553+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065656-111045917e59","event":"COMPLETED"}
+{"at":"2026-11-12T06:58:07.205397+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065807-4729c147f27c","event":"STARTED","experiment_id":"ridge-p2-20261112-03"}
+{"at":"2026-11-12T06:59:18.862957+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065807-4729c147f27c","event":"COMPLETED"}
+{"at":"2026-11-12T06:59:22.016232+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065922-889d87507043","event":"STARTED","experiment_id":"ridge-p2-20261112-04"}
+{"at":"2026-11-12T07:00:31.296083+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T065922-889d87507043","event":"COMPLETED"}
+{"at":"2026-11-12T07:00:34.938375+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T070034-2be80e14eb0e","event":"STARTED","experiment_id":"ridge-p2-20261112-05"}
+{"at":"2026-11-12T07:01:42.573897+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T070034-2be80e14eb0e","event":"COMPLETED"}
+{"at":"2026-11-12T07:01:46.065964+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T070146-b224e750cd90","event":"STARTED","experiment_id":"ridge-p2-20261112-06"}
+{"at":"2026-11-12T07:02:51.939728+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T070146-b224e750cd90","event":"COMPLETED"}
+{"at":"2026-11-12T07:03:00.029140+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T070300-38fd4e4ad18d","event":"STARTED","experiment_id":"ridge-p2-20261112-07"}
+{"at":"2026-11-12T07:04:08.831816+00:00","attempt":"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\execution\\attempts\\20261112T070300-38fd4e4ad18d","event":"COMPLETED"}

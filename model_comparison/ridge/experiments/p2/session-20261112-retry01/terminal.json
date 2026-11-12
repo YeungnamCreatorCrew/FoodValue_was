@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12T06:47:50.957519+00:00",
+  "error_type": "AssertionError",
+  "reason": "",
+  "state": "STOPPED",
+  "test_executed": false,
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\session-20261112-retry01\\run_session.py\", line 154, in main\n    assert all(v['normalized_equal'] for v in source_parity.values())\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+}

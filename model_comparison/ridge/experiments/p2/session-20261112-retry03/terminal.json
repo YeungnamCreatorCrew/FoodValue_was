@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12T06:55:25.769458+00:00",
+  "error_type": "ValueError",
+  "reason": "CONTROL parity gate failed; external experiments prohibited",
+  "state": "STOPPED",
+  "test_executed": false,
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\session-20261112-retry03\\run_session.py\", line 187, in main\n    compare_control(Path(result['folder']), snap, baseline)\n  File \"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\session-20261112-retry03\\run_session.py\", line 113, in compare_control\n    raise ValueError('CONTROL parity gate failed; external experiments prohibited')\nValueError: CONTROL parity gate failed; external experiments prohibited\n"
+}

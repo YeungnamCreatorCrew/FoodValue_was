@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12T06:45:30.709807+00:00",
+  "error_type": "RuntimeError",
+  "reason": "01-snapshot-check failed with exit 2; see 01-snapshot-check.log",
+  "state": "STOPPED",
+  "test_executed": false,
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\session-20261112\\run_session.py\", line 131, in main\n    command('01-snapshot-check', ['uv', 'run', '--extra', 'prices', 'python', '-X', 'utf8',\n  File \"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\session-20261112\\run_session.py\", line 53, in command\n    raise RuntimeError(f'{label} failed with exit {result.returncode}; see {label}.log')\nRuntimeError: 01-snapshot-check failed with exit 2; see 01-snapshot-check.log\n"
+}
