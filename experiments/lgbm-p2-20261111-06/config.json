@@ -1,0 +1,64 @@
+{
+  "model": "LightGBM",
+  "owner": "B",
+  "class": "model_comparison.lightgbm.model:LGBMModel",
+  "params": {
+    "target_transform": "log_ratio",
+    "strategy": "direct_per_horizon",
+    "objective": "regression",
+    "n_estimators": 60,
+    "learning_rate": 0.05,
+    "num_leaves": 4,
+    "min_child_samples": 100,
+    "bagging_fraction": 1.0,
+    "bagging_freq": 0,
+    "feature_fraction": 1.0,
+    "lambda_l2": 10.0,
+    "early_stopping_rounds": 0,
+    "drop_features": [],
+    "deterministic": true,
+    "force_row_wise": true,
+    "num_threads": 4,
+    "max_depth": 2,
+    "relative_features": true,
+    "keep_current": false
+  },
+  "feature_set": "base_v1+MARKET+PRODUCTION",
+  "extra_features": [
+    "MARKET",
+    "PRODUCTION"
+  ],
+  "target_transform": "log_ratio",
+  "strategy": "direct_per_horizon",
+  "seed": 42,
+  "experiment_id": "lgbm-p2-20261111-06",
+  "standard_version": "v1",
+  "git_sha": "660c553f018b720159f9eedfe4c001687b380fc1",
+  "data_version": "fv-snap-20261031-v1",
+  "phase": "p2",
+  "origins": "validation",
+  "origin_list": "validation",
+  "month": null,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "refit": "weekly_first_origin",
+  "runtime": {
+    "where": "local",
+    "threads": 4
+  },
+  "tuning": {
+    "trials_used": 0,
+    "seconds_used": 0
+  },
+  "config_id": "6c1df2b8"
+}

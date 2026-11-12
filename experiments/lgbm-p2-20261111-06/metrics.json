@@ -1,0 +1,522 @@
+{
+  "adoption": {
+    "checks": {
+      "1_relative_improvement_ge_5pct": false,
+      "2_macro_rmae_lt_1": true,
+      "3_series_wins_majority": true,
+      "4_success_rate_ge_99pct": true,
+      "5_bootstrap_ci_low_gt_0": true
+    },
+    "majority_required": 6,
+    "note": "6(자원)은 최종 시험 Docker 실행 값으로 판단",
+    "validation_gate_passed": false
+  },
+  "baselines": {
+    "mean7": {
+      "macro_mape": 7.05534,
+      "macro_rmae": 1.431631,
+      "micro_mape": 7.141779,
+      "naive_macro_mape": 4.91419,
+      "naive_micro_mape": 4.975975,
+      "points": 11255,
+      "relative_improvement_pct": -43.570783,
+      "rmae_null_series": [],
+      "series": null,
+      "series_count": 10,
+      "series_wins": 0
+    },
+    "naive": {
+      "macro_mape": 4.912547,
+      "macro_rmae": 1.0,
+      "micro_mape": 4.967149,
+      "naive_macro_mape": 4.912547,
+      "naive_micro_mape": 4.967149,
+      "points": 11275,
+      "relative_improvement_pct": 0.0,
+      "rmae_null_series": [],
+      "series": null,
+      "series_count": 10,
+      "series_wins": 0
+    }
+  },
+  "config_id": "6c1df2b8",
+  "data_version": "fv-snap-20261031-v1",
+  "evaluated_points": 11275,
+  "model": "LightGBM",
+  "month": null,
+  "origin_list": "validation",
+  "phase": "p2",
+  "prediction_rows": 17080,
+  "results": {
+    "common_success": null,
+    "model_only": {
+      "by_horizon": {
+        "1": {
+          "macro_mape": 2.08872,
+          "naive_macro_mape": 2.14664,
+          "points": 1819,
+          "relative_improvement_pct": 2.698171,
+          "series_count": 10
+        },
+        "2": {
+          "macro_mape": 3.511572,
+          "naive_macro_mape": 3.692531,
+          "points": 1339,
+          "relative_improvement_pct": 4.900681,
+          "series_count": 10
+        },
+        "3": {
+          "macro_mape": 4.098305,
+          "naive_macro_mape": 4.274785,
+          "points": 1361,
+          "relative_improvement_pct": 4.128406,
+          "series_count": 10
+        },
+        "4": {
+          "macro_mape": 4.440913,
+          "naive_macro_mape": 4.550169,
+          "points": 1341,
+          "relative_improvement_pct": 2.401139,
+          "series_count": 10
+        },
+        "5": {
+          "macro_mape": 5.096981,
+          "naive_macro_mape": 5.247777,
+          "points": 1340,
+          "relative_improvement_pct": 2.873531,
+          "series_count": 10
+        },
+        "6": {
+          "macro_mape": 6.004545,
+          "naive_macro_mape": 6.340759,
+          "points": 1778,
+          "relative_improvement_pct": 5.30243,
+          "series_count": 10
+        },
+        "7": {
+          "macro_mape": 6.812694,
+          "naive_macro_mape": 7.223695,
+          "points": 2207,
+          "relative_improvement_pct": 5.68962,
+          "series_count": 10
+        }
+      },
+      "by_kind_cross": {
+        "0": {
+          "macro_mape": 5.188415,
+          "naive_macro_mape": 5.328589,
+          "points": 4373,
+          "relative_improvement_pct": 2.630603,
+          "series_count": 4
+        },
+        "1": {
+          "macro_mape": 27.891444,
+          "naive_macro_mape": 29.837999,
+          "points": 198,
+          "relative_improvement_pct": 6.523745,
+          "series_count": 4
+        }
+      },
+      "by_market": {
+        "RETAIL": {
+          "macro_mape": 4.343967,
+          "naive_macro_mape": 4.678346,
+          "points": 5705,
+          "relative_improvement_pct": 7.147376,
+          "series_count": 5
+        },
+        "WHOLESALE": {
+          "macro_mape": 5.058412,
+          "naive_macro_mape": 5.160696,
+          "points": 5480,
+          "relative_improvement_pct": 1.981984,
+          "series_count": 5
+        }
+      },
+      "by_season": {
+        "autumn": {
+          "macro_mape": 4.710028,
+          "naive_macro_mape": 4.886629,
+          "points": 2890,
+          "relative_improvement_pct": 3.613954,
+          "series_count": 10
+        },
+        "spring": {
+          "macro_mape": 5.380884,
+          "naive_macro_mape": 5.754313,
+          "points": 2900,
+          "relative_improvement_pct": 6.48954,
+          "series_count": 10
+        },
+        "summer": {
+          "macro_mape": 5.310717,
+          "naive_macro_mape": 5.485503,
+          "points": 2725,
+          "relative_improvement_pct": 3.18633,
+          "series_count": 10
+        },
+        "winter": {
+          "macro_mape": 3.400348,
+          "naive_macro_mape": 3.531706,
+          "points": 2670,
+          "relative_improvement_pct": 3.719393,
+          "series_count": 10
+        }
+      },
+      "macro_mape": 4.70119,
+      "macro_rmae": 0.96295,
+      "micro_mape": 4.782317,
+      "naive_macro_mape": 4.919521,
+      "naive_micro_mape": 5.006317,
+      "points": 11185,
+      "relative_improvement_pct": 4.438066,
+      "rmae_null_series": [],
+      "series": {
+        "1": {
+          "mae": 132.320804,
+          "mape": 4.629178,
+          "naive_mae": 149.085664,
+          "naive_mape": 5.198433,
+          "points": 1144,
+          "relative_improvement_pct": 10.950516,
+          "rmae": 0.887549,
+          "win": true
+        },
+        "10": {
+          "mae": 400.638986,
+          "mape": 3.759871,
+          "naive_mae": 408.164336,
+          "naive_mape": 3.830226,
+          "points": 1144,
+          "relative_improvement_pct": 1.83683,
+          "rmae": 0.981563,
+          "win": true
+        },
+        "2": {
+          "mae": 116.333042,
+          "mape": 5.537641,
+          "naive_mae": 124.70979,
+          "naive_mape": 5.940815,
+          "points": 1144,
+          "relative_improvement_pct": 6.786496,
+          "rmae": 0.93283,
+          "win": true
+        },
+        "7": {
+          "mae": 554.788462,
+          "mape": 3.007292,
+          "naive_mae": 574.59965,
+          "naive_mape": 3.183793,
+          "points": 1144,
+          "relative_improvement_pct": 5.543725,
+          "rmae": 0.965522,
+          "win": true
+        },
+        "8": {
+          "mae": 105.444444,
+          "mape": 4.739746,
+          "naive_mae": 108.325397,
+          "naive_mape": 4.87323,
+          "points": 1134,
+          "relative_improvement_pct": 2.739127,
+          "rmae": 0.973405,
+          "win": true
+        },
+        "9": {
+          "mae": 1522.502212,
+          "mape": 0.920927,
+          "naive_mae": 1454.646018,
+          "naive_mape": 0.869725,
+          "points": 904,
+          "relative_improvement_pct": -5.887068,
+          "rmae": 1.046648,
+          "win": false
+        },
+        "9001": {
+          "mae": 215.389816,
+          "mape": 4.59447,
+          "naive_mae": 240.765584,
+          "naive_mape": 5.240542,
+          "points": 1139,
+          "relative_improvement_pct": 12.328342,
+          "rmae": 0.894604,
+          "win": true
+        },
+        "9002": {
+          "mae": 1014.933566,
+          "mape": 7.226755,
+          "naive_mae": 1004.042832,
+          "naive_mape": 7.193477,
+          "points": 1144,
+          "relative_improvement_pct": -0.462618,
+          "rmae": 1.010847,
+          "win": false
+        },
+        "9011": {
+          "mae": 105.238636,
+          "mape": 3.996571,
+          "naive_mae": 111.173077,
+          "naive_mape": 4.2493,
+          "points": 1144,
+          "relative_improvement_pct": 5.947535,
+          "rmae": 0.94662,
+          "win": true
+        },
+        "9012": {
+          "mae": 1623.881993,
+          "mape": 8.599446,
+          "naive_mae": 1640.436189,
+          "naive_mape": 8.615672,
+          "points": 1144,
+          "relative_improvement_pct": 0.188325,
+          "rmae": 0.989909,
+          "win": true
+        }
+      },
+      "series_count": 10,
+      "series_wins": 8
+    },
+    "policy": {
+      "bootstrap": {
+        "blocks": 12,
+        "ci_high": 0.353525,
+        "ci_low": 0.074295,
+        "delta": 0.218795,
+        "iterations": 1000,
+        "seed": 0
+      },
+      "by_horizon": {
+        "1": {
+          "macro_mape": 2.086114,
+          "naive_macro_mape": 2.144327,
+          "points": 1834,
+          "relative_improvement_pct": 2.714768,
+          "series_count": 10
+        },
+        "2": {
+          "macro_mape": 3.506976,
+          "naive_macro_mape": 3.688214,
+          "points": 1350,
+          "relative_improvement_pct": 4.913959,
+          "series_count": 10
+        },
+        "3": {
+          "macro_mape": 4.092981,
+          "naive_macro_mape": 4.270018,
+          "points": 1371,
+          "relative_improvement_pct": 4.146055,
+          "series_count": 10
+        },
+        "4": {
+          "macro_mape": 4.433879,
+          "naive_macro_mape": 4.543749,
+          "points": 1351,
+          "relative_improvement_pct": 2.418051,
+          "series_count": 10
+        },
+        "5": {
+          "macro_mape": 5.08773,
+          "naive_macro_mape": 5.239623,
+          "points": 1351,
+          "relative_improvement_pct": 2.898924,
+          "series_count": 10
+        },
+        "6": {
+          "macro_mape": 5.993908,
+          "naive_macro_mape": 6.330779,
+          "points": 1793,
+          "relative_improvement_pct": 5.321167,
+          "series_count": 10
+        },
+        "7": {
+          "macro_mape": 6.801307,
+          "naive_macro_mape": 7.21231,
+          "points": 2225,
+          "relative_improvement_pct": 5.698621,
+          "series_count": 10
+        }
+      },
+      "by_kind_cross": {
+        "0": {
+          "macro_mape": 5.188415,
+          "naive_macro_mape": 5.328589,
+          "points": 4373,
+          "relative_improvement_pct": 2.630603,
+          "series_count": 4
+        },
+        "1": {
+          "macro_mape": 27.891444,
+          "naive_macro_mape": 29.837999,
+          "points": 198,
+          "relative_improvement_pct": 6.523745,
+          "series_count": 4
+        }
+      },
+      "by_market": {
+        "RETAIL": {
+          "macro_mape": 4.343967,
+          "naive_macro_mape": 4.678346,
+          "points": 5705,
+          "relative_improvement_pct": 7.147376,
+          "series_count": 5
+        },
+        "WHOLESALE": {
+          "macro_mape": 5.043536,
+          "naive_macro_mape": 5.146748,
+          "points": 5570,
+          "relative_improvement_pct": 2.005375,
+          "series_count": 5
+        }
+      },
+      "by_season": {
+        "autumn": {
+          "macro_mape": 4.709901,
+          "naive_macro_mape": 4.886865,
+          "points": 2900,
+          "relative_improvement_pct": 3.621215,
+          "series_count": 10
+        },
+        "spring": {
+          "macro_mape": 5.380884,
+          "naive_macro_mape": 5.754313,
+          "points": 2900,
+          "relative_improvement_pct": 6.48954,
+          "series_count": 10
+        },
+        "summer": {
+          "macro_mape": 5.187578,
+          "naive_macro_mape": 5.373186,
+          "points": 2805,
+          "relative_improvement_pct": 3.454338,
+          "series_count": 10
+        },
+        "winter": {
+          "macro_mape": 3.400348,
+          "naive_macro_mape": 3.531706,
+          "points": 2670,
+          "relative_improvement_pct": 3.719393,
+          "series_count": 10
+        }
+      },
+      "macro_mape": 4.693752,
+      "macro_rmae": 0.962902,
+      "micro_mape": 4.744937,
+      "naive_macro_mape": 4.912547,
+      "naive_micro_mape": 4.967149,
+      "points": 11275,
+      "relative_improvement_pct": 4.453806,
+      "rmae_null_series": [],
+      "series": {
+        "1": {
+          "mae": 132.320804,
+          "mape": 4.629178,
+          "naive_mae": 149.085664,
+          "naive_mape": 5.198433,
+          "points": 1144,
+          "relative_improvement_pct": 10.950516,
+          "rmae": 0.887549,
+          "win": true
+        },
+        "10": {
+          "mae": 400.638986,
+          "mape": 3.759871,
+          "naive_mae": 408.164336,
+          "naive_mape": 3.830226,
+          "points": 1144,
+          "relative_improvement_pct": 1.83683,
+          "rmae": 0.981563,
+          "win": true
+        },
+        "2": {
+          "mae": 116.333042,
+          "mape": 5.537641,
+          "naive_mae": 124.70979,
+          "naive_mape": 5.940815,
+          "points": 1144,
+          "relative_improvement_pct": 6.786496,
+          "rmae": 0.93283,
+          "win": true
+        },
+        "7": {
+          "mae": 554.788462,
+          "mape": 3.007292,
+          "naive_mae": 574.59965,
+          "naive_mape": 3.183793,
+          "points": 1144,
+          "relative_improvement_pct": 5.543725,
+          "rmae": 0.965522,
+          "win": true
+        },
+        "8": {
+          "mae": 105.444444,
+          "mape": 4.739746,
+          "naive_mae": 108.325397,
+          "naive_mape": 4.87323,
+          "points": 1134,
+          "relative_improvement_pct": 2.739127,
+          "rmae": 0.973405,
+          "win": true
+        },
+        "9": {
+          "mae": 1398.331992,
+          "mape": 0.846546,
+          "naive_mae": 1336.619718,
+          "naive_mape": 0.799981,
+          "points": 994,
+          "relative_improvement_pct": -5.820812,
+          "rmae": 1.04617,
+          "win": false
+        },
+        "9001": {
+          "mae": 215.389816,
+          "mape": 4.59447,
+          "naive_mae": 240.765584,
+          "naive_mape": 5.240542,
+          "points": 1139,
+          "relative_improvement_pct": 12.328342,
+          "rmae": 0.894604,
+          "win": true
+        },
+        "9002": {
+          "mae": 1014.933566,
+          "mape": 7.226755,
+          "naive_mae": 1004.042832,
+          "naive_mape": 7.193477,
+          "points": 1144,
+          "relative_improvement_pct": -0.462618,
+          "rmae": 1.010847,
+          "win": false
+        },
+        "9011": {
+          "mae": 105.238636,
+          "mape": 3.996571,
+          "naive_mae": 111.173077,
+          "naive_mape": 4.2493,
+          "points": 1144,
+          "relative_improvement_pct": 5.947535,
+          "rmae": 0.94662,
+          "win": true
+        },
+        "9012": {
+          "mae": 1623.881993,
+          "mape": 8.599446,
+          "naive_mae": 1640.436189,
+          "naive_mape": 8.615672,
+          "points": 1144,
+          "relative_improvement_pct": 0.188325,
+          "rmae": 0.989909,
+          "win": true
+        }
+      },
+      "series_count": 10,
+      "series_wins": 8
+    }
+  },
+  "series_count": 10,
+  "standard_version": "v1",
+  "status_counts": {
+    "NO_INPUT": 287,
+    "OK": 16793
+  },
+  "success_rate": 0.992018
+}
