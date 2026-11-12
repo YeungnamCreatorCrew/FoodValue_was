@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12T06:49:42.351924+00:00",
+  "error_type": "RuntimeError",
+  "reason": "02-tests failed with exit 1; see 02-tests.log",
+  "state": "STOPPED",
+  "test_executed": false,
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\session-20261112-retry02\\run_session.py\", line 173, in main\n    command('02-tests', ['uv', 'run', '--extra', 'prices', 'python', '-X', 'utf8', '-m', 'pytest',\n  File \"C:\\FoodValue_was\\model_comparison\\ridge\\experiments\\p2\\session-20261112-retry02\\run_session.py\", line 54, in command\n    raise RuntimeError(f'{label} failed with exit {result.returncode}; see {label}.log')\nRuntimeError: 02-tests failed with exit 1; see 02-tests.log\n"
+}

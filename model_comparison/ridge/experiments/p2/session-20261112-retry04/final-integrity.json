@@ -1,0 +1,121 @@
+{
+  "at": "2026-11-12T07:08:04.106797+00:00",
+  "branch": "feat/ridge-p2",
+  "changed_or_missing_originals": [],
+  "git_sha": "1adbac5f2f666056e5f91f8468eeba4c4971dc47",
+  "known_preexisting_corrupted_document": "PREPARATION_REPORT.md; preserved unchanged",
+  "korean_report_sample_assertions": "PASSED",
+  "manifest_excludes_itself": true,
+  "official_test_executed": false,
+  "original_files_checked": 345,
+  "p1_pinned_artifacts_and_official_recomputation": "PASSED",
+  "per_session_preservation": [
+    {
+      "checked_files": 345,
+      "session": "session-20261112",
+      "unexpected_changes": [],
+      "verified_append_only": []
+    },
+    {
+      "checked_files": 352,
+      "session": "session-20261112-retry01",
+      "unexpected_changes": [],
+      "verified_append_only": []
+    },
+    {
+      "checked_files": 359,
+      "session": "session-20261112-retry02",
+      "unexpected_changes": [],
+      "verified_append_only": []
+    },
+    {
+      "checked_files": 371,
+      "session": "session-20261112-retry03",
+      "unexpected_changes": [],
+      "verified_append_only": []
+    },
+    {
+      "checked_files": 418,
+      "session": "session-20261112-retry04",
+      "unexpected_changes": [],
+      "verified_append_only": [
+        "model_comparison/ridge/experiments/p2/execution/events.jsonl"
+      ]
+    }
+  ],
+  "replacement_characters": [],
+  "sealed_experiments": [
+    {
+      "common_validator": {
+        "errors": [],
+        "warnings": []
+      },
+      "completion_sha256": "c1a53cbaa06214600ce3328ea96ec77a7023395a636762c51806a3ffdc80c08f",
+      "experiment_id": "ridge-p2-20261112-01",
+      "seal_and_official_recomputation": "PASSED"
+    },
+    {
+      "common_validator": {
+        "errors": [],
+        "warnings": []
+      },
+      "completion_sha256": "a348a6c615bd32f9456b39831422668b8e3ee26ecd04878b42960a3626534299",
+      "experiment_id": "ridge-p2-20261112-02",
+      "seal_and_official_recomputation": "PASSED"
+    },
+    {
+      "common_validator": {
+        "errors": [],
+        "warnings": []
+      },
+      "completion_sha256": "c2dc646d11f493ff724b595ec1a444d3c349b867afe2034cfdf761eaa77f62d3",
+      "experiment_id": "ridge-p2-20261112-03",
+      "seal_and_official_recomputation": "PASSED"
+    },
+    {
+      "common_validator": {
+        "errors": [],
+        "warnings": []
+      },
+      "completion_sha256": "e3e6f0d77546ea4ffc62e1203c2e31aa2cd6c40424e7cbb577247e02d0ceff0a",
+      "experiment_id": "ridge-p2-20261112-04",
+      "seal_and_official_recomputation": "PASSED"
+    },
+    {
+      "common_validator": {
+        "errors": [],
+        "warnings": []
+      },
+      "completion_sha256": "156cf1127001e35d8848e5818eea2dfc6e0c1fd85870930e5743a1c02fbe2564",
+      "experiment_id": "ridge-p2-20261112-05",
+      "seal_and_official_recomputation": "PASSED"
+    },
+    {
+      "common_validator": {
+        "errors": [],
+        "warnings": []
+      },
+      "completion_sha256": "2b5d4810c5cb344c7342c0a89fd49fe2325933fcf60a8e40ea2ad55ff746e160",
+      "experiment_id": "ridge-p2-20261112-06",
+      "seal_and_official_recomputation": "PASSED"
+    },
+    {
+      "common_validator": {
+        "errors": [],
+        "warnings": []
+      },
+      "completion_sha256": "cc1b10d5b2bb1a594c4f32b1dd6c59097d494218e026243d1d634ec6cea74250",
+      "experiment_id": "ridge-p2-20261112-07",
+      "seal_and_official_recomputation": "PASSED"
+    }
+  ],
+  "shared_execution_journal_original_prefix_verified_bytes": 407,
+  "snapshot_check_errors": [],
+  "snapshot_manifest_sha256": "3297209f59afbe96faa1e93d22f267fcc653d107cf42082f10018dee4eb81aa0",
+  "staged_diff_empty": true,
+  "state": "PASSED",
+  "suspicious_question_runs_in_new_markdown": [],
+  "tracked_diff_empty": true,
+  "utf8_errors": [],
+  "utf8_strict_files_checked": 292
+}

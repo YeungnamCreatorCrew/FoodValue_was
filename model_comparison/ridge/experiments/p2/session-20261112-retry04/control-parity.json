@@ -1,0 +1,28 @@
+{
+  "all_nonidentity_metrics_identical": true,
+  "at": "2026-11-12T06:56:54.477561+00:00",
+  "control": "ridge-p2-20261112-01",
+  "control_mape": 5.060471,
+  "evaluated_points": 11275,
+  "evaluation_points_and_policy_inputs_identical": true,
+  "fixed_condition_differences": {},
+  "ignored_identity_columns": [
+    "config_id",
+    "experiment_id"
+  ],
+  "ignored_metric_metadata": [
+    "experiment_id",
+    "config_id",
+    "phase"
+  ],
+  "p1": "ridge-p1-20261111-07",
+  "p1_mape": 5.060471,
+  "p1_official_recomputation_identical": true,
+  "prediction_rows": 17080,
+  "raw_atol": 1e-06,
+  "raw_max_absolute_difference": 0.0,
+  "raw_rtol": 1e-12,
+  "row_difference_count": 0,
+  "row_differences": [],
+  "state": "PASSED"
+}
