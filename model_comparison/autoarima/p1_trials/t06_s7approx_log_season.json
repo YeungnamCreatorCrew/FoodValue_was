@@ -1,0 +1,29 @@
+{
+  "model": "AutoARIMA",
+  "owner": "C",
+  "class": "model_comparison.autoarima.model:AutoARIMAModel",
+  "params": {
+    "series_mode": "calendar_day",
+    "transform": "log",
+    "seasonal": true,
+    "season_length": 7,
+    "calendar_exog": "season",
+    "event_exog": false,
+    "window_days": 1825,
+    "max_p": 5,
+    "max_q": 5,
+    "max_P": 2,
+    "max_Q": 2,
+    "max_d": 2,
+    "max_D": 1,
+    "stepwise": true,
+    "approximation": true,
+    "ic": "aicc",
+    "n_jobs": 1
+  },
+  "feature_set": "base_v1",
+  "extra_features": [],
+  "target_transform": "log",
+  "strategy": "recursive_arima",
+  "seed": 42
+}
