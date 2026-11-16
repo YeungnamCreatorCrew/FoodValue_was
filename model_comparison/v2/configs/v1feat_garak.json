@@ -1,0 +1,17 @@
+{
+  "name": "v1feat_garak",
+  "model": "XGBoost",
+  "class": "model_comparison.v2.models:PooledXGB",
+  "params": {},
+  "window_days": 1825,
+  "seed": 42,
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "blocks": [
+    "GARAK",
+    "SERIES_ID"
+  ]
+}
