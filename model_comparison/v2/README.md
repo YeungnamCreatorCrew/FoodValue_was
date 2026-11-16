@@ -5,18 +5,31 @@ v1(4개 모델 비교, 기준서 v1)과 **별도**로 진행하는 확장 실험
 
 ## 자료
 
-v1 스냅샷(`fv-snap-20261031-v1`)은 그대로 쓰고, 옆에 추가 자료 폴더를 만든다.
+v1 스냅샷(`fv-snap-20261031-v1`)은 그대로 쓰고, 옆에 추가 자료 폴더를 만든다. **팀 모두 같은 정제본을 쓴다.**
+
+| 폴더 | 용도 | manifest SHA-256 |
+| --- | --- | --- |
+| `fv-v2-extra-20261031` | 원본 추출본(가락 API·ASOS 값 그대로). 정제본을 만드는 입력. PR #42 첫 결과는 이 판 | `5bc051c3…324055a` |
+| `fv-v2-extra-20261031-r2` | **정제본 — 모든 v2 실험의 입력**(`run_pooled` 기본값) | `b23ca484…7b6acc` |
+
+정제본은 원본에서 반입량 오입력 의심값의 `ton`만 빈 값으로 바꾼 것이다(그 외 파일·글자는 동일). 뺀 값은
+`garak_excluded.csv`에, 규칙(직전 20개 반입일 중앙값의 8배 초과, 직전 값 10개 이상일 때만)과 원본 manifest
+SHA-256은 정제본 `manifest.json`의 `cleaning`·`derived_from`에 남는다. 현재 5건: 무 2021-11-26(14,762톤),
+깐마늘 2021-04-23·08-09·08-26·09-15. 2026-11-16 가락 API 재조회로 원본 값임을 확인했다(한 도매법인 값만 튐).
+직접 CSV를 읽는 코드도 **빈 `ton` = 결측(NaN)**, 자료 기간 안에서 행이 없는 날(일요일 등) = 0톤으로 읽어야 같은 자료가 된다.
 
 | 파일 | 내용 | 기간 |
 | --- | --- | --- |
 | `asos_station_daily.csv` | 품목 주산지 ASOS 관측소 일자료(평균·최저·최고기온, 강수, 습도, 일조) | 2016-01 ~ 2026-10-31 |
 | `garak_arrivals_daily.csv` | 가락시장 경매 후 반입물량(톤), 5개 품목 | 2021-01 ~ 2026-10-31 |
 | `item_station.csv` | 품목 → 주산지 관측소(`stations.py`, **팀 검토 대상**) | |
+| `garak_excluded.csv` | (정제본만) 뺀 반입량: 날짜·품목·원래 톤·직전 중앙값·배수 | |
 
 ```powershell
 # 스냅샷 담당(공유 DB 보유자) — v1 스냅샷이 data/snapshots/ 에 있어야 함
 uv run --extra prices python -m model_comparison.v2.snapshot export --garak ..\garak_arrivals.jsonl
-# 받는 사람: data/snapshots/fv-v2-extra-20261031/ 에 풀고
+uv run python -m model_comparison.v2.snapshot clean          # 원본 → 정제본(-r2)
+# 받는 사람: 정제본을 data/snapshots/fv-v2-extra-20261031-r2/ 에 풀고, manifest SHA-256이 위 표와 같은지 확인
 uv run python -m model_comparison.v2.snapshot check
 ```
 
@@ -34,6 +47,7 @@ uv run python -m model_comparison.v2.snapshot check
 
 - "며칠 / 몇 주 / 몇 달 뒤 영향"을 사람이 정하지 않고, 52주 이력을 모두 주어 모델이 찾게 한다.
 - 값이 없으면 NaN(반입량은 2021년 이전, 자료 기간 안의 일요일 등 경매 없는 날은 0톤).
+- 정제본의 빈 반입량(오입력 의심값)은 NaN. 판정은 직전 값만 써서 시점 규칙을 지킨다.
 - 시점 규칙 테스트: d일과 그 뒤 날씨·반입량을 지워도 기준일 d 특징이 같음(`tests/test_v2.py`).
 
 ## 통합 학습

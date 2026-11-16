@@ -9,6 +9,7 @@
 - ORIGIN_WEATHER: 품목 주산지 관측소 평균 날씨. 주 k(=1..52, d−7k ~ d−7k+6) 평균기온·강수합,
                   4주 블록 j(=1..13)의 최저기온 최솟값·최고기온 최댓값 → 130개
 - GARAK:          가락시장 반입량(톤). 주 k(=1..8) 합, 최근 7·28일 합의 전년 같은 기간 대비 → 10개
+                  오입력 의심값은 스냅샷 정제 단계에서 빈 값으로 저장돼 있다(snapshot.drop_garak_spikes) → NaN
 - CROSS_ITEM:     다른 4개 품목(같은 시장)의 d−1 가격 7·28일 변화율 → 8개
 - SERIES_ID:      품목 5개 원핫 + 도매 여부(통합 학습에서 계열 구분) → 6개
 """
@@ -93,6 +94,7 @@ def _past_years_mean(values):
     return np.where(count >= 2, mean, np.nan)
 
 
+
 class V2Features:
     """v1 Snapshot + v2 추가 자료 폴더 → 계열별 기준일 특징 행렬."""
 
@@ -109,7 +111,8 @@ class V2Features:
                 _num(r['avg_ta']), _num(r['min_ta']), _num(r['max_ta']), rain)
         self.garak = {}
         for r in _read(extra / 'garak_arrivals_daily.csv'):
-            self.garak[r['item'], date.fromisoformat(r['arrival_date'])] = float(r['ton'])
+            # 빈 ton = 스냅샷 정제(snapshot clean)에서 뺀 오입력 의심값 → NaN(창 통계에서 빠짐). 0톤과 다르다
+            self.garak[r['item'], date.fromisoformat(r['arrival_date'])] = _num(r['ton'])
         garak_days = [d for _, d in self.garak]
         self.garak_span = (min(garak_days), max(garak_days)) if garak_days else (date.max, date.min)
         self._cache = {}
