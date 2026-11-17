@@ -17,3 +17,6 @@ docs/
 data/snapshots/
 experiments/*/model/
 runs/
+
+# 외부 원본 파일 캐시(KREI 관측월보 PDF 등). 내용 해시는 external_observation.payload에 남는다.
+data/raw/

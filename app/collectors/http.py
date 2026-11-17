@@ -33,10 +33,16 @@ def service_key(value: str) -> str:
 
 
 def fetch_json(url: str, params: dict, *, timeout: float = TIMEOUT_SECONDS, retries: int = RETRIES, sleep=time.sleep):
-    query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
+    return decode(fetch_bytes(url, params, timeout=timeout, retries=retries, sleep=sleep, accept='application/json'))
+
+
+def fetch_bytes(url: str, params: dict | None = None, *, timeout: float = TIMEOUT_SECONDS, retries: int = RETRIES,
+                sleep=time.sleep, accept: str = '*/*') -> bytes:
+    """응답 원문(bytes). XML·PDF처럼 JSON이 아닌 원천에 쓴다."""
+    query = urllib.parse.urlencode({k: v for k, v in (params or {}).items() if v is not None})
     # 파라미터가 없으면 '?'를 붙이지 않는다. ECOS는 경로형 URL 끝의 '?' 때문에 무자료(INFO-200)를 돌려준다.
     request = urllib.request.Request(f'{url}?{query}' if query else url,
-                                     headers={'User-Agent': USER_AGENT, 'Accept': 'application/json'})
+                                     headers={'User-Agent': USER_AGENT, 'Accept': accept})
     last = 'UNKNOWN'
     for attempt in range(retries):
         try:
@@ -55,7 +61,7 @@ def fetch_json(url: str, params: dict, *, timeout: float = TIMEOUT_SECONDS, retr
             sleep(2 ** attempt)
     else:
         raise NetworkError(last)
-    return decode(body)
+    return body
 
 
 def decode(body: bytes):
