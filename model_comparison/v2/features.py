@@ -12,6 +12,10 @@
                   오입력 의심값은 스냅샷 정제 단계에서 빈 값으로 저장돼 있다(snapshot.drop_garak_spikes) → NaN
 - CROSS_ITEM:     다른 4개 품목(같은 시장)의 d−1 가격 7·28일 변화율 → 8개
 - SERIES_ID:      품목 5개 원핫 + 도매 여부(통합 학습에서 계열 구분) → 6개
+- PRICE_DYN:      자기 가격(d까지)만으로 만든 동역학 → 11개(추가 자료 불필요)
+                  변동 없는 날 비율·마지막 변동 후 일수(가격이 잘 안 바뀌는 소매 계열용), 일별 로그 변화 변동성,
+                  56일 범위 안 위치, 91·365일 평균 대비, 전년 대비, 3일 변화,
+                  작년 같은 시기 h일 변화(1~3년 전 평균, 목표 시점별) — 계절 흐름을 가격 자체에서 가져온다
 """
 import csv
 import math
@@ -26,9 +30,13 @@ WEATHER_WEEKS = 52
 EXTREME_BLOCKS = 13  # 4주 블록
 GARAK_WEEKS = 8
 LAG = standard.EXTRA_LAG_DAYS
-V2_BLOCKS = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK', 'CROSS_ITEM', 'SERIES_ID')
+V2_BLOCKS = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK', 'CROSS_ITEM', 'SERIES_ID', 'PRICE_DYN')
+NEEDS_EXTRA = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK')  # 추가 자료 폴더가 있어야 하는 묶음
 ANOM_BLOCKS = 13  # 4주 블록 × 13 = 52주
 ANOM_YEARS = 5
+PRICE_DYN_NAMES = ['pd_flat_share28', 'pd_days_since_change', 'pd_logret_vol28', 'pd_range_pos56', 'pd_ratio_mean91',
+                   'pd_ratio_mean365', 'pd_yoy', 'pd_chg3', 'pd_analog_n', 'pd_analog_chg7', 'pd_analog_chg_h']
+ANALOG_YEARS = 3
 
 
 def block_names(block: str) -> list[str]:
@@ -46,6 +54,8 @@ def block_names(block: str) -> list[str]:
         return [f'cross_{item}_{span}' for item in standard.ITEMS for span in ('chg7', 'chg28')]
     if block == 'SERIES_ID':
         return [f'is_{item}' for item in standard.ITEMS] + ['is_wholesale']
+    if block == 'PRICE_DYN':
+        return PRICE_DYN_NAMES
     raise ValueError(block)
 
 
@@ -98,9 +108,19 @@ def _past_years_mean(values):
 class V2Features:
     """v1 Snapshot + v2 추가 자료 폴더 → 계열별 기준일 특징 행렬."""
 
-    def __init__(self, snap: loader.Snapshot, extra_dir: Path):
+    def __init__(self, snap: loader.Snapshot, extra_dir: Path | None):
         self.snap = snap
-        extra = Path(extra_dir)
+        self.extra = Path(extra_dir) if extra_dir is not None else None
+        self._loaded = False
+        self._cache = {}
+
+    def _load(self):
+        """추가 자료 폴더는 ORIGIN_WEATHER·WEATHER_ANOM·GARAK에만 필요하다. 처음 필요할 때 읽는다."""
+        if self._loaded:
+            return
+        if self.extra is None or not (self.extra / 'item_station.csv').exists():
+            raise FileNotFoundError(f'v2 추가 자료 폴더가 없음: {self.extra} (ORIGIN_WEATHER·WEATHER_ANOM·GARAK에 필요)')
+        extra = self.extra
         self.item_stations = {}
         for r in _read(extra / 'item_station.csv'):
             self.item_stations.setdefault(r['item'], []).append(int(r['stn_id']))
@@ -115,10 +135,11 @@ class V2Features:
             self.garak[r['item'], date.fromisoformat(r['arrival_date'])] = _num(r['ton'])
         garak_days = [d for _, d in self.garak]
         self.garak_span = (min(garak_days), max(garak_days)) if garak_days else (date.max, date.min)
-        self._cache = {}
+        self._loaded = True
 
     # 품목 단위 일별 배열(계열 시작일 기준, 앞에 여유 head일)
     def _item_daily(self, item, start, n, head):
+        self._load()
         days = [start + timedelta(days=i - head) for i in range(n + head)]
         stations = self.item_stations[item]
         cols = np.full((len(days), 4), np.nan)
@@ -145,6 +166,8 @@ class V2Features:
             out = np.tile(row, (n, 1))
         elif block == 'CROSS_ITEM':
             out = self._cross(s, n)
+        elif block == 'PRICE_DYN':
+            out = price_dynamics(s.filled)
         else:
             weather, garak = self._item_daily(s.item, s.start, n, head)
             if block == 'WEATHER_ANOM':
@@ -170,6 +193,17 @@ class V2Features:
         self._cache[key] = out
         return out
 
+    def analog_by_horizon(self, series_id, origin_idx, horizons):
+        s = self.snap.series[series_id]
+        out = np.full(len(origin_idx), np.nan)
+        for h in np.unique(horizons):
+            key = (series_id, 'analog', int(h))
+            if key not in self._cache:
+                self._cache[key] = _analog(s.filled, int(h))[0]
+            rows = horizons == h
+            out[rows] = self._cache[key][origin_idx[rows]]
+        return out
+
     def _cross(self, s, n):
         cols = []
         by_key = {(x.item, x.market): x for x in self.snap.series.values()}
@@ -187,6 +221,61 @@ class V2Features:
                 cols.append(now / loader._shift(aligned, LAG + 7) - 1)
                 cols.append(now / loader._shift(aligned, LAG + 28) - 1)
         return np.column_stack(cols)
+
+
+def _rolling(values, length, how, min_share=.7):
+    return _window_stat(values, 0, length, how) if how != 'std' else _rolling_std(values, length, min_share)
+
+
+def _rolling_std(values, length, min_share=.7):
+    n = len(values)
+    pad = np.concatenate([np.full(length - 1, np.nan), values])
+    win = np.lib.stride_tricks.sliding_window_view(pad, length)[:n]
+    count = (~np.isnan(win)).sum(axis=1)
+    with np.errstate(all='ignore'):
+        out = np.nanstd(np.where(count[:, None] > 0, win, 0.0), axis=1)
+    return np.where(count >= length * min_share, out, np.nan)
+
+
+def price_dynamics(filled):
+    """자기 가격 v(앞채움)로 만든 기준일 특징(PRICE_DYN_NAMES 중 시점 무관 9개 + analog 자리 2개 중 1개).
+    행 i는 v[..i]만 쓴다. pd_analog_chg_h(시점별)는 rows()에서 따로 붙인다."""
+    v = np.asarray(filled, dtype=float)
+    n = len(v)
+    prev = loader._shift(v, 1)
+    with np.errstate(all='ignore'):
+        flat = np.where(np.isnan(v) | np.isnan(prev), np.nan, (v == prev).astype(float))
+        logret = np.log(v / prev)
+    flat_share = _window_stat(flat, 0, 28, 'mean')
+    changed = np.where(flat == 0, np.arange(n), -1)
+    last_change = np.maximum.accumulate(changed)
+    since = np.where(last_change >= 0, np.minimum(np.arange(n) - last_change, 90), 90).astype(float)
+    since = np.where(np.isnan(v), np.nan, since)
+    vol = _rolling_std(logret, 28)
+    lo, hi = _window_stat(v, 0, 56, 'min'), _window_stat(v, 0, 56, 'max')
+    with np.errstate(all='ignore'):
+        pos = np.where(hi > lo, (v - lo) / (hi - lo), .5)
+        pos = np.where(np.isnan(lo) | np.isnan(v), np.nan, pos)
+        r91 = v / _window_stat(v, 0, 91, 'mean') - 1
+        r365 = v / _window_stat(v, 0, 365, 'mean', ) - 1
+        yoy = v / loader._shift(v, 364) - 1
+        chg3 = v / loader._shift(v, 3) - 1
+    analog7, count = _analog(v, 7)
+    return np.column_stack([flat_share, since, vol, pos, r91, r365, yoy, chg3, count, analog7])
+
+
+def _analog(v, h):
+    """행 i: 1~3년 전 같은 시기의 h일 변화 v[i−364k+h]/v[i−364k] − 1 의 평균(h ≤ 7 이라 모두 i 이전 자료)."""
+    changes = []
+    for k in range(1, ANALOG_YEARS + 1):
+        lag = 364 * k
+        with np.errstate(all='ignore'):
+            changes.append(loader._shift(v, lag - h) / loader._shift(v, lag) - 1)
+    stack = np.vstack(changes)
+    count = (~np.isnan(stack)).sum(axis=0)
+    with np.errstate(all='ignore'):
+        mean = np.nansum(stack, axis=0) / np.maximum(count, 1)
+    return np.where(count > 0, mean, np.nan), count.astype(float)
 
 
 def feature_names(bundles, blocks) -> list[str]:
@@ -209,4 +298,6 @@ def rows(snap: loader.Snapshot, v2: V2Features, series_id: int, origin_idx, hori
     for block in V2_BLOCKS:
         if block in blocks:
             parts.append(v2.origin_block(series_id, block)[origin_idx])
+            if block == 'PRICE_DYN':
+                parts.append(v2.analog_by_horizon(series_id, origin_idx, horizons))
     return np.column_stack(parts)

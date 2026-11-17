@@ -44,6 +44,9 @@ uv run python -m model_comparison.v2.snapshot check
 | `GARAK` | 10 | 반입량 과거 8주 각 주 합, 최근 7·28일 전년 대비 | d−1 |
 | `CROSS_ITEM` | 10 | 다른 품목(같은 시장) 가격 7·28일 변화율 | d−1 |
 | `SERIES_ID` | 6 | 품목 원핫 + 도매 여부 | — |
+| `PRICE_DYN` | 11 | 자기 가격만으로 만든 동역학(변동 없는 날 비율, 마지막 변동 후 일수, 로그 변화 변동성, 56일 범위 위치, 91·365일 평균 대비, 전년 대비, 3일 변화, 1~3년 전 같은 시기 h일 변화) | d |
+
+- 추가 자료 폴더는 `ORIGIN_WEATHER`·`WEATHER_ANOM`·`GARAK`을 쓸 때만 필요하다. 그 밖의 묶음만 쓰는 설정은 폴더 없이 돈다.
 
 - "며칠 / 몇 주 / 몇 달 뒤 영향"을 사람이 정하지 않고, 52주 이력을 모두 주어 모델이 찾게 한다.
 - 값이 없으면 NaN(반입량은 2021년 이전, 자료 기간 안의 일요일 등 경매 없는 날은 0톤).
@@ -66,8 +69,34 @@ uv run --extra prices python -m model_comparison.v2.run_pooled --config model_co
 | `all.json` | 모든 자료 |
 | `no_ow.json`, `no_garak.json`, `no_cross.json` | 모든 자료에서 하나씩 빼기 — 무엇이 기여했는지 |
 | `v1feat_garak.json`, `v1feat_cross.json`, `v1feat_anom.json` | v1 효과 묶음에 하나씩 더하기 |
+| `v1feat_xgb_robust.json` | v1feat + Huber 손실 + 계열 변동 크기 가중(앙상블 구성원 1) |
+| `v1feat_lgbm.json` | v1feat를 LightGBM(`PooledLGBM`, 제곱 오차)으로(앙상블 구성원 2) |
 
-첫 결과는 [RESULTS.md](RESULTS.md).
+### 학습 방식 옵션 (`params`에 넣음)
+
+| 키 | 값 | 설명 |
+| --- | --- | --- |
+| `objective` | `reg:pseudohubererror`(+`huber_slope`) / `reg:absoluteerror` / LightGBM `huber`(+`alpha`) | 대상이 변화율이라 Huber·MAE가 MAPE에 가깝다. 제곱 오차는 변동 큰 계열에 끌려가 가격이 잘 안 바뀌는 계열에서 naive에 진다 |
+| `series_weight` | `inv_scale` / `balanced` | `inv_scale` = 계열 변화율 크기로 나눠 계열마다 손실 기여를 맞춘다(평가가 계열 macro 평균). `balanced` = 표본 수만 맞춤 |
+| `halflife_days` | 숫자 | 오래된 표본 가중을 반감(최근 흐름 강조) |
+| `strategy` | `pooled_horizon` | 시점 7개를 한 모델로(기본은 시점별 7개) |
+
+`run_pooled`는 모델 `fit`이 `groups`·`ages`를 받으면 계열 번호·표본 경과일을 넘긴다(받지 않는 모델은 그대로 동작).
+
+### 앙상블
+
+끝난 실험 폴더의 예측을 평균해 같은 평가기로 채점한다(재학습 없음, 몇 초). 같은 기준일 목록으로 돌린 실험만 합칠 수 있다.
+
+```powershell
+uv run --extra prices python -m model_comparison.v2.run_pooled --config model_comparison/v2/configs/v1feat_xgb_robust.json
+uv run --extra prices python -m model_comparison.v2.run_pooled --config model_comparison/v2/configs/v1feat_lgbm.json
+uv run --extra prices python -m model_comparison.v2.ensemble experiments_v2/v1feat_xgb_robust-validation-<날짜>-01 `
+    experiments_v2/v1feat_lgbm-validation-<날짜>-01 --name ens-robust-lgbm     # --weights 0.5,0.5, --how median
+```
+
+새 자료를 시험할 때도 같은 두 구성원 설정에 `bundles`·`blocks`만 바꿔 넣고 앙상블로 비교하면 된다.
+
+결과는 [RESULTS.md](RESULTS.md).
 
 결과: `experiments_v2/<설정>-<기준일 목록>-날짜-번호/` (`importance.json`에 특징 중요도). v1 CI 검사 대상이 아니다.
 최종 시험 기준일은 쓰지 않는다(팀 합의 후 별도).

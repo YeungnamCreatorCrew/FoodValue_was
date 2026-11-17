@@ -16,6 +16,7 @@ from tools.runtime import apply_environment
 _CHANGED_ENV = apply_environment()
 
 import argparse
+import inspect
 import csv
 import json
 import sys
@@ -52,14 +53,17 @@ class Matrices:
         if observed < standard.MIN_TRAIN_OBSERVATIONS:
             return None
         first = start + standard.FEATURE_LOOKBACK_DAYS
-        xs, ys, hs = [], [], []
+        xs, ys, hs, ages = [], [], [], []
         for h in standard.HORIZONS:
             o = np.arange(first, as_of_idx - h + 1)
             o = o[s.valid[o] & ~np.isnan(s.actual[o + h])]
             xs.append(self.by[sid, h][o])
             ys.append(s.actual[o + h])
             hs.append(np.full(o.size, h))
-        return np.concatenate(xs), np.concatenate(ys), np.concatenate(hs)
+            ages.append(as_of_idx - (o + h))  # 목표일이 학습 시점보다 며칠 앞인지(최근 가중용)
+        n = sum(len(y) for y in ys)
+        return (np.concatenate(xs), np.concatenate(ys), np.concatenate(hs), np.full(n, sid),
+                np.concatenate(ages).astype(float))
 
     def inputs(self, sid, i):
         s = self.snap.series[sid]
@@ -87,13 +91,15 @@ def run(args):
     v2 = F.V2Features(snap, args.extra)
     cls = run_backtest.load_class(config['class'])
     params = config.get('params', {})
+    fit_takes_groups = 'groups' in inspect.signature(cls.fit).parameters  # 계열·최근 가중을 받는 모델만
 
     stamp = date.today().strftime('%Y%m%d')
     base = f'{config["name"]}-{args.origins}{"-" + args.month if args.month else ""}-{stamp}'
     folder = next(Path(args.out) / f'{base}-{n:02d}' for n in range(1, 100) if not (Path(args.out) / f'{base}-{n:02d}').exists())
     folder.mkdir(parents=True)
     record = {**config, 'experiment_id': folder.name, 'data_version': standard.DATA_VERSION,
-              'v2_extra': json.loads((Path(args.extra) / 'manifest.json').read_text(encoding='utf-8')),
+              'v2_extra': (json.loads((Path(args.extra) / 'manifest.json').read_text(encoding='utf-8'))
+                           if any(b in F.NEEDS_EXTRA for b in blocks) else None),
               'origin_list': args.origins, 'month': args.month, 'series': series_ids, 'phase': 'v2',
               'git_sha': run_backtest.git('rev-parse', 'HEAD') or None, 'refit': standard.REFIT,
               'model': config.get('model', 'XGBoost'), 'feature_count': len(F.feature_names(bundles, blocks))}
@@ -122,10 +128,13 @@ def run(args):
             parts = [p for p in parts if p is not None]
             model = None
             if parts:
-                X, y, h = (np.concatenate([p[k] for p in parts]) for k in range(3))
+                X, y, h, g, age = (np.concatenate([p[k] for p in parts]) for k in range(5))
                 model = cls(**params)
                 try:
-                    model.fit(X, y, h, mats.names, config.get('seed', 42))
+                    if fit_takes_groups:
+                        model.fit(X, y, h, mats.names, config.get('seed', 42), groups=g, ages=age)
+                    else:
+                        model.fit(X, y, h, mats.names, config.get('seed', 42))
                 except Exception as error:  # noqa: BLE001
                     log(f'  {d} 재학습 실패: {type(error).__name__}: {error}')
                     model = None

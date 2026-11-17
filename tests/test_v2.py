@@ -169,3 +169,85 @@ def test_pooled_runner_refuses_test_origins(tmp_path, snap_dir):
                               extra=tmp_path, out=tmp_path)
     with pytest.raises(SystemExit, match='최종 시험'):
         run_pooled.run(args)
+
+
+def test_price_dynamics_use_only_prices_up_to_d():
+    """PRICE_DYN: d 뒤 가격을 바꿔도 기준일 d의 값(작년 같은 시기 h일 변화 포함)은 같아야 한다."""
+    rng = np.random.default_rng(0)
+    v = 1000 * np.exp(np.cumsum(rng.normal(0, .02, 1500)))
+    v[rng.random(1500) < .3] = np.nan
+    d = 1200
+    other = v.copy()
+    other[d + 1:] = 1.0
+    a, b = F.price_dynamics(v), F.price_dynamics(other)
+    assert ((a[d] == b[d]) | (np.isnan(a[d]) & np.isnan(b[d]))).all()
+    for h in standard.HORIZONS:
+        assert F._analog(v, h)[0][d] == pytest.approx(F._analog(other, h)[0][d], nan_ok=True)
+    assert a.shape[1] == len(F.PRICE_DYN_NAMES) - 1  # pd_analog_chg_h는 시점별로 rows()가 붙인다
+
+
+def test_price_dynamics_flat_share_and_days_since_change():
+    v = np.array([100.0] * 40 + [110.0] + [110.0] * 5)
+    out = F.price_dynamics(v)
+    names = F.PRICE_DYN_NAMES
+    assert out[39, names.index('pd_flat_share28')] == pytest.approx(1.0)
+    assert out[40, names.index('pd_days_since_change')] == 0
+    assert out[45, names.index('pd_days_since_change')] == 5
+
+
+def test_price_only_blocks_run_without_extra_folder(tmp_path, snap_dir):
+    """SERIES_ID·CROSS_ITEM·PRICE_DYN만 쓰면 추가 자료 폴더가 없어도 돈다. 가중·LightGBM 경로도 함께 확인."""
+    for cls, params in (('PooledXGB', {'n_estimators': 20, 'max_depth': 2, 'series_weight': 'inv_scale',
+                                       'halflife_days': 365}),
+                        ('PooledLGBM', {'n_estimators': 20, 'num_leaves': 4, 'series_weight': 'balanced'})):
+        config = {'name': cls, 'class': f'model_comparison.v2.models:{cls}', 'params': params,
+                  'bundles': ['MARKET'], 'blocks': ['SERIES_ID', 'CROSS_ITEM', 'PRICE_DYN'], 'seed': 42}
+        path = tmp_path / f'{cls}.json'
+        path.write_text(json.dumps(config), encoding='utf-8')
+        args = argparse.Namespace(config=path, origins='validation', month='2025-02', series=None,
+                                  snapshot=snap_dir, extra=tmp_path / 'missing', out=tmp_path / 'out')
+        folder = run_pooled.run(args)
+        metrics = json.loads((folder / 'metrics.json').read_text(encoding='utf-8'))
+        assert metrics['results']['policy']['points'] > 0
+    shutil.rmtree(tmp_path / 'out')
+
+
+def test_sample_weights_balance_series_and_decay():
+    from model_comparison.v2.models import sample_weights
+
+    y = np.array([.1, .1, .1, .01])
+    groups = np.array([1, 1, 1, 2])
+    w = sample_weights(y, groups, None, 'balanced')
+    assert w[:3].sum() == pytest.approx(w[3]) and w.mean() == pytest.approx(1)
+    w = sample_weights(y, groups, None, 'inv_scale')
+    assert w[3] / w[0] == pytest.approx(10)
+    w = sample_weights(y, None, np.array([0, 365, 730, 0]), None, 365)
+    assert w[0] / w[1] == pytest.approx(2) and w[1] / w[2] == pytest.approx(2)
+    assert sample_weights(y, groups, None) is None
+
+
+def test_ensemble_averages_ok_rows_and_falls_back_to_members(tmp_path, snap_dir):
+    from model_comparison.v2 import ensemble
+
+    folders = []
+    for name, depth in (('a', 2), ('b', 3)):
+        config = {'name': name, 'class': 'model_comparison.v2.models:PooledXGB',
+                  'params': {'n_estimators': 20, 'max_depth': depth}, 'bundles': [], 'blocks': ['SERIES_ID'],
+                  'seed': 42}
+        path = tmp_path / f'{name}.json'
+        path.write_text(json.dumps(config), encoding='utf-8')
+        folders.append(run_pooled.run(argparse.Namespace(
+            config=path, origins='validation', month='2025-02', series=None, snapshot=snap_dir,
+            extra=tmp_path / 'missing', out=tmp_path / 'out')))
+    rows = ensemble.combine(folders, [3, 1])
+    a, b = (ensemble._read(f) for f in folders)
+    for r in rows:
+        key = (r['series_id'], r['origin_date'], r['horizon'])
+        if a[key]['status'] == 'OK' and b[key]['status'] == 'OK':
+            expected = .75 * float(a[key]['predicted_price']) + .25 * float(b[key]['predicted_price'])
+            assert r['predicted_price'] == pytest.approx(expected)
+        elif a[key]['status'] != 'OK' and b[key]['status'] != 'OK':
+            assert r['status'] == a[key]['status']
+    folder = ensemble.run(argparse.Namespace(folders=[str(f) for f in folders], name='e', weights=None, how='mean',
+                                             snapshot=snap_dir, out=tmp_path / 'ens'))
+    assert json.loads((folder / 'metrics.json').read_text(encoding='utf-8'))['results']['policy']['points'] > 0
