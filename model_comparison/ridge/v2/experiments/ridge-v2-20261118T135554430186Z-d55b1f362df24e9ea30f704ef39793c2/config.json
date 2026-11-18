@@ -1,0 +1,62 @@
+{
+  "blocks": [
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [
+      "CROSS_ITEM"
+    ],
+    "note": "팀 v2 configs/v1feat_cross.json과 같은 특징 구성",
+    "reference": "v1feat",
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42"
+  },
+  "config_id": "755d9d1d",
+  "config_sha256": "ebf24de191f7d092f44ef2ca6ccea249a994883e7e8bbca194f87c72d0d23cc0",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261118T135554430186Z-d55b1f362df24e9ea30f704ef39793c2",
+  "extra_features": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "feature_count": 45,
+  "feature_set": "v2:1825",
+  "git_sha": "bfabcebd651f855b0489238c92dc126ed7d61209",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "v1feat_cross",
+  "origin_list": "tune",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}

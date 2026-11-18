@@ -1,0 +1,62 @@
+{
+  "blocks": [
+    "WEATHER_ANOM",
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [
+      "WEATHER_ANOM"
+    ],
+    "note": "팀 v2 configs/v1feat_anom.json과 같은 특징 구성",
+    "reference": "v1feat",
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42"
+  },
+  "config_id": "d13370cd",
+  "config_sha256": "a04e73d28e058378df65989dbf1307df9355bad3cbdc4a8b0a8128d0a44ef33b",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261118T135635195036Z-6855b1a40faa47878ebaeeecf790cb52",
+  "extra_features": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "WEATHER_ANOM",
+    "SERIES_ID"
+  ],
+  "feature_count": 61,
+  "feature_set": "v2:1825",
+  "git_sha": "bfabcebd651f855b0489238c92dc126ed7d61209",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "v1feat_anom",
+  "origin_list": "tune",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}

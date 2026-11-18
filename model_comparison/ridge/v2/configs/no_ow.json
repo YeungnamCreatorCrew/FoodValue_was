@@ -1,0 +1,35 @@
+{
+  "name": "no_ow",
+  "model": "Ridge",
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "window_days": 1825,
+  "seed": 42,
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "refit": "weekly_first_origin",
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "MACRO",
+    "PRODUCTION"
+  ],
+  "blocks": [
+    "GARAK",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "comparison": {
+    "reference": "all",
+    "added": [],
+    "removed": [
+      "ORIGIN_WEATHER"
+    ],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42",
+    "note": "팀 v2 configs/no_ow.json과 같은 특징 구성. 내용은 no_origin_weather.json와 같고 이름만 팀 기준으로 통일(기존 파일은 과거 실행 기록용으로 보존)"
+  }
+}

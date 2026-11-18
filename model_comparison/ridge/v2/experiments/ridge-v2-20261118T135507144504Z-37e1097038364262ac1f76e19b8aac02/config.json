@@ -1,0 +1,62 @@
+{
+  "blocks": [
+    "GARAK",
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [
+      "GARAK"
+    ],
+    "note": "팀 v2 configs/v1feat_garak.json과 같은 특징 구성",
+    "reference": "v1feat",
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42"
+  },
+  "config_id": "a1dbc69c",
+  "config_sha256": "5163110a0d60241d62606b168cfe196e12955c41fab7c591610c4bb5d9cd8937",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261118T135507144504Z-37e1097038364262ac1f76e19b8aac02",
+  "extra_features": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "GARAK",
+    "SERIES_ID"
+  ],
+  "feature_count": 45,
+  "feature_set": "v2:1825",
+  "git_sha": "bfabcebd651f855b0489238c92dc126ed7d61209",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "v1feat_garak",
+  "origin_list": "tune",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}

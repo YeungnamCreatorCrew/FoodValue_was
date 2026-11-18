@@ -1,0 +1,26 @@
+{
+  "name": "market_alpha1",
+  "model": "Ridge",
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "params": {
+    "alpha": 1,
+    "solver": "lsqr"
+  },
+  "window_days": 1825,
+  "seed": 42,
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "refit": "weekly_first_origin",
+  "bundles": [
+    "MARKET"
+  ],
+  "blocks": [
+    "SERIES_ID"
+  ],
+  "comparison": {
+    "reference": "market",
+    "added": [],
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, seed=42; only alpha changed 10 -> 1"
+  }
+}
