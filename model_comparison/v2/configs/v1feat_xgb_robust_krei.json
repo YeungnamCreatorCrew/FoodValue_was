@@ -1,0 +1,21 @@
+{
+  "name": "v1feat_xgb_robust_krei",
+  "model": "XGBoost",
+  "class": "model_comparison.v2.models:PooledXGB",
+  "params": {
+    "objective": "reg:pseudohubererror",
+    "huber_slope": 0.02,
+    "series_weight": "inv_scale"
+  },
+  "window_days": 1825,
+  "seed": 42,
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "blocks": [
+    "SERIES_ID",
+    "KREI"
+  ]
+}

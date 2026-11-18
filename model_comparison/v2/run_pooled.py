@@ -16,6 +16,7 @@ from tools.runtime import apply_environment
 _CHANGED_ENV = apply_environment()
 
 import argparse
+import hashlib
 import inspect
 import csv
 import json
@@ -27,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from model_comparison.v2 import features as F
+from model_comparison.v2.krei import KREI_DIR
 from model_comparison.v2.snapshot import EXTRA_DIR
 from tools import evaluate, loader, origins, run_backtest, standard
 
@@ -88,7 +90,8 @@ def run(args):
         days = [d for d in days if d.strftime('%Y-%m') == args.month]
     origins.guard('p2', days)
     series_ids = [int(x) for x in args.series.split(',')] if args.series else snap.series_ids
-    v2 = F.V2Features(snap, args.extra)
+    krei_dir = getattr(args, 'krei', None)
+    v2 = F.V2Features(snap, args.extra, krei_dir)
     cls = run_backtest.load_class(config['class'])
     params = config.get('params', {})
     fit_takes_groups = 'groups' in inspect.signature(cls.fit).parameters  # 계열·최근 가중을 받는 모델만
@@ -100,6 +103,10 @@ def run(args):
     record = {**config, 'experiment_id': folder.name, 'data_version': standard.DATA_VERSION,
               'v2_extra': (json.loads((Path(args.extra) / 'manifest.json').read_text(encoding='utf-8'))
                            if any(b in F.NEEDS_EXTRA for b in blocks) else None),
+              'v2_krei': ({'snapshot_id': json.loads((Path(krei_dir) / 'manifest.json').read_text(encoding='utf-8'))
+                           .get('snapshot_id'), 'manifest_sha256': hashlib.sha256(
+                               (Path(krei_dir) / 'manifest.json').read_bytes()).hexdigest()}
+                          if 'KREI' in blocks else None),
               'origin_list': args.origins, 'month': args.month, 'series': series_ids, 'phase': 'v2',
               'git_sha': run_backtest.git('rev-parse', 'HEAD') or None, 'refit': standard.REFIT,
               'model': config.get('model', 'XGBoost'), 'feature_count': len(F.feature_names(bundles, blocks))}
@@ -171,7 +178,7 @@ def run(args):
     if importance:
         groups = {}
         for name, value in importance.items():
-            key = name.split('_')[0] if name.startswith(('ow_', 'wa_', 'garak', 'cross', 'is_')) else 'v1'
+            key = name.split('_')[0] if name.startswith(('ow_', 'wa_', 'garak', 'cross', 'is_', 'krei', 'pd_')) else 'v1'
             groups[key] = groups.get(key, 0) + value
         total = sum(groups.values()) or 1
         log('특징 묶음별 중요도(마지막 재학습): ' + ', '.join(f'{k} {v / total:.0%}' for k, v in
@@ -188,6 +195,7 @@ def main(argv=None):
     parser.add_argument('--series', help='예측할 계열(학습은 항상 10개 계열 전체)')
     parser.add_argument('--snapshot', type=Path, default=evaluate.DEFAULT_SNAPSHOT)
     parser.add_argument('--extra', type=Path, default=EXTRA_DIR)
+    parser.add_argument('--krei', type=Path, default=KREI_DIR, help='KREI 관측월보 스냅샷 폴더(KREI 묶음)')
     parser.add_argument('--out', type=Path, default=OUT)
     args = parser.parse_args(argv)
     folder = run(args)
