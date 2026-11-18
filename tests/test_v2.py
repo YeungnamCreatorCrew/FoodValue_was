@@ -70,7 +70,7 @@ def test_v2_features_use_only_data_before_d(tmp_path, snap_dir):
     snap = loader.Snapshot(snap_dir)
     full = F.V2Features(snap, write_extra(tmp_path / 'full'))
     part = F.V2Features(snap, write_extra(tmp_path / 'part', cut=d))
-    bundles, blocks = [], list(F.V2_BLOCKS)
+    bundles, blocks = [], [b for b in F.V2_BLOCKS if b != 'KREI']  # KREI는 별도 스냅샷(아래 KREI 테스트)
     i = snap.series[1].index(d)
     a = F.rows(snap, full, 1, [i], [3], bundles, blocks)[0]
     b = F.rows(snap, part, 1, [i], [3], bundles, blocks)[0]
@@ -251,3 +251,101 @@ def test_ensemble_averages_ok_rows_and_falls_back_to_members(tmp_path, snap_dir)
     folder = ensemble.run(argparse.Namespace(folders=[str(f) for f in folders], name='e', weights=None, how='mean',
                                              snapshot=snap_dir, out=tmp_path / 'ens'))
     assert json.loads((folder / 'metrics.json').read_text(encoding='utf-8'))['results']['policy']['points'] > 0
+
+
+def write_krei(folder, reports):
+    """가짜 KREI 스냅샷. reports: [(key, available_from, [(item, crop, metric, kind, start, end, basis, value, dir)])]"""
+    from model_comparison.v2 import krei
+
+    folder.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for key, available, facts in reports:
+        for item, crop, metric, kind, start, end, basis, value, direction in facts:
+            rows.append({'source_record_key': key, 'available_from': available, 'item_name': item, 'crop_type': crop,
+                         'metric': metric, 'kind': kind, 'target_start': start, 'target_end': end, 'basis': basis,
+                         'value': value, 'value_low': '', 'value_high': '', 'direction': direction})
+    with open(folder / 'krei_values.csv', 'w', encoding='utf-8-sig', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=krei.COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+    (folder / 'manifest.json').write_text(json.dumps({'snapshot_id': 'test', 'values_rows': len(rows)}),
+                                          encoding='utf-8')
+    return folder
+
+
+def cabbage_report(key, available, month_start, month_end, prev_start, prev_end, outlook, actual, ship):
+    return (key, available, [
+        ('배추', '', 'WHOLESALE_PRICE', 'OUTLOOK', month_start, month_end, 'LEVEL', outlook, ''),
+        ('배추', '', 'WHOLESALE_PRICE', 'OUTLOOK', month_start, month_end, 'PREV_YEAR', '', 'UP'),
+        ('배추', '', 'WHOLESALE_PRICE', 'ACTUAL', prev_start, prev_end, 'LEVEL', actual, ''),
+        ('배추', '', 'SHIPMENT', 'OUTLOOK', month_start, month_end, 'PREV_YEAR', ship, 'DOWN'),
+        ('배추', '가을', 'SHIPMENT', 'OUTLOOK', month_start, month_end, 'PREV_YEAR', '-99', 'DOWN'),
+    ])
+
+
+def test_krei_features_use_only_reports_published_before_d(tmp_path):
+    from model_comparison.v2 import krei
+
+    folder = write_krei(tmp_path / 'k', [
+        cabbage_report('A:1', '2025-03-06T10:00:00+09:00', '2025-03-01', '2025-03-31', '2025-02-01', '2025-02-28',
+                       '12000', '10000', '-15.1'),
+        cabbage_report('A:2', '2025-04-02T09:00:00+09:00', '2025-04-01', '2025-04-30', '2025-03-01', '2025-03-31',
+                       '9000', '10000', '3'),
+        cabbage_report('A:3', '2026-11-03T09:00:00+09:00', '2026-11-01', '2026-11-30', '2026-10-01', '2026-10-31',
+                       '1', '1', '1'),  # 마감일 뒤 공개 → 읽지 않음
+    ])
+    k = krei.KreiSnapshot(folder)
+    assert len(k.reports) == 2 and k.dropped_after_cutoff == 1
+    start = date(2025, 1, 1)
+    filled = np.full(200, 100.0)
+    f = k.features('배추', start, filled)
+    at = lambda d: dict(zip(krei.NAMES, f[(d - start).days]))  # noqa: E731
+    assert np.isnan(at(date(2025, 3, 6))['krei_price_outlook_chg'])  # 공개 당일은 아직 쓰지 않음(d−1 규칙)
+    day = at(date(2025, 3, 7))
+    assert day['krei_price_outlook_chg'] == pytest.approx(.2)
+    assert day['krei_implied_vs_current'] == pytest.approx(.2)  # 지난달 평균 100 × 1.2 / 현재 100 − 1
+    assert day['krei_price_dir_py'] == 1 and math.isnan(day['krei_price_dir_nm'])
+    assert day['krei_shipment_py'] == pytest.approx(-15.1)  # 작형 행(-99)이 아니라 전체 행
+    assert day['krei_days_since'] == 1
+    assert at(date(2025, 4, 3))['krei_price_outlook_chg'] == pytest.approx(-.1)
+    # 4월 전망은 4월이 지나면 쓰지 않는다(경과일만 남음)
+    late = at(date(2025, 5, 10))
+    assert np.isnan(late['krei_price_outlook_chg']) and np.isnan(late['krei_shipment_py'])
+    assert late['krei_days_since'] == (date(2025, 5, 10) - date(2025, 4, 2)).days
+    # 미래 호를 지워도 과거 기준일 값은 같다
+    part = krei.KreiSnapshot(write_krei(tmp_path / 'p', [cabbage_report(
+        'A:1', '2025-03-06T10:00:00+09:00', '2025-03-01', '2025-03-31', '2025-02-01', '2025-02-28', '12000', '10000',
+        '-15.1')]))
+    g = part.features('배추', start, filled)
+    i = (date(2025, 3, 20) - start).days
+    assert np.allclose(f[i], g[i], equal_nan=True)
+    assert np.isnan(k.features('대파', start, filled)).all()
+
+
+def test_krei_rejects_missing_columns_and_row_count_mismatch(tmp_path):
+    from model_comparison.v2 import krei
+
+    folder = write_krei(tmp_path / 'k', [cabbage_report(
+        'A:1', '2025-03-06T10:00:00+09:00', '2025-03-01', '2025-03-31', '2025-02-01', '2025-02-28', '1', '1', '1')])
+    (folder / 'manifest.json').write_text(json.dumps({'values_rows': 999}), encoding='utf-8')
+    with pytest.raises(ValueError, match='행 수'):
+        krei.KreiSnapshot(folder)
+    with open(folder / 'krei_values.csv', 'w', encoding='utf-8-sig', newline='') as f:
+        f.write('source_record_key,available_from\nA:1,2025-03-06T10:00:00+09:00\n')
+    with pytest.raises(ValueError, match='열'):
+        krei.KreiSnapshot(folder)
+
+
+def test_pooled_runner_with_krei_block(tmp_path, snap_dir):
+    folder = write_krei(tmp_path / 'k', [cabbage_report(
+        'A:1', '2025-01-03T10:00:00+09:00', '2025-01-01', '2025-01-31', '2024-12-01', '2024-12-31', '1', '1', '1')])
+    config = {'name': 'k', 'class': 'model_comparison.v2.models:PooledXGB',
+              'params': {'n_estimators': 20, 'max_depth': 2}, 'bundles': [], 'blocks': ['SERIES_ID', 'KREI'],
+              'seed': 42}
+    path = tmp_path / 'k.json'
+    path.write_text(json.dumps(config), encoding='utf-8')
+    out = run_pooled.run(argparse.Namespace(config=path, origins='validation', month='2025-02', series=None,
+                                            snapshot=snap_dir, extra=tmp_path / 'missing', krei=folder,
+                                            out=tmp_path / 'out'))
+    record = json.loads((out / 'config.json').read_text(encoding='utf-8'))
+    assert record['v2_krei']['snapshot_id'] == 'test' and record['feature_count'] == 15 + 6 + 6

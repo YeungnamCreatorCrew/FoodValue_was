@@ -16,6 +16,7 @@
                   변동 없는 날 비율·마지막 변동 후 일수(가격이 잘 안 바뀌는 소매 계열용), 일별 로그 변화 변동성,
                   56일 범위 안 위치, 91·365일 평균 대비, 전년 대비, 3일 변화,
                   작년 같은 시기 h일 변화(1~3년 전 평균, 목표 시점별) — 계절 흐름을 가격 자체에서 가져온다
+- KREI:           KREI 관측월보(별도 스냅샷, krei.py). 기준일 d−1까지 공개(available_from)된 최신 호의 품목 값 → 6개
 """
 import csv
 import math
@@ -24,13 +25,14 @@ from pathlib import Path
 
 import numpy as np
 
+from model_comparison.v2 import krei
 from tools import loader, standard
 
 WEATHER_WEEKS = 52
 EXTREME_BLOCKS = 13  # 4주 블록
 GARAK_WEEKS = 8
 LAG = standard.EXTRA_LAG_DAYS
-V2_BLOCKS = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK', 'CROSS_ITEM', 'SERIES_ID', 'PRICE_DYN')
+V2_BLOCKS = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK', 'CROSS_ITEM', 'SERIES_ID', 'PRICE_DYN', 'KREI')
 NEEDS_EXTRA = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK')  # 추가 자료 폴더가 있어야 하는 묶음
 ANOM_BLOCKS = 13  # 4주 블록 × 13 = 52주
 ANOM_YEARS = 5
@@ -56,6 +58,8 @@ def block_names(block: str) -> list[str]:
         return [f'is_{item}' for item in standard.ITEMS] + ['is_wholesale']
     if block == 'PRICE_DYN':
         return PRICE_DYN_NAMES
+    if block == 'KREI':
+        return list(krei.NAMES)
     raise ValueError(block)
 
 
@@ -108,9 +112,11 @@ def _past_years_mean(values):
 class V2Features:
     """v1 Snapshot + v2 추가 자료 폴더 → 계열별 기준일 특징 행렬."""
 
-    def __init__(self, snap: loader.Snapshot, extra_dir: Path | None):
+    def __init__(self, snap: loader.Snapshot, extra_dir: Path | None, krei_dir: Path | None = None):
         self.snap = snap
         self.extra = Path(extra_dir) if extra_dir is not None else None
+        self.krei_dir = Path(krei_dir) if krei_dir is not None else None
+        self._krei = None
         self._loaded = False
         self._cache = {}
 
@@ -168,6 +174,12 @@ class V2Features:
             out = self._cross(s, n)
         elif block == 'PRICE_DYN':
             out = price_dynamics(s.filled)
+        elif block == 'KREI':
+            if self._krei is None:
+                if self.krei_dir is None:
+                    raise FileNotFoundError('KREI 묶음에는 --krei 스냅샷 폴더가 필요')
+                self._krei = krei.KreiSnapshot(self.krei_dir)
+            out = self._krei.features(s.item, s.start, s.filled)
         else:
             weather, garak = self._item_daily(s.item, s.start, n, head)
             if block == 'WEATHER_ANOM':

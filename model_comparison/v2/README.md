@@ -46,7 +46,14 @@ uv run python -m model_comparison.v2.snapshot check
 | `SERIES_ID` | 6 | 품목 원핫 + 도매 여부 | — |
 | `PRICE_DYN` | 11 | 자기 가격만으로 만든 동역학(변동 없는 날 비율, 마지막 변동 후 일수, 로그 변화 변동성, 56일 범위 위치, 91·365일 평균 대비, 전년 대비, 3일 변화, 1~3년 전 같은 시기 h일 변화) | d |
 
+| `KREI` | 6 | KREI 관측월보(별도 스냅샷): 이번 달 도매가격 전망 ÷ 지난달 실적, 그 변화를 우리 계열 가격에 옮긴 값, 가격 전망 전년·평년 대비 방향, 전체 출하량 전망(전년 대비), 마지막 호 공개 후 경과일 | d−1 (`available_from`) |
+
 - 추가 자료 폴더는 `ORIGIN_WEATHER`·`WEATHER_ANOM`·`GARAK`을 쓸 때만 필요하다. 그 밖의 묶음만 쓰는 설정은 폴더 없이 돈다.
+- `KREI` 묶음은 KREI 스냅샷 폴더(`--krei`, 기본 `data/snapshots/FoodValue_KREI_Snapshot_20261118/`)가 필요하다.
+  데이터 담당이 수정판(새 `snapshot_id`)을 내면 그 폴더를 `--krei`로 주거나 `krei.py`의 `SNAPSHOT_ID`를 바꾼다.
+  읽는 열: `available_from`·`item_name`·`crop_type`·`metric`·`kind`·`target_start`·`target_end`·`basis`·
+  `value`(`value_low`/`value_high`)·`direction`, manifest의 `snapshot_id`·`values_rows`. 데이터 마감일 뒤 공개된 호는 읽지 않고,
+  전망 대상 달이 지나면 전망 값은 비운다(1·2월 미발행 기간에 12월 전망을 쓰지 않음).
 
 - "며칠 / 몇 주 / 몇 달 뒤 영향"을 사람이 정하지 않고, 52주 이력을 모두 주어 모델이 찾게 한다.
 - 값이 없으면 NaN(반입량은 2021년 이전, 자료 기간 안의 일요일 등 경매 없는 날은 0톤).
@@ -71,6 +78,7 @@ uv run --extra prices python -m model_comparison.v2.run_pooled --config model_co
 | `v1feat_garak.json`, `v1feat_cross.json`, `v1feat_anom.json` | v1 효과 묶음에 하나씩 더하기 |
 | `v1feat_xgb_robust.json` | v1feat + Huber 손실 + 계열 변동 크기 가중(앙상블 구성원 1) |
 | `v1feat_lgbm.json` | v1feat를 LightGBM(`PooledLGBM`, 제곱 오차)으로(앙상블 구성원 2) |
+| `v1feat_xgb_robust_krei.json`, `v1feat_lgbm_krei.json` | 위 두 구성원 + `KREI` 묶음 |
 
 ### 학습 방식 옵션 (`params`에 넣음)
 
