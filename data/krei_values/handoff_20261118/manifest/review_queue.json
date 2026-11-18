@@ -1,0 +1,16 @@
+[
+  {
+    "id": "8705-STOCK-PREV_YEAR",
+    "pdf_id": "8705",
+    "source_record_key": "OVR0000000008:8705",
+    "page": 5,
+    "item_name": "무",
+    "crop_type": "겨울",
+    "metric": "STOCK",
+    "candidate": "전년 대비 재고량 비교 방향",
+    "reason": "본문 전년과 비슷과 그래프 2025년산9,246·2024년산5,220이 정합적이지 않음. 임의 증감률 계산 금지.",
+    "resolution": "현재 절대 재고량9,246톤만 검증해 포함; 전년 비교 후보는 JSON·DB에서 제외.",
+    "status": "HELD_OUT_NOT_LOADED",
+    "use_for_training": false
+  }
+]
