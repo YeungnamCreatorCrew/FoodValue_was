@@ -1,0 +1,280 @@
+{
+  "selection": {
+    "candidate_ids": [
+      "ridge-p2-20261112-01",
+      "ridge-p2-20261112-02",
+      "ridge-p2-20261112-03",
+      "ridge-p2-20261112-04",
+      "ridge-p2-20261112-05",
+      "ridge-p2-20261112-06",
+      "ridge-p2-20261112-07"
+    ],
+    "criterion": "minimum original policy macro MAPE among present full-validation p2 results",
+    "winner": "ridge-p2-20261112-02",
+    "warning": "Retrospective selection on Validation; reference only, not unbiased confirmation"
+  },
+  "p2_control": "ridge-p2-20261112-01",
+  "records": [
+    {
+      "id": "ridge-p1-20261111-07",
+      "path": "experiments/ridge-p1-20261111-07",
+      "sha256": {
+        "config.json": "6a9b547da766ec0750f801e3a327ec459a792b314d5b52e1465843bd4c06219e",
+        "metrics.json": "d50f1601e9d6b680fc0fa72b4725a2388d557d62b393f0c5001f959428be7775",
+        "predictions.csv": "3e7f9c97e7d79666af01d0ab51510198fccdb98d601b1c325a223971419c667c"
+      },
+      "original_policy_macro_mape": 5.060471,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    },
+    {
+      "id": "ridge-p2-20261112-01",
+      "path": "experiments/ridge-p2-20261112-01",
+      "sha256": {
+        "config.json": "dbd62e461a6e3bc77ad69a46508f7423a74c24dda0b6a51df1084c7dafadf531",
+        "metrics.json": "b61a3fd26cec57c84ff31651788b0e3063bf10a2315459d051081f2fb2aa9835",
+        "predictions.csv": "1d7ba2b677150dd9da2a2f1fd8236710e70c8a837c895394b193731b17c27e53"
+      },
+      "original_policy_macro_mape": 5.060471,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    },
+    {
+      "id": "ridge-p2-20261112-02",
+      "path": "experiments/ridge-p2-20261112-02",
+      "sha256": {
+        "config.json": "d0096c9969758b90ee05055e2aab3b34004c1a65904676335532bb7cb90d98cf",
+        "metrics.json": "bd08c9a3476e0552cad0d96cc2830c284588fe46ac3555fe8e2b3b50eba12c75",
+        "predictions.csv": "71f08d6d41ae6800d44ec775519b092f5ad61ace450b63a2144716157a784062"
+      },
+      "original_policy_macro_mape": 4.940629,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [
+        "MARKET"
+      ],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    },
+    {
+      "id": "ridge-p2-20261112-03",
+      "path": "experiments/ridge-p2-20261112-03",
+      "sha256": {
+        "config.json": "585ae110d7dca0ed2707efb4582060288affc507f651f8c8c84e96da3ad1a63f",
+        "metrics.json": "51cc1e5650c16a513382c6fdbbcde568e8fc5770f6670e7e457b6e6a0aed7195",
+        "predictions.csv": "3395073befa2cdd725539b57cee6ff90d12502a307b94546ac52c89f33cc11d8"
+      },
+      "original_policy_macro_mape": 5.143822,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [
+        "NATIONAL_WEATHER"
+      ],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    },
+    {
+      "id": "ridge-p2-20261112-04",
+      "path": "experiments/ridge-p2-20261112-04",
+      "sha256": {
+        "config.json": "3ce5a10e4adc4de630fbb9a0bd4e6ed92f0008df55ff055273605ff437bacabd",
+        "metrics.json": "e8094bf59f5b68c285a73bab35b202a4b57fed845fc1e91c6c5946edd22d7d9f",
+        "predictions.csv": "28f12c689068442677cc013c259de4a11979656af712a2b7bfcc4781b49bdcdf"
+      },
+      "original_policy_macro_mape": 5.200425,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [
+        "EVENT"
+      ],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    },
+    {
+      "id": "ridge-p2-20261112-05",
+      "path": "experiments/ridge-p2-20261112-05",
+      "sha256": {
+        "config.json": "aad5254e268212faf0205fe61f78d65a45af0cdade27573e16628ddceff65efe",
+        "metrics.json": "5cf51585fedd37fbe8ced6f1c7714f5c8261ef3956017857a93f0a176f92c4d4",
+        "predictions.csv": "f3366e9f3597bed1e06553ae81f2618553111ee3c3bf3d4fd0d4acf428a69d15"
+      },
+      "original_policy_macro_mape": 5.085541,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [
+        "MACRO"
+      ],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    },
+    {
+      "id": "ridge-p2-20261112-06",
+      "path": "experiments/ridge-p2-20261112-06",
+      "sha256": {
+        "config.json": "d77b73f0746f5a9bdb86e895065e9cd94089cc6d4d65fc93f1b9d560c2db369a",
+        "metrics.json": "78aef978450056d169bc86a2c1f358a081589d2469510f9c9b89baf9a10d9f3d",
+        "predictions.csv": "c2500f40c1b64848a513882fbde0930e622380a55c9e6eaea491d2fd9cd9d342"
+      },
+      "original_policy_macro_mape": 5.043419,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [
+        "PRODUCTION"
+      ],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    },
+    {
+      "id": "ridge-p2-20261112-07",
+      "path": "experiments/ridge-p2-20261112-07",
+      "sha256": {
+        "config.json": "710e573557de81c4e4527ce62deaadb4ab1fc8358d3a8853db8a7cf9827221e4",
+        "metrics.json": "3689f26e796ddbc8a3d0842232047d31760c178615515beaae90ad689dcf3a8e",
+        "predictions.csv": "c154f350a3c604d9e7ac3d6779c824ceed4219127d33647dcd5a1ad44b9643eb"
+      },
+      "original_policy_macro_mape": 4.942954,
+      "original_naive_macro_mape": 4.912547,
+      "original_success_rate": 0.992018,
+      "origin_list": "validation",
+      "month": null,
+      "series": [
+        1,
+        2,
+        7,
+        8,
+        9,
+        10,
+        9001,
+        9002,
+        9011,
+        9012
+      ],
+      "bundles": [
+        "MARKET",
+        "PRODUCTION"
+      ],
+      "comparison_label": "reference",
+      "note": "Read directly from original metrics.json; no recomputation; not a Ridge v2 result"
+    }
+  ],
+  "p1_reference": {
+    "artifacts_sha256": {
+      "README.md": "aae5bd8767606ada36e4567b429c8cf971dc40856995f4ebe99d1b9869cc7000",
+      "config.json": "6a9b547da766ec0750f801e3a327ec459a792b314d5b52e1465843bd4c06219e",
+      "environment.txt": "a7c5f88dc049435e23672889b61b798765c8582d1c81549ecf54acf398090b89",
+      "invocation.json": "1b67c99c04a7d78199b0d70be6cabcd9e4f8df1c6052bc89e1e844a2ecbf1a0f",
+      "metrics.json": "d50f1601e9d6b680fc0fa72b4725a2388d557d62b393f0c5001f959428be7775",
+      "model_source.py": "a73fc3692db47834121c716c41d9ca72dc5ddb536089a6af96a07e34770d934f",
+      "predictions.csv": "3e7f9c97e7d79666af01d0ab51510198fccdb98d601b1c325a223971419c667c",
+      "run.log": "32693ae628e5af9b8c7238bf610cc025aaa1281a30882a88d0db7b09a4e423e0",
+      "tuning_log.csv": "ff6e2adbd5f71f46254dfb5749dee5fb1e478be78d046cfd43507c6087f7653c"
+    },
+    "experiment_id": "ridge-p1-20261111-07",
+    "snapshot_id": "fv-snap-20261031-v1",
+    "snapshot_manifest_sha256": "3297209f59afbe96faa1e93d22f267fcc653d107cf42082f10018dee4eb81aa0"
+  }
+}

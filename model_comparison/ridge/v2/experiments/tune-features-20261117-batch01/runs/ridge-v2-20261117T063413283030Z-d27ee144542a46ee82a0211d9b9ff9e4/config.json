@@ -1,0 +1,48 @@
+{
+  "blocks": [],
+  "bundles": [],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [],
+    "reference": "control",
+    "removed": [
+      "SERIES_ID"
+    ],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42"
+  },
+  "config_id": "a1d6f689",
+  "config_sha256": "01a3b407b0a71fc1fd0a69a82cdb55a2a0a79f5405be5111c8d77fe015579661",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261117T063413283030Z-d27ee144542a46ee82a0211d9b9ff9e4",
+  "extra_features": [],
+  "feature_count": 15,
+  "feature_set": "v2:1825",
+  "git_sha": "3b03596557574a703db4085be894b8a3c2e70512",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "no_series_id",
+  "origin_list": "tune",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}

@@ -1,0 +1,7 @@
+{
+  "method": "read-only git diff dev -- selected paths",
+  "selected_paths_identical": true,
+  "dev_tests_separately_executed": false,
+  "p1_readme_sha256": "aae5bd8767606ada36e4567b429c8cf971dc40856995f4ebe99d1b9869cc7000",
+  "expected_sha256": "aae5bd8767606ada36e4567b429c8cf971dc40856995f4ebe99d1b9869cc7000"
+}

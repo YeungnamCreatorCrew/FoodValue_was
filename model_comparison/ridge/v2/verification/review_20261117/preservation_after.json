@@ -1,0 +1,31 @@
+{
+  "before_file_count": 948,
+  "branch": "feat/ridge-v2",
+  "changed_allowed": [
+    "model_comparison/ridge/v2/README.md",
+    "model_comparison/ridge/v2/audit.py",
+    "model_comparison/ridge/v2/comparison.py",
+    "model_comparison/ridge/v2/model.py",
+    "model_comparison/ridge/v2/run.py"
+  ],
+  "missing_existing_files": [],
+  "planned_runs": [
+    {
+      "id": "ridge-v2-20261116T123820139238Z-11474de62eba48d793a894711c9ba21e",
+      "sealed_files": 58,
+      "status": "PLANNED"
+    },
+    {
+      "id": "ridge-v2-20261116T124531908357Z-e9ce498a18eb43568a2948d7936ec2a1",
+      "sealed_files": 59,
+      "status": "PLANNED"
+    }
+  ],
+  "protected_tracked_diff": "",
+  "snapshot_manifests": {
+    "v1": "3297209f59afbe96faa1e93d22f267fcc653d107cf42082f10018dee4eb81aa0",
+    "v2": "b23ca4844be2ad3167c2001dd69de276b7f9300aa81c5fc51f78c4d37c7b6acc"
+  },
+  "unchanged_existing_files": 943,
+  "unexpected_changes": []
+}

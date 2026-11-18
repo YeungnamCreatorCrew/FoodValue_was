@@ -1,0 +1,50 @@
+[
+  {
+    "id": "ridge-v2-20261116T123820139238Z-11474de62eba48d793a894711c9ba21e",
+    "status": "PLANNED",
+    "resources": {
+      "cpu_seconds": 4.265625,
+      "peak_process_memory_mb": 184.44921875,
+      "wall_seconds": 6.775074500008486
+    },
+    "origin_count": 53,
+    "series": [
+      1,
+      2,
+      7,
+      8,
+      9,
+      10,
+      9001,
+      9002,
+      9011,
+      9012
+    ],
+    "v1_manifest_sha256": "3297209f59afbe96faa1e93d22f267fcc653d107cf42082f10018dee4eb81aa0",
+    "v2_manifest_sha256": "b23ca4844be2ad3167c2001dd69de276b7f9300aa81c5fc51f78c4d37c7b6acc"
+  },
+  {
+    "id": "ridge-v2-20261116T124531908357Z-e9ce498a18eb43568a2948d7936ec2a1",
+    "status": "PLANNED",
+    "resources": {
+      "cpu_seconds": 4.359375,
+      "peak_process_memory_mb": 184.15234375,
+      "wall_seconds": 7.175559499999508
+    },
+    "origin_count": 53,
+    "series": [
+      1,
+      2,
+      7,
+      8,
+      9,
+      10,
+      9001,
+      9002,
+      9011,
+      9012
+    ],
+    "v1_manifest_sha256": "3297209f59afbe96faa1e93d22f267fcc653d107cf42082f10018dee4eb81aa0",
+    "v2_manifest_sha256": "b23ca4844be2ad3167c2001dd69de276b7f9300aa81c5fc51f78c4d37c7b6acc"
+  }
+]

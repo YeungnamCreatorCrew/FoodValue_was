@@ -1,0 +1,55 @@
+{
+  "blocks": [
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "EVENT"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [
+      "EVENT"
+    ],
+    "reference": "control",
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42"
+  },
+  "config_id": "01615453",
+  "config_sha256": "56fb03b11e43ee16b9125d4f5b8687c233251f493c3d78a4e868c988df5ae23f",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261117T062819453310Z-8e480d549da449c89f3af1e4f016ae57",
+  "extra_features": [
+    "EVENT",
+    "SERIES_ID"
+  ],
+  "feature_count": 25,
+  "feature_set": "v2:1825",
+  "git_sha": "3b03596557574a703db4085be894b8a3c2e70512",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "event",
+  "origin_list": "tune",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}

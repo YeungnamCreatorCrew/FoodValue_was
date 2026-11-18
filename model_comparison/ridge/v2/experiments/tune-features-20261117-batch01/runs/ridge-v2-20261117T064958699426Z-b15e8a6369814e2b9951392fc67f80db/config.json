@@ -1,0 +1,67 @@
+{
+  "blocks": [
+    "ORIGIN_WEATHER",
+    "GARAK",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "PRODUCTION"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [],
+    "reference": "all",
+    "removed": [
+      "MACRO"
+    ],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42"
+  },
+  "config_id": "f1a36866",
+  "config_sha256": "40d06ca990c3154e845df7e41c26b41675df36c0b65382043f19290555fa6783",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261117T064958699426Z-b15e8a6369814e2b9951392fc67f80db",
+  "extra_features": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "PRODUCTION",
+    "ORIGIN_WEATHER",
+    "GARAK",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "feature_count": 186,
+  "feature_set": "v2:1825",
+  "git_sha": "3b03596557574a703db4085be894b8a3c2e70512",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "no_macro",
+  "origin_list": "tune",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}
