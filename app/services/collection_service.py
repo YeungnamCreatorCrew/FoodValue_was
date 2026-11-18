@@ -17,8 +17,8 @@ from sqlalchemy import exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors import data_go_kr, ecos, kamis, kosis
-from app.collectors.http import CollectorError, fetch_json
+from app.collectors import data_go_kr, ecos, kamis, kosis, krei
+from app.collectors.http import CollectorError, fetch_bytes, fetch_json
 from app.models.external import ExternalCollectionRun, ExternalObservation, ItemWeatherStation
 from app.models.fridge import Item
 from app.models.price import RETAIL, PriceSeries
@@ -168,6 +168,16 @@ def collect_ecos(engine, start, end, fetch, credentials):
     first = start or incremental_start(engine, ecos.SOURCE, ecos.DATASET, end)
     return run_dataset(engine, ecos.SOURCE, ecos.DATASET, first, end,
                        lambda: ecos.collect(fetch, key=credentials.ecos_key, start=first, end=end))
+
+
+def collect_krei_monthly(engine, *, start_year, end_year, cache_dir, groups=tuple(krei.GROUPS), fetch=fetch_bytes):
+    """KREI 관측월보 목록·PDF 텍스트·발행일. 인증키가 필요 없다. 월 1회 정도만 돌리면 된다.
+
+    같은 PDF·같은 목록 내용이면 다시 저장하지 않고, 목록(mod_date 등)이나 PDF가 바뀌면 새 버전으로 남는다.
+    """
+    return run_dataset(engine, krei.SOURCE, krei.DATASET, date(start_year, 1, 1), date(end_year, 12, 31),
+                       lambda: krei.collect(fetch, groups=groups, years=range(start_year, end_year + 1),
+                                            cache_dir=cache_dir))
 
 
 def verified_stations(engine, item_ids):

@@ -2,7 +2,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -76,6 +76,30 @@ class ItemProduction(Base):
     volume_unit: Mapped[str] = mapped_column(String(10))
     is_estimate: Mapped[bool] = mapped_column(Boolean)
     source: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class KreiReportValue(Base):
+    """KREI 관측월보 추출 수치(값 1개=1행). 스키마: V20261117_1722__krei_report_value.sql"""
+    __tablename__ = 'krei_report_value'
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    observation_id: Mapped[int] = mapped_column(ForeignKey('external_observation.id'))
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    item_name: Mapped[str] = mapped_column(String(30))
+    crop_type: Mapped[str | None] = mapped_column(String(30))
+    metric: Mapped[str] = mapped_column(String(30))
+    kind: Mapped[str] = mapped_column(String(10))
+    target_start: Mapped[date] = mapped_column(Date)
+    target_end: Mapped[date] = mapped_column(Date)
+    basis: Mapped[str] = mapped_column(String(20))
+    value: Mapped[Decimal | None] = mapped_column(Numeric(14, 3))
+    value_low: Mapped[Decimal | None] = mapped_column(Numeric(14, 3))
+    value_high: Mapped[Decimal | None] = mapped_column(Numeric(14, 3))
+    unit: Mapped[str | None] = mapped_column(String(20))
+    direction: Mapped[str | None] = mapped_column(String(10))
+    evidence: Mapped[str] = mapped_column(Text)
+    extractor: Mapped[str] = mapped_column(String(40))
+    extractor_version: Mapped[str] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
