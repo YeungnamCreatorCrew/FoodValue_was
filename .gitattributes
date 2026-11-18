@@ -1,0 +1,2 @@
+# Ridge v2 실행 기록은 실행기가 파일별 SHA-256으로 봉인한다. 체크아웃 때 줄바꿈이 바뀌면(core.autocrlf) 봉인 검사가 실패하므로 변환하지 않는다.
+model_comparison/ridge/v2/experiments/** -text

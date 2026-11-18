@@ -1,0 +1,53 @@
+{
+  "blocks": [
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "MARKET"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [],
+    "reference": "market",
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, seed=42; only alpha changed 10 -> 10000"
+  },
+  "config_id": "ff0757b1",
+  "config_sha256": "b7273cecf4d4209a23621dd385a1d16d3c25dced0eece83cff08c50630f49c9d",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261118T150814414112Z-eaefa901772c430390ce7a0eaa984a44",
+  "extra_features": [
+    "MARKET",
+    "SERIES_ID"
+  ],
+  "feature_count": 25,
+  "feature_set": "v2:1825",
+  "git_sha": "cdd27635105169d1b649cf253b2a81cdf756d9c1",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "market_alpha10000",
+  "origin_list": "tune",
+  "params": {
+    "alpha": 10000,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}
