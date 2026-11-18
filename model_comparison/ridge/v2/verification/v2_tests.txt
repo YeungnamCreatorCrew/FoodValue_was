@@ -1,0 +1,105 @@
+.........................FF.......................                       [100%]
+================================== FAILURES ===================================
+__ test_common_runner_dynamic_loading_and_byte_identical_predictions_metrics __
+
+tmp_path = WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/test_common_runner_dynamic_loa0')
+synthetic = (<tools.loader.Snapshot object at 0x0000025B7450C5C0>, WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/ridge-v2-synthetic0/snap'), WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/ridge-v2-synthetic0/extra'))
+
+    def test_common_runner_dynamic_loading_and_byte_identical_predictions_metrics(tmp_path,synthetic):
+        config,args,snap,days,attempt=setup_run(tmp_path,synthetic)
+        # Use two synthetic weekly origins in both runners.
+        configpath=tmp_path/'c.json'; A.exclusive_json(configpath,config)
+        original=snap.origins['tune']
+        snap.origins['tune']=days
+        # Common run loads its own snapshot, so select a month with matching weekly list through monkeypatch.
+        from unittest.mock import patch
+        with patch.object(run_pooled.loader,'Snapshot',return_value=snap):
+            common=run_pooled.run(SimpleNamespace(config=configpath,origins='tune',month='2025-01',series='1',
+                                                 snapshot=args.snapshot,extra=args.extra,out=tmp_path/'common'))
+        snap.origins['tune']=original
+        assert R.train(config,snap,days,[1],args,attempt) in ('COMPLETED','PARTIAL')
+        a,b=evaluate.read_predictions(common),evaluate.read_predictions(attempt.folder)
+        for rows in (a,b):
+            for r in rows: r.pop('experiment_id')
+        assert a==b
+        assert A.read(common/'metrics.json')==A.read(attempt.folder/'metrics.json')
+        full=A.read(attempt.folder/'metrics_full_precision.json')
+        assert full['policy']['overall']['rmse'] is not None
+        assert AUDIT_SINK.get() is None
+>       assert 'FIT' in (attempt.folder/'events.jsonl').read_text()
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+model_comparison\ridge\v2\tests\test_integration.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/test_common_runner_dynamic_loa0/experiments/ridge-v2-20261116T122527542061Z-7efc11ba36d742ab85ec09c8e01101ac/events.jsonl')
+encoding = 'locale', errors = None
+
+    def read_text(self, encoding=None, errors=None):
+        """
+        Open the file in text mode, read it, and close the file.
+        """
+        encoding = io.text_encoding(encoding)
+        with self.open(mode='r', encoding=encoding, errors=errors) as f:
+>           return f.read()
+                   ^^^^^^^^
+E           UnicodeDecodeError: 'cp949' codec can't decode byte 0xeb in position 5889: illegal multibyte sequence
+
+C:\Users\22212\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\pathlib.py:1028: UnicodeDecodeError
+---------------------------- Captured stdout call -----------------------------
+control-tune-2025-01-20261116-01 특징 21개, 창 1825일, 기준일 2개 × 계열 1개 (특징 준비 0s)
+  2025-01-06 재학습 표본 25784개 0.1s
+  2025-01-13 재학습 표본 25749개 0.1s
+RESOURCES {"total_seconds": 0.3, "fit_seconds": 0.2, "peak_memory_mb": 0.0}
+평가 점 10개, 성공률 100.00%, 계열 1개
+policy macro MAPE 0.4828% (naive 0.3349%) 개선 -44.14%  rMAE 1.441176  승 0/1  Δ 95% [-0.147824, -0.147824]
+      1 MAPE 0.483% (naive 0.335%) 개선 -44.135544
+검증 관문: 1X 2X 3X 4O 5X
+metrics SHA-256 d5937e7fdad0b2820829e3de60e67993e1b14da96b91965066447144e869b617
+특징 묶음별 중요도(마지막 재학습): v1 59%, is 41%
+__ test_failed_weekly_refit_never_reuses_previous_model_and_retains_partial ___
+
+tmp_path = WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/test_failed_weekly_refit_never0')
+synthetic = (<tools.loader.Snapshot object at 0x0000025B7450C5C0>, WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/ridge-v2-synthetic0/snap'), WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/ridge-v2-synthetic0/extra'))
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000025B763E33E0>
+
+    def test_failed_weekly_refit_never_reuses_previous_model_and_retains_partial(tmp_path,synthetic,monkeypatch):
+        config,args,snap,days,attempt=setup_run(tmp_path,synthetic)
+        old=run_pooled.Matrices.training
+        def broken(self,sid,i,window):
+            result=old(self,sid,i,window)
+            if i==snap.series[sid].index(days[1]) and result is not None:
+                x,y,h=result
+                y=y.copy(); y[0]=np.inf
+                return x,y,h
+            return result
+        monkeypatch.setattr(run_pooled.Matrices,'training',broken)
+        assert R.train(config,snap,days,[1],args,attempt)=='PARTIAL'
+        rows=evaluate.read_predictions(attempt.folder)
+        assert any(r['status']=='OK' for r in rows[:7])
+        assert all(r['status']=='FIT_FAILED' for r in rows[7:])
+        assert A.read(attempt.folder/'metrics.json')['status_counts']['FIT_FAILED']==7
+>       assert 'Target prices' in (attempt.folder/'run.log').read_text()
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+model_comparison\ridge\v2\tests\test_integration.py:72: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/Users/22212/ridge_v2_work/v2_test_tmp/test_failed_weekly_refit_never0/experiments/ridge-v2-20261116T122530067823Z-252fd996005940a7aee9604a2b958f32/run.log')
+encoding = 'locale', errors = None
+
+    def read_text(self, encoding=None, errors=None):
+        """
+        Open the file in text mode, read it, and close the file.
+        """
+        encoding = io.text_encoding(encoding)
+        with self.open(mode='r', encoding=encoding, errors=errors) as f:
+>           return f.read()
+                   ^^^^^^^^
+E           UnicodeDecodeError: 'cp949' codec can't decode byte 0xeb in position 5889: illegal multibyte sequence
+
+C:\Users\22212\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\pathlib.py:1028: UnicodeDecodeError
+=========================== short test summary info ===========================
+FAILED model_comparison/ridge/v2/tests/test_integration.py::test_common_runner_dynamic_loading_and_byte_identical_predictions_metrics
+FAILED model_comparison/ridge/v2/tests/test_integration.py::test_failed_weekly_refit_never_reuses_previous_model_and_retains_partial
+2 failed, 48 passed in 10.33s

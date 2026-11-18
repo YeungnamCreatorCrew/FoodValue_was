@@ -1,0 +1,54 @@
+{
+  "added_source_files": [
+    "model_comparison/ridge/v2/tests/test_review_regressions.py"
+  ],
+  "all_tracked_diff": "",
+  "before_file_count": 948,
+  "branch": "feat/ridge-v2",
+  "changed_allowed": [
+    "model_comparison/ridge/v2/README.md",
+    "model_comparison/ridge/v2/audit.py",
+    "model_comparison/ridge/v2/comparison.py",
+    "model_comparison/ridge/v2/model.py",
+    "model_comparison/ridge/v2/run.py"
+  ],
+  "checked_after_final_tests": true,
+  "execution_scope_exception": "Initial baseline inadvertently ran the existing real-data single-origin parity test: 2025-01-06, series 1 and 9001, p1/p2 each, four fit calls. No official experiment run/folder or old artifact writes. Excluded in final validation.",
+  "final_source_sha256": {
+    "model_comparison/ridge/v2/README.md": "1b8dc6785559782ef623d78adead0af569a8a2e3100ed1e2be4f412119f01082",
+    "model_comparison/ridge/v2/audit.py": "dddf6d4e907e211b3f38503d763f22b23a0f286fd7ee87cd35ee55d4d2f81dda",
+    "model_comparison/ridge/v2/comparison.py": "24ce3b6c531aa590651d2f1853236843ac35c0c8ae05c5ea42a5d4a5fbe17cdf",
+    "model_comparison/ridge/v2/model.py": "b691006dd44a59b6ff84d40a9d70856edc182f1f3a160587352db0288de77199",
+    "model_comparison/ridge/v2/run.py": "6d2b59b614ebd04d87d8a7d9d58adae5f5b3effca11e91a9381e463a3a230985",
+    "model_comparison/ridge/v2/tests/test_review_regressions.py": "337c4ef31fd3e2115f3927d9999bae8d2be6c199b57c55b5bb39dde0b1a73a67"
+  },
+  "missing_existing_files": [],
+  "no_new_official_experiment_folders": true,
+  "planned_runs": [
+    {
+      "id": "ridge-v2-20261116T123820139238Z-11474de62eba48d793a894711c9ba21e",
+      "sealed_files": 58,
+      "status": "PLANNED"
+    },
+    {
+      "id": "ridge-v2-20261116T124531908357Z-e9ce498a18eb43568a2948d7936ec2a1",
+      "sealed_files": 59,
+      "status": "PLANNED"
+    }
+  ],
+  "protected_tracked_diff": "",
+  "snapshot_manifests": {
+    "v1": "3297209f59afbe96faa1e93d22f267fcc653d107cf42082f10018dee4eb81aa0",
+    "v2": "b23ca4844be2ad3167c2001dd69de276b7f9300aa81c5fc51f78c4d37c7b6acc"
+  },
+  "tests": {
+    "baseline": "141 passed, 23 pre-existing cp949 decoding warnings",
+    "deselected": "test_real_p1_snapshot_single_origin_prediction_parity",
+    "final": "167 passed, 1 deselected, no warnings",
+    "new_regression_cases": 27,
+    "ridge_v2": "80 passed, no warnings"
+  },
+  "unchanged_existing_files": 943,
+  "unexpected_changes": [],
+  "verification_script_note": "Final file-set check uses git ls-files -z to handle Korean paths. An earlier ad hoc check misread a Git-quoted filename; no file mutation was involved."
+}

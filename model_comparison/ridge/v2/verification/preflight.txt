@@ -1,0 +1,9 @@
+.venv\Scripts\python.exe : warning: could not open directory '.pytest_cache/': Permission denied
+위치 줄:2 문자:415
++ ... t -Tail 70; .venv\Scripts\python.exe -B -m model_comparison.ridge.v2. ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: could ...rmission denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+warning: could not open directory '.pytest_cache/': Permission denied
+{"run_id": "ridge-v2-20261116T123820139238Z-11474de62eba48d793a894711c9ba21e", "status": "PLANNED", "folder": "C:\\FoodValue_was\\model_comparison\\ridge\\v2\\experiments\\ridge-v2-20261116T123820139238Z-11474de62eba48d793a894711c9ba21e"}
