@@ -727,10 +727,10 @@
       "target_start": "2026-01-01",
       "target_end": "2026-12-31",
       "basis": "LEVEL",
-      "value": 5966,
+      "value": 5906,
       "unit": "ha",
       "direction": null,
-      "evidence": "p.6 겨울무 재배(의향)면적: 5,966ha (전년 및 평년 대비 각각 0.7% 감소)"
+      "evidence": "p.6 겨울무 재배(의향)면적: 5,906ha (전년 및 평년 대비 각각 0.7% 감소)"
     },
     {
       "item_name": "무",
@@ -743,7 +743,7 @@
       "value": -0.7,
       "unit": "%",
       "direction": "DOWN",
-      "evidence": "p.6 겨울무 재배(의향)면적: 5,966ha (전년 및 평년 대비 각각 0.7% 감소)"
+      "evidence": "p.6 겨울무 재배(의향)면적: 5,906ha (전년 및 평년 대비 각각 0.7% 감소)"
     },
     {
       "item_name": "무",
@@ -756,7 +756,7 @@
       "value": -0.7,
       "unit": "%",
       "direction": "DOWN",
-      "evidence": "p.6 겨울무 재배(의향)면적: 5,966ha (전년 및 평년 대비 각각 0.7% 감소)"
+      "evidence": "p.6 겨울무 재배(의향)면적: 5,906ha (전년 및 평년 대비 각각 0.7% 감소)"
     }
   ],
   "unmapped": [

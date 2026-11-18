@@ -168,10 +168,10 @@
       "target_start": "2025-01-01",
       "target_end": "2025-12-31",
       "basis": "LEVEL",
-      "value": 13015,
+      "value": 13051,
       "unit": "ha",
       "direction": null,
-      "evidence": "p.4 가을배추 재배(의향)면적: 13,015ha (전년과 비슷)"
+      "evidence": "p.4 가을배추 재배(의향)면적: 13,051ha (전년과 비슷)"
     },
     {
       "item_name": "배추",
@@ -184,7 +184,7 @@
       "value": null,
       "unit": null,
       "direction": "FLAT",
-      "evidence": "p.4 가을배추 재배(의향)면적: 13,015ha (전년과 비슷)"
+      "evidence": "p.4 가을배추 재배(의향)면적: 13,051ha (전년과 비슷)"
     },
     {
       "item_name": "배추",
