@@ -39,16 +39,16 @@ def test_imprint_prefers_issue_line():
     assert printed == date(2020, 3, 31) and issue == '941' and raw.startswith('2020년 3월 31일')
 
 
-def test_availability_takes_later_plausible_value_and_rejects_reuploads():
+def test_availability_takes_later_value_including_reuploads():
     first = date(2020, 4, 1)
     moment, basis, accepted = krei.availability(first, date(2020, 3, 31), krei.parse_reg_date('20200331173806'))
     assert basis == 'REG_DATE' and accepted == ['IMPRINT', 'REG_DATE'] and moment.hour == 17
-    # 일괄 재등록일(2년 뒤)은 버리고 판권만 쓴다.
+    # 늦은 재등록일도 보존하며 과거 인쇄일로 소급하지 않는다.
     moment, basis, _ = krei.availability(date(2021, 4, 1), date(2021, 3, 31), krei.parse_reg_date('20230510120000'))
-    assert basis == 'IMPRINT' and moment == datetime(2021, 3, 31, tzinfo=krei.SEOUL)
+    assert basis == 'REG_DATE' and moment == datetime(2023, 5, 10, 12, tzinfo=krei.SEOUL)
     # 이미지 PDF(판권 없음)는 그럴듯한 reg_date만 쓴다. 둘 다 없으면 UNKNOWN.
     assert krei.availability(date(2025, 4, 1), None, krei.parse_reg_date('20250402192725'))[1] == 'REG_DATE'
-    assert krei.availability(date(2008, 4, 1), None, krei.parse_reg_date('20110315000000')) == (None, None, [])
+    assert krei.availability(date(2008, 4, 1), None, krei.parse_reg_date('20110315000000'))[0] == datetime(2011, 3, 15, tzinfo=krei.SEOUL)
 
 
 def test_collect_downloads_parses_and_caches(tmp_path, monkeypatch):
