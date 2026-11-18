@@ -304,7 +304,7 @@ def test_krei_features_use_only_reports_published_before_d(tmp_path):
     day = at(date(2025, 3, 7))
     assert day['krei_price_outlook_chg'] == pytest.approx(.2)
     assert day['krei_implied_vs_current'] == pytest.approx(.2)  # 지난달 평균 100 × 1.2 / 현재 100 − 1
-    assert day['krei_price_dir_py'] == 1 and math.isnan(day['krei_price_dir_nm'])
+    assert day['krei_price_dir_py'] == 1 and 'krei_price_dir_nm' not in day  # 평년 대비는 쓰지 않음
     assert day['krei_shipment_py'] == pytest.approx(-15.1)  # 작형 행(-99)이 아니라 전체 행
     assert day['krei_days_since'] == 1
     assert at(date(2025, 4, 3))['krei_price_outlook_chg'] == pytest.approx(-.1)
@@ -320,6 +320,21 @@ def test_krei_features_use_only_reports_published_before_d(tmp_path):
     i = (date(2025, 3, 20) - start).days
     assert np.allclose(f[i], g[i], equal_nan=True)
     assert np.isnan(k.features('대파', start, filled)).all()
+
+
+def test_krei_shipment_direction_only_flat_is_zero(tmp_path):
+    from model_comparison.v2 import krei
+
+    facts = [('배추', '', 'WHOLESALE_PRICE', 'OUTLOOK', '2025-03-01', '2025-03-31', 'LEVEL', '12000', ''),
+             ('배추', '', 'WHOLESALE_PRICE', 'ACTUAL', '2025-02-01', '2025-02-28', 'LEVEL', '10000', ''),
+             ('배추', '', 'SHIPMENT', 'OUTLOOK', '2025-03-01', '2025-03-31', 'PREV_YEAR', '', 'FLAT'),
+             ('무', '', 'WHOLESALE_PRICE', 'OUTLOOK', '2025-03-01', '2025-03-31', 'LEVEL', '12000', ''),
+             ('무', '', 'SHIPMENT', 'OUTLOOK', '2025-03-01', '2025-03-31', 'PREV_YEAR', '', 'DOWN')]
+    k = krei.KreiSnapshot(write_krei(tmp_path / 'k', [('A:1', '2025-03-06T10:00:00+09:00', facts)]))
+    start = date(2025, 3, 1)
+    i, j = (date(2025, 3, 10) - start).days, krei.NAMES.index('krei_shipment_py')
+    assert k.features('배추', start, np.full(20, 100.0))[i, j] == 0
+    assert np.isnan(k.features('무', start, np.full(20, 100.0))[i, j])
 
 
 def test_krei_rejects_missing_columns_and_row_count_mismatch(tmp_path):
@@ -348,4 +363,4 @@ def test_pooled_runner_with_krei_block(tmp_path, snap_dir):
                                             snapshot=snap_dir, extra=tmp_path / 'missing', krei=folder,
                                             out=tmp_path / 'out'))
     record = json.loads((out / 'config.json').read_text(encoding='utf-8'))
-    assert record['v2_krei']['snapshot_id'] == 'test' and record['feature_count'] == 15 + 6 + 6
+    assert record['v2_krei']['snapshot_id'] == 'test' and record['feature_count'] == 15 + 6 + 5
