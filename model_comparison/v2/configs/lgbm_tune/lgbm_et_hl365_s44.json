@@ -1,0 +1,19 @@
+{
+  "name": "lgbm_et_hl365_s44",
+  "model": "LightGBM",
+  "class": "model_comparison.v2.models:PooledLGBM",
+  "params": {
+    "extra_trees": true,
+    "halflife_days": 365
+  },
+  "window_days": 1825,
+  "seed": 44,
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "blocks": [
+    "SERIES_ID"
+  ]
+}

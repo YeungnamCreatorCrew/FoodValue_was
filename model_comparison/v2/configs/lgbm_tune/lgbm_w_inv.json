@@ -1,0 +1,18 @@
+{
+  "name": "lgbm_w_inv",
+  "model": "LightGBM",
+  "class": "model_comparison.v2.models:PooledLGBM",
+  "params": {
+    "series_weight": "inv_scale"
+  },
+  "window_days": 1825,
+  "seed": 42,
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "blocks": [
+    "SERIES_ID"
+  ]
+}

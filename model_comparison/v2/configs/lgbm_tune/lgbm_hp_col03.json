@@ -1,0 +1,18 @@
+{
+  "name": "lgbm_hp_col03",
+  "model": "LightGBM",
+  "class": "model_comparison.v2.models:PooledLGBM",
+  "params": {
+    "colsample_bytree": 0.3
+  },
+  "window_days": 1825,
+  "seed": 42,
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "blocks": [
+    "SERIES_ID"
+  ]
+}

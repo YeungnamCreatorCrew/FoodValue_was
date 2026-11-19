@@ -1,0 +1,13 @@
+config_id,seed,macro_mape,ensemble_mape_with_xgb
+v1feat_lgbm,42,4.3403,4.2877
+v1feat_lgbm,43,4.3479,4.2945
+v1feat_lgbm,44,4.358,4.3
+lgbm_extratrees,42,4.3178,4.2763
+lgbm_extratrees,43,4.3307,4.2859
+lgbm_extratrees,44,4.3289,4.2861
+lgbm_hl365,42,4.34,4.2766
+lgbm_hl365,43,4.344,4.2857
+lgbm_hl365,44,4.3533,4.2877
+lgbm_et_hl365,42,4.29,4.2517
+lgbm_et_hl365,43,4.3156,4.2658
+lgbm_et_hl365,44,4.3327,4.2755

@@ -1,0 +1,16 @@
+trial,config_id,params,macro_mape,ensemble_mape_with_xgb,seconds,status
+1,v1feat_lgbm,{},4.3403,4.2877,104.9,OK
+2,lgbm_w_inv,"{""series_weight"": ""inv_scale""}",4.3246,4.2958,108.5,OK
+3,lgbm_w_bal,"{""series_weight"": ""balanced""}",4.3501,4.2962,107.3,OK
+4,lgbm_hp_slow,"{""n_estimators"": 600, ""learning_rate"": 0.025}",4.361,4.3019,205.1,OK
+5,lgbm_hp_leaves31,"{""num_leaves"": 31, ""min_child_samples"": 100}",4.4163,4.3037,208.3,OK
+6,lgbm_hp_leaves7,"{""num_leaves"": 7}",4.3702,4.318,64.9,OK
+7,lgbm_hp_col03,"{""colsample_bytree"": 0.3}",4.3745,4.3118,118.0,OK
+8,lgbm_hp_lam50,"{""reg_lambda"": 50.0}",4.3314,4.2914,129.8,OK
+9,lgbm_hp_mcs200,"{""min_child_samples"": 200}",4.3868,4.3027,125.5,OK
+10,lgbm_hl730,"{""halflife_days"": 730}",4.3389,4.2808,107.7,OK
+11,lgbm_hl365,"{""halflife_days"": 365}",4.34,4.2766,107.4,OK
+12,lgbm_pricedyn,"{""blocks"": [""SERIES_ID"", ""PRICE_DYN""]}",4.405,4.3067,118.6,OK
+13,lgbm_extratrees,"{""extra_trees"": true}",4.3178,4.2763,113.5,OK
+14,lgbm_dart,"{""boosting_type"": ""dart"", ""n_estimators"": 300, ""drop_rate"": 0.1}",4.3742,4.3298,290.5,OK
+15,lgbm_et_hl365,"{""extra_trees"": true, ""halflife_days"": 365}",4.29,4.2517,115.3,OK
