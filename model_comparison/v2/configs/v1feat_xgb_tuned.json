@@ -1,0 +1,23 @@
+{
+  "name": "v1feat_xgb_tuned",
+  "model": "XGBoost",
+  "class": "model_comparison.v2.models:PooledXGB",
+  "params": {
+    "objective": "reg:pseudohubererror",
+    "huber_slope": 0.03,
+    "series_weight": "inv_scale",
+    "n_estimators": 600,
+    "max_depth": 6,
+    "min_child_weight": 5
+  },
+  "window_days": 1825,
+  "seed": 42,
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "blocks": [
+    "SERIES_ID"
+  ]
+}
