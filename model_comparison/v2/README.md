@@ -128,7 +128,7 @@ v2 튜닝은 기준서(`MODEL_TRAINING_STANDARD.md` §6)의 "집중 튜닝(3단�
 | 모델 | 사용 | 상태 |
 | --- | --- | --- |
 | LightGBM | 15 / 40 | 검증 확인 후 종료, 기본값(`v1feat_lgbm`) 유지 (§7) |
-| XGBoost | 9 / 40 (제안) | v2를 만들 때 튜닝 기준일에서 손실·가중 방식을 고른 9회(§3)와 검증 1회 확인을 포함하는 안. 포함 여부는 팀 결정 |
+| XGBoost | 0 / 40 | v2를 만들 때 손실·가중 방식을 고른 9회(§3)는 v2 구조를 정한 실험이라 세지 않는다(팀 결정 2026-11-19). 튜닝은 `v1feat_xgb_robust`에서 시작 |
 | Ridge | Ridge v2 실행 기록 기준으로 담당이 집계 | `model_comparison/ridge/v2/EXPERIMENT_LOG.md` (§6) |
 | AutoARIMA | v2 튜닝 시작 전 | v1 p1·p2 시도는 v1 예산으로 따로 셈 |
 
