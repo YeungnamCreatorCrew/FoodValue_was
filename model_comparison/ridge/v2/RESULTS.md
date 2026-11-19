@@ -2559,3 +2559,1955 @@ Series counts: {'improved': 5, 'worsened': 5, 'same': 0, 'unavailable': 0}/10
 
 Point set differences and paired policy/common-success metrics: see comparison.json.
 
+
+## ridge-v2-20261119T071321190532Z-271fab3c870f446797f421d84901ce7d
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T071321190532Z-271fab3c870f446797f421d84901ce7d | no_ow_w730 | 4.6946164 | 610.47958 | 966.24522 | 1.0623702 | -1.9181919 (direct) | -1.8998337 (direct) | 3 |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6070894 | 4.6946164 | 0.087527036 | %p | -1.8998337 | worsened |
+| mae | 532.31701 | 610.47958 | 78.162571 | price | -14.683463 | worsened |
+| rmse | 943.1701 | 966.24522 | 23.075122 | price | -2.4465494 | worsened |
+| rmae | 1 | 1.0623702 | 0.062370224 | ratio | -6.2370224 | worsened |
+| success_rate_pct | 100 | 99.239392 | -0.76060849 | %p | -0.76060849 | worsened |
+| valid_predictions | 2498 | 2479 | -19 | count | -0.76060849 | count_change |
+| failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.7684965 | 4.457701 | -0.31079558 | %p | 6.5176849 | improved |
+| 1 | 대파/RETAIL | mae | 138.26877 | 129.94862 | -8.3201581 | price | 6.0173804 | improved |
+| 1 | 대파/RETAIL | rmse | 210.78605 | 195.98021 | -14.805844 | price | 7.0241101 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.9398262 | -0.060173804 | ratio | 6.0173804 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.5020618 | 5.7839442 | 0.28188243 | %p | -5.1232145 | worsened |
+| 2 | 대파/WHOLESALE | mae | 115.75099 | 119.83794 | 4.0869565 | price | -3.5308178 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 171.13609 | 180.07079 | 8.9347021 | price | -5.220817 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.0353082 | 0.035308178 | ratio | -3.5308178 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.8934034 | 3.1892301 | 0.29582677 | %p | -10.22418 | worsened |
+| 7 | 양파/WHOLESALE | mae | 518.09486 | 575 | 56.905138 | price | -10.983537 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 828.46348 | 839.96234 | 11.498858 | price | -1.3879741 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 1 | 1.1098354 | 0.10983537 | ratio | -10.983537 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5066419 | 4.3331261 | -0.17351582 | %p | 3.8502243 | improved |
+| 8 | 양파/RETAIL | mae | 100.63745 | 95.768924 | -4.8685259 | price | 4.837688 | improved |
+| 8 | 양파/RETAIL | rmse | 158.86309 | 150.26818 | -8.5949123 | price | 5.4102638 | improved |
+| 8 | 양파/RETAIL | rmae | 1 | 0.95162312 | -0.04837688 | ratio | 4.837688 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79734567 | 1.2777011 | 0.48035547 | %p | -60.244319 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1331.6964 | 2024.7411 | 693.04464 | price | -52.042239 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2873.1904 | 3082.7088 | 209.51839 | price | -7.2921861 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.5204224 | 0.52042239 | ratio | -52.042239 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 91.517857 | -8.4821429 | %p | -8.4821429 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 224 | 205 | -19 | count | -8.4821429 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.449684 | 3.6123373 | 0.16265327 | %p | -4.7150193 | worsened |
+| 10 | 깐마늘/RETAIL | mae | 368.16996 | 384.68775 | 16.517787 | price | -4.4864569 | worsened |
+| 10 | 깐마늘/RETAIL | rmse | 552.35443 | 578.66159 | 26.307162 | price | -4.7627322 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 1.0448646 | 0.044864569 | ratio | -4.4864569 | worsened |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.3318013 | 5.0895557 | -0.24224557 | %p | 4.5434096 | improved |
+| 9001 | 배추/RETAIL | mae | 249.55159 | 245.29762 | -4.2539683 | price | 1.7046448 | improved |
+| 9001 | 배추/RETAIL | rmse | 410.05649 | 401.33782 | -8.7186683 | price | 2.1262115 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.98295355 | -0.017046448 | ratio | 1.7046448 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.5865937 | 8.5044096 | -0.082184114 | %p | 0.95712126 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1049.2372 | 1037.9447 | -11.29249 | price | 1.0762572 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1830.8586 | 1818.4087 | -12.449866 | price | 0.6800015 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.98923743 | -0.010762572 | ratio | 1.0762572 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6275579 | 3.7138837 | 0.086325781 | %p | -2.3797216 | worsened |
+| 9011 | 무/RETAIL | mae | 96.027668 | 98.12253 | 2.0948617 | price | -2.1815188 | worsened |
+| 9011 | 무/RETAIL | rmse | 154.88288 | 146.94089 | -7.9419954 | price | 5.1277425 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 1.0218152 | 0.021815188 | ratio | -2.1815188 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 6.6073073 | 6.984275 | 0.37696773 | %p | -5.7053155 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1355.7352 | 1393.4466 | 37.711462 | price | -2.7816245 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2241.1094 | 2268.1128 | 27.003394 | price | -1.2049119 | worsened |
+| 9012 | 무/WHOLESALE | rmae | 1 | 1.0278162 | 0.027816245 | ratio | -2.7816245 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### CONTROL: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6062595 | 4.6946164 | 0.088356895 | %p | -1.9181919 | worsened |
+| mae | 565.55167 | 610.47958 | 44.927904 | price | -7.9440848 | worsened |
+| rmse | 926.40586 | 966.24522 | 39.839363 | price | -4.3004222 | worsened |
+| rmae | 1.0199316 | 1.0623702 | 0.042438655 | ratio | -4.1609316 | worsened |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.729811 | 4.457701 | -0.27211005 | %p | 5.7530851 | improved |
+| 1 | 대파/RETAIL | mae | 137.83004 | 129.94862 | -7.8814229 | price | 5.7182186 | improved |
+| 1 | 대파/RETAIL | rmse | 209.17894 | 195.98021 | -13.198737 | price | 6.3097827 | improved |
+| 1 | 대파/RETAIL | rmae | 0.99682694 | 0.9398262 | -0.057000743 | ratio | 5.7182186 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7321563 | 5.7839442 | 0.051787871 | %p | -0.90346229 | worsened |
+| 2 | 대파/WHOLESALE | mae | 119.66403 | 119.83794 | 0.17391304 | price | -0.14533443 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 178.73898 | 180.07079 | 1.3318077 | price | -0.74511315 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1.0338057 | 1.0353082 | 0.0015024757 | ratio | -0.14533443 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.6804386 | 3.1892301 | 0.50879157 | %p | -18.981654 | worsened |
+| 7 | 양파/WHOLESALE | mae | 490.60474 | 575 | 84.395257 | price | -17.202291 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 779.08186 | 839.96234 | 60.880481 | price | -7.8143882 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.94693999 | 1.1098354 | 0.16289538 | ratio | -17.202291 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5910002 | 4.3331261 | -0.25787416 | %p | 5.6169493 | improved |
+| 8 | 양파/RETAIL | mae | 102.95618 | 95.768924 | -7.187251 | price | 6.9808838 | improved |
+| 8 | 양파/RETAIL | rmse | 165.03507 | 150.26818 | -14.766888 | price | 8.9477275 | improved |
+| 8 | 양파/RETAIL | rmae | 1.0230404 | 0.95162312 | -0.07141726 | ratio | 6.9808838 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0666711 | 1.2777011 | 0.21103 | %p | -19.783979 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1711.4688 | 2024.7411 | 313.27232 | price | -18.304297 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2838.9402 | 3082.7088 | 243.76863 | price | -8.5866066 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2851793 | 1.5204224 | 0.23524304 | ratio | -18.304297 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.5386936 | 3.6123373 | 0.073643752 | %p | -2.0811 | worsened |
+| 10 | 깐마늘/RETAIL | mae | 378.0751 | 384.68775 | 6.6126482 | price | -1.7490303 | worsened |
+| 10 | 깐마늘/RETAIL | rmse | 565.37403 | 578.66159 | 13.287561 | price | -2.3502248 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1.0269037 | 1.0448646 | 0.017960858 | ratio | -1.7490303 | worsened |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7784957 | 5.0895557 | 0.31105994 | %p | -6.5095787 | worsened |
+| 9001 | 배추/RETAIL | mae | 225.22222 | 245.29762 | 20.075397 | price | -8.913595 | worsened |
+| 9001 | 배추/RETAIL | rmse | 373.33966 | 401.33782 | 27.99816 | price | -7.49938 | worsened |
+| 9001 | 배추/RETAIL | rmae | 0.90250767 | 0.98295355 | 0.080445879 | ratio | -8.913595 | worsened |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.078732 | 8.5044096 | 0.42567765 | %p | -5.2691147 | worsened |
+| 9002 | 배추/WHOLESALE | mae | 964.14229 | 1037.9447 | 73.802372 | price | -7.6547178 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1703.9703 | 1818.4087 | 114.43848 | price | -6.7159907 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91889835 | 0.98923743 | 0.070339076 | ratio | -7.6547178 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6490033 | 3.7138837 | 0.064880443 | %p | -1.7780319 | worsened |
+| 9011 | 무/RETAIL | mae | 97.142292 | 98.12253 | 0.98023715 | price | -1.0090735 | worsened |
+| 9011 | 무/RETAIL | rmse | 155.16118 | 146.94089 | -8.2202932 | price | 5.2979058 | improved |
+| 9011 | 무/RETAIL | rmae | 1.0116073 | 1.0218152 | 0.010207862 | ratio | -1.0090735 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.2175931 | 6.984275 | -0.23331807 | %p | 3.2326299 | improved |
+| 9012 | 무/WHOLESALE | mae | 1428.4111 | 1393.4466 | -34.964427 | price | 2.4477847 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2295.2384 | 2268.1128 | -27.125572 | price | 1.1818194 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0536063 | 1.0278162 | -0.025790012 | ratio | 2.4477847 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 3, 'worsened': 7, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### MARKET: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.5011413 | 4.6946164 | 0.19347507 | %p | -4.2983558 | worsened |
+| mae | 557.9753 | 610.47958 | 52.504273 | price | -9.4097843 | worsened |
+| rmse | 915.84853 | 966.24522 | 50.396686 | price | -5.5027315 | worsened |
+| rmae | 0.99470404 | 1.0623702 | 0.067666179 | ratio | -6.8026444 | worsened |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.4264277 | 4.457701 | 0.031273215 | %p | -0.70651136 | worsened |
+| 1 | 대파/RETAIL | mae | 128.74704 | 129.94862 | 1.201581 | price | -0.93328831 | worsened |
+| 1 | 대파/RETAIL | rmse | 191.58023 | 195.98021 | 4.3999768 | price | -2.2966758 | worsened |
+| 1 | 대파/RETAIL | rmae | 0.93113601 | 0.9398262 | 0.0086901835 | ratio | -0.93328831 | worsened |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7329145 | 5.7839442 | 0.051029681 | %p | -0.89011759 | worsened |
+| 2 | 대파/WHOLESALE | mae | 119.51779 | 119.83794 | 0.3201581 | price | -0.26787486 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 180.87209 | 180.07079 | -0.80129395 | price | 0.44301692 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0325423 | 1.0353082 | 0.0027659211 | ratio | -0.26787486 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.7343152 | 3.1892301 | 0.45491495 | %p | -16.637254 | worsened |
+| 7 | 양파/WHOLESALE | mae | 493.7747 | 575 | 81.225296 | price | -16.44987 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 788.25789 | 839.96234 | 51.704449 | price | -6.5593316 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.95305848 | 1.1098354 | 0.15677688 | ratio | -16.44987 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.4251885 | 4.3331261 | -0.092062427 | %p | 2.0804182 | improved |
+| 8 | 양파/RETAIL | mae | 98.860558 | 95.768924 | -3.0916335 | price | 3.1272669 | improved |
+| 8 | 양파/RETAIL | rmse | 158.71298 | 150.26818 | -8.4447961 | price | 5.3207975 | improved |
+| 8 | 양파/RETAIL | rmae | 0.98234363 | 0.95162312 | -0.030720507 | ratio | 3.1272669 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0408994 | 1.2777011 | 0.23680176 | %p | -22.749726 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1681.6964 | 2024.7411 | 343.04464 | price | -20.398726 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2794.4083 | 3082.7088 | 288.30052 | price | -10.317051 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2628227 | 1.5204224 | 0.25759973 | ratio | -20.398726 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.4576913 | 3.6123373 | 0.15464596 | %p | -4.4725207 | worsened |
+| 10 | 깐마늘/RETAIL | mae | 369.85375 | 384.68775 | 14.833992 | price | -4.0107723 | worsened |
+| 10 | 깐마늘/RETAIL | rmse | 551.58736 | 578.66159 | 27.07423 | price | -4.908421 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1.0045734 | 1.0448646 | 0.040291153 | ratio | -4.0107723 | worsened |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7542722 | 5.0895557 | 0.33528348 | %p | -7.0522568 | worsened |
+| 9001 | 배추/RETAIL | mae | 222.59921 | 245.29762 | 22.698413 | price | -10.196987 | worsened |
+| 9001 | 배추/RETAIL | rmse | 357.26432 | 401.33782 | 44.073493 | price | -12.336382 | worsened |
+| 9001 | 배추/RETAIL | rmae | 0.89199676 | 0.98295355 | 0.090956796 | ratio | -10.196987 | worsened |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.9397931 | 8.5044096 | 0.56461656 | %p | -7.1112251 | worsened |
+| 9002 | 배추/WHOLESALE | mae | 959.84585 | 1037.9447 | 78.098814 | price | -8.1365997 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1709.8839 | 1818.4087 | 108.52484 | price | -6.3469129 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91480353 | 0.98923743 | 0.074433901 | ratio | -8.1365997 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.3570825 | 3.7138837 | 0.35680125 | %p | -10.628313 | worsened |
+| 9011 | 무/RETAIL | mae | 89.268775 | 98.12253 | 8.8537549 | price | -9.9180872 | worsened |
+| 9011 | 무/RETAIL | rmse | 141.13088 | 146.94089 | 5.8100092 | price | -4.1167526 | worsened |
+| 9011 | 무/RETAIL | rmae | 0.92961515 | 1.0218152 | 0.092200041 | ratio | -9.9180872 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.1428288 | 6.984275 | -0.15855372 | %p | 2.2197608 | improved |
+| 9012 | 무/WHOLESALE | mae | 1415.5889 | 1393.4466 | -22.142292 | price | 1.5641753 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2284.7874 | 2268.1128 | -16.674578 | price | 0.72980876 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0441486 | 1.0278162 | -0.016332314 | ratio | 1.5641753 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 2, 'worsened': 8, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+## ridge-v2-20261119T071400180795Z-10352b83c13e480998a13c4e1c6008c8
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T071400180795Z-10352b83c13e480998a13c4e1c6008c8 | no_ow_w1095 | 4.5840538 | 593.09087 | 935.81308 | 1.0373233 | 0.48207553 (direct) | 0.50000136 (direct) | 5 |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6070894 | 4.5840538 | -0.023035509 | %p | 0.50000136 | improved |
+| mae | 532.31701 | 593.09087 | 60.773867 | price | -11.416856 | worsened |
+| rmse | 943.1701 | 935.81308 | -7.3570156 | price | 0.78003062 | improved |
+| rmae | 1 | 1.0373233 | 0.03732334 | ratio | -3.732334 | worsened |
+| success_rate_pct | 100 | 99.239392 | -0.76060849 | %p | -0.76060849 | worsened |
+| valid_predictions | 2498 | 2479 | -19 | count | -0.76060849 | count_change |
+| failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.7684965 | 4.3569852 | -0.41151134 | %p | 8.6297922 | improved |
+| 1 | 대파/RETAIL | mae | 138.26877 | 126.72727 | -11.541502 | price | 8.34715 | improved |
+| 1 | 대파/RETAIL | rmse | 210.78605 | 194.35071 | -16.435342 | price | 7.7971679 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.9165285 | -0.0834715 | ratio | 8.34715 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.5020618 | 5.7299948 | 0.22793305 | %p | -4.1426843 | worsened |
+| 2 | 대파/WHOLESALE | mae | 115.75099 | 118.83004 | 3.0790514 | price | -2.6600649 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 171.13609 | 178.6853 | 7.5492055 | price | -4.4112294 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.0266006 | 0.026600649 | ratio | -2.6600649 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.8934034 | 3.0823124 | 0.18890906 | %p | -6.528957 | worsened |
+| 7 | 양파/WHOLESALE | mae | 518.09486 | 552.1502 | 34.055336 | price | -6.5731854 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 828.46348 | 841.6217 | 13.158222 | price | -1.5882682 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 1 | 1.0657319 | 0.065731854 | ratio | -6.5731854 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5066419 | 4.3346761 | -0.17196586 | %p | 3.8158314 | improved |
+| 8 | 양파/RETAIL | mae | 100.63745 | 95.430279 | -5.2071713 | price | 5.1741884 | improved |
+| 8 | 양파/RETAIL | rmse | 158.86309 | 153.70154 | -5.1615524 | price | 3.249057 | improved |
+| 8 | 양파/RETAIL | rmae | 1 | 0.94825812 | -0.051741884 | ratio | 5.1741884 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79734567 | 1.2666733 | 0.4693276 | %p | -58.861247 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1331.6964 | 1999.9464 | 668.25 | price | -50.180355 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2873.1904 | 2876.0563 | 2.8658754 | price | -0.099745406 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.5018036 | 0.50180355 | ratio | -50.180355 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 91.517857 | -8.4821429 | %p | -8.4821429 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 224 | 205 | -19 | count | -8.4821429 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.449684 | 3.4599644 | 0.01028038 | %p | -0.29800933 | worsened |
+| 10 | 깐마늘/RETAIL | mae | 368.16996 | 366.49407 | -1.6758893 | price | 0.45519448 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 552.35443 | 553.54559 | 1.1911604 | price | -0.21565147 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 0.99544806 | -0.0045519448 | ratio | 0.45519448 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.3318013 | 4.9285168 | -0.40328441 | %p | 7.5637555 | improved |
+| 9001 | 배추/RETAIL | mae | 249.55159 | 234.59921 | -14.952381 | price | 5.9916994 | improved |
+| 9001 | 배추/RETAIL | rmse | 410.05649 | 401.0594 | -8.9970899 | price | 2.1941099 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.94008301 | -0.059916994 | ratio | 5.9916994 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.5865937 | 8.2574769 | -0.32911679 | %p | 3.8329144 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1049.2372 | 996.28063 | -52.956522 | price | 5.0471451 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1830.8586 | 1790.7143 | -40.144302 | price | 2.192649 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.94952855 | -0.050471451 | ratio | 5.0471451 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6275579 | 3.7521892 | 0.12463126 | %p | -3.4356793 | worsened |
+| 9011 | 무/RETAIL | mae | 96.027668 | 99.913043 | 3.8853755 | price | -4.0461 | worsened |
+| 9011 | 무/RETAIL | rmse | 154.88288 | 150.32368 | -4.5592008 | price | 2.9436441 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 1.040461 | 0.040461 | ratio | -4.0461 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 6.6073073 | 6.6717493 | 0.064441957 | %p | -0.97531345 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1355.7352 | 1340.5375 | -15.197628 | price | 1.120988 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2241.1094 | 2218.0723 | -23.037131 | price | 1.0279343 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1 | 0.98879012 | -0.01120988 | ratio | 1.120988 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### CONTROL: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6062595 | 4.5840538 | -0.02220565 | %p | 0.48207553 | improved |
+| mae | 565.55167 | 593.09087 | 27.539201 | price | -4.8694403 | worsened |
+| rmse | 926.40586 | 935.81308 | 9.4072253 | price | -1.015454 | worsened |
+| rmae | 1.0199316 | 1.0373233 | 0.017391772 | ratio | -1.7051901 | worsened |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.729811 | 4.3569852 | -0.37282582 | %p | 7.8824675 | improved |
+| 1 | 대파/RETAIL | mae | 137.83004 | 126.72727 | -11.102767 | price | 8.0554042 | improved |
+| 1 | 대파/RETAIL | rmse | 209.17894 | 194.35071 | -14.828235 | price | 7.0887799 | improved |
+| 1 | 대파/RETAIL | rmae | 0.99682694 | 0.9165285 | -0.080298439 | ratio | 8.0554042 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7321563 | 5.7299948 | -0.0021615055 | %p | 0.037708418 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.66403 | 118.83004 | -0.83399209 | price | 0.69694467 | improved |
+| 2 | 대파/WHOLESALE | rmse | 178.73898 | 178.6853 | -0.053688919 | price | 0.03003761 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0338057 | 1.0266006 | -0.0072050538 | ratio | 0.69694467 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.6804386 | 3.0823124 | 0.40187387 | %p | -14.99284 | worsened |
+| 7 | 양파/WHOLESALE | mae | 490.60474 | 552.1502 | 61.545455 | price | -12.544814 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 779.08186 | 841.6217 | 62.539845 | price | -8.0273779 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.94693999 | 1.0657319 | 0.11879186 | ratio | -12.544814 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5910002 | 4.3346761 | -0.25632419 | %p | 5.5831883 | improved |
+| 8 | 양파/RETAIL | mae | 102.95618 | 95.430279 | -7.5258964 | price | 7.3098057 | improved |
+| 8 | 양파/RETAIL | rmse | 165.03507 | 153.70154 | -11.333528 | price | 6.8673455 | improved |
+| 8 | 양파/RETAIL | rmae | 1.0230404 | 0.94825812 | -0.074782264 | ratio | 7.3098057 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0666711 | 1.2666733 | 0.20000213 | %p | -18.750121 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1711.4688 | 1999.9464 | 288.47768 | price | -16.855562 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2838.9402 | 2876.0563 | 37.116111 | price | -1.3073932 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2851793 | 1.5018036 | 0.2166242 | ratio | -16.855562 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.5386936 | 3.4599644 | -0.078729137 | %p | 2.224808 | improved |
+| 10 | 깐마늘/RETAIL | mae | 378.0751 | 366.49407 | -11.581028 | price | 3.0631554 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 565.37403 | 553.54559 | -11.828441 | price | 2.0921444 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1.0269037 | 0.99544806 | -0.031455656 | ratio | 3.0631554 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7784957 | 4.9285168 | 0.1500211 | %p | -3.1395048 | worsened |
+| 9001 | 배추/RETAIL | mae | 225.22222 | 234.59921 | 9.3769841 | price | -4.1634365 | worsened |
+| 9001 | 배추/RETAIL | rmse | 373.33966 | 401.0594 | 27.719738 | price | -7.4248041 | worsened |
+| 9001 | 배추/RETAIL | rmae | 0.90250767 | 0.94008301 | 0.037575334 | ratio | -4.1634365 | worsened |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.078732 | 8.2574769 | 0.17874498 | %p | -2.2125375 | worsened |
+| 9002 | 배추/WHOLESALE | mae | 964.14229 | 996.28063 | 32.13834 | price | -3.3333607 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1703.9703 | 1790.7143 | 86.744048 | price | -5.090702 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91889835 | 0.94952855 | 0.030630196 | ratio | -3.3333607 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6490033 | 3.7521892 | 0.10318592 | %p | -2.8277836 | worsened |
+| 9011 | 무/RETAIL | mae | 97.142292 | 99.913043 | 2.770751 | price | -2.8522602 | worsened |
+| 9011 | 무/RETAIL | rmse | 155.16118 | 150.32368 | -4.8374986 | price | 3.1177248 | improved |
+| 9011 | 무/RETAIL | rmae | 1.0116073 | 1.040461 | 0.028853674 | ratio | -2.8522602 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.2175931 | 6.6717493 | -0.54584384 | %p | 7.5626852 | improved |
+| 9012 | 무/WHOLESALE | mae | 1428.4111 | 1340.5375 | -87.873518 | price | 6.1518368 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2295.2384 | 2218.0723 | -77.166097 | price | 3.362008 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0536063 | 0.98879012 | -0.064816138 | ratio | 6.1518368 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 5, 'worsened': 5, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### MARKET: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.5011413 | 4.5840538 | 0.082912526 | %p | -1.8420334 | worsened |
+| mae | 557.9753 | 593.09087 | 35.115569 | price | -6.2933913 | worsened |
+| rmse | 915.84853 | 935.81308 | 19.964548 | price | -2.1798963 | worsened |
+| rmae | 0.99470404 | 1.0373233 | 0.042619295 | ratio | -4.2846207 | worsened |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.4264277 | 4.3569852 | -0.06944255 | %p | 1.568817 | improved |
+| 1 | 대파/RETAIL | mae | 128.74704 | 126.72727 | -2.0197628 | price | 1.568784 | improved |
+| 1 | 대파/RETAIL | rmse | 191.58023 | 194.35071 | 2.7704787 | price | -1.4461193 | worsened |
+| 1 | 대파/RETAIL | rmae | 0.93113601 | 0.9165285 | -0.014607512 | ratio | 1.568784 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7329145 | 5.7299948 | -0.0029196955 | %p | 0.050928642 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.51779 | 118.83004 | -0.68774704 | price | 0.57543488 | improved |
+| 2 | 대파/WHOLESALE | rmse | 180.87209 | 178.6853 | -2.1867905 | price | 1.209026 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0325423 | 1.0266006 | -0.0059416083 | ratio | 0.57543488 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.7343152 | 3.0823124 | 0.34799725 | %p | -12.727035 | worsened |
+| 7 | 양파/WHOLESALE | mae | 493.7747 | 552.1502 | 58.375494 | price | -11.822293 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 788.25789 | 841.6217 | 53.363812 | price | -6.7698418 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.95305848 | 1.0657319 | 0.11267337 | ratio | -11.822293 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.4251885 | 4.3346761 | -0.090512462 | %p | 2.0453922 | improved |
+| 8 | 양파/RETAIL | mae | 98.860558 | 95.430279 | -3.4302789 | price | 3.4698154 | improved |
+| 8 | 양파/RETAIL | rmse | 158.71298 | 153.70154 | -5.0114362 | price | 3.1575466 | improved |
+| 8 | 양파/RETAIL | rmae | 0.98234363 | 0.94825812 | -0.034085511 | ratio | 3.4698154 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0408994 | 1.2666733 | 0.22577389 | %p | -21.69027 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1681.6964 | 1999.9464 | 318.25 | price | -18.924343 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2794.4083 | 2876.0563 | 81.648009 | price | -2.9218353 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2628227 | 1.5018036 | 0.23898089 | ratio | -18.924343 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.4576913 | 3.4599644 | 0.0022730716 | %p | -0.065739575 | worsened |
+| 10 | 깐마늘/RETAIL | mae | 369.85375 | 366.49407 | -3.3596838 | price | 0.90838169 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 551.58736 | 553.54559 | 1.9582284 | price | -0.35501691 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1.0045734 | 0.99544806 | -0.009125361 | ratio | 0.90838169 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7542722 | 4.9285168 | 0.17424465 | %p | -3.665012 | worsened |
+| 9001 | 배추/RETAIL | mae | 222.59921 | 234.59921 | 12 | price | -5.3908548 | worsened |
+| 9001 | 배추/RETAIL | rmse | 357.26432 | 401.0594 | 43.795071 | price | -12.258451 | worsened |
+| 9001 | 배추/RETAIL | rmae | 0.89199676 | 0.94008301 | 0.04808625 | ratio | -5.3908548 | worsened |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.9397931 | 8.2574769 | 0.31768388 | %p | -4.0011607 | worsened |
+| 9002 | 배추/WHOLESALE | mae | 959.84585 | 996.28063 | 36.434783 | price | -3.7958994 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1709.8839 | 1790.7143 | 80.830406 | price | -4.7272453 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91480353 | 0.94952855 | 0.034725021 | ratio | -3.7958994 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.3570825 | 3.7521892 | 0.39510672 | %p | -11.769348 | worsened |
+| 9011 | 무/RETAIL | mae | 89.268775 | 99.913043 | 10.644269 | price | -11.923843 | worsened |
+| 9011 | 무/RETAIL | rmse | 141.13088 | 150.32368 | 9.1928038 | price | -6.5136729 | worsened |
+| 9011 | 무/RETAIL | rmae | 0.92961515 | 1.040461 | 0.11084585 | ratio | -11.923843 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.1428288 | 6.6717493 | -0.47107949 | %p | 6.595139 | improved |
+| 9012 | 무/WHOLESALE | mae | 1415.5889 | 1340.5375 | -75.051383 | price | 5.3017781 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2284.7874 | 2218.0723 | -66.715104 | price | 2.9199699 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0441486 | 0.98879012 | -0.055358439 | ratio | 5.3017781 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+## ridge-v2-20261119T071447105414Z-d5b1a17be6304a33950e68f315e35b0e
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T071447105414Z-d5b1a17be6304a33950e68f315e35b0e | market_w730 | 4.5281307 | 554.48788 | 908.27189 | 0.99585915 | 1.6961449 (direct) | 1.713852 (direct) | 8 |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6070894 | 4.5281307 | -0.078958694 | %p | 1.713852 | improved |
+| mae | 532.31701 | 554.48788 | 22.170871 | price | -4.1649751 | worsened |
+| rmse | 943.1701 | 908.27189 | -34.898203 | price | 3.7000964 | improved |
+| rmae | 1 | 0.99585915 | -0.0041408544 | ratio | 0.41408544 | improved |
+| success_rate_pct | 100 | 99.239392 | -0.76060849 | %p | -0.76060849 | worsened |
+| valid_predictions | 2498 | 2479 | -19 | count | -0.76060849 | count_change |
+| failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.7684965 | 4.5143682 | -0.25412834 | %p | 5.3293179 | improved |
+| 1 | 대파/RETAIL | mae | 138.26877 | 131.1502 | -7.1185771 | price | 5.148362 | improved |
+| 1 | 대파/RETAIL | rmse | 210.78605 | 194.24235 | -16.543699 | price | 7.848574 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.94851638 | -0.05148362 | ratio | 5.148362 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.5020618 | 5.6767171 | 0.17465528 | %p | -3.1743605 | worsened |
+| 2 | 대파/WHOLESALE | mae | 115.75099 | 118.16206 | 2.4110672 | price | -2.0829776 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 171.13609 | 180.41648 | 9.2803914 | price | -5.4228137 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.0208298 | 0.020829776 | ratio | -2.0829776 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.8934034 | 2.8490079 | -0.044395473 | %p | 1.5343686 | improved |
+| 7 | 양파/WHOLESALE | mae | 518.09486 | 511.02767 | -7.0671937 | price | 1.3640733 | improved |
+| 7 | 양파/WHOLESALE | rmse | 828.46348 | 776.16565 | -52.297832 | price | 6.3126297 | improved |
+| 7 | 양파/WHOLESALE | rmae | 1 | 0.98635927 | -0.013640733 | ratio | 1.3640733 | improved |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5066419 | 4.3325655 | -0.17407644 | %p | 3.8626641 | improved |
+| 8 | 양파/RETAIL | mae | 100.63745 | 97.047809 | -3.5896414 | price | 3.5669042 | improved |
+| 8 | 양파/RETAIL | rmse | 158.86309 | 153.53836 | -5.3247326 | price | 3.3517745 | improved |
+| 8 | 양파/RETAIL | rmae | 1 | 0.96433096 | -0.035669042 | ratio | 3.5669042 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79734567 | 0.99760887 | 0.2002632 | %p | -25.116233 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1331.6964 | 1606.8571 | 275.16071 | price | -20.66242 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2873.1904 | 2714.1601 | -159.03036 | price | 5.5349745 | improved |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.2066242 | 0.2066242 | ratio | -20.66242 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 91.517857 | -8.4821429 | %p | -8.4821429 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 224 | 205 | -19 | count | -8.4821429 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.449684 | 3.3681079 | -0.081576169 | %p | 2.3647432 | improved |
+| 10 | 깐마늘/RETAIL | mae | 368.16996 | 361.35573 | -6.8142292 | price | 1.8508379 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 552.35443 | 531.65732 | -20.697112 | price | 3.7470709 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 0.98149162 | -0.018508379 | ratio | 1.8508379 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.3318013 | 4.8569905 | -0.47481077 | %p | 8.9052601 | improved |
+| 9001 | 배추/RETAIL | mae | 249.55159 | 228.37302 | -21.178571 | price | 8.4866507 | improved |
+| 9001 | 배추/RETAIL | rmse | 410.05649 | 368.92545 | -41.13104 | price | 10.030579 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.91513349 | -0.084866507 | ratio | 8.4866507 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.5865937 | 8.0718832 | -0.51471058 | %p | 5.9943511 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1049.2372 | 981.81028 | -67.426877 | price | 6.4262762 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1830.8586 | 1741.5083 | -89.350265 | price | 4.8802384 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.93573724 | -0.064262762 | ratio | 6.4262762 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6275579 | 3.4551199 | -0.17243802 | %p | 4.7535567 | improved |
+| 9011 | 무/RETAIL | mae | 96.027668 | 91.612648 | -4.4150198 | price | 4.5976538 | improved |
+| 9011 | 무/RETAIL | rmse | 154.88288 | 144.55506 | -10.327821 | price | 6.6681487 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 0.95402346 | -0.045976538 | ratio | 4.5976538 | improved |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 6.6073073 | 7.1589377 | 0.55163038 | %p | -8.3487925 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1355.7352 | 1417.4822 | 61.747036 | price | -4.5545057 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2241.1094 | 2277.5499 | 36.440439 | price | -1.626 | worsened |
+| 9012 | 무/WHOLESALE | rmae | 1 | 1.0455451 | 0.045545057 | ratio | -4.5545057 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 7, 'worsened': 3, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### CONTROL: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6062595 | 4.5281307 | -0.078128834 | %p | 1.6961449 | improved |
+| mae | 565.55167 | 554.48788 | -11.063795 | price | 1.9562838 | improved |
+| rmse | 926.40586 | 908.27189 | -18.133962 | price | 1.9574533 | improved |
+| rmae | 1.0199316 | 0.99585915 | -0.024072423 | ratio | 2.3601998 | improved |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.729811 | 4.5143682 | -0.21544281 | %p | 4.5549983 | improved |
+| 1 | 대파/RETAIL | mae | 137.83004 | 131.1502 | -6.6798419 | price | 4.846434 | improved |
+| 1 | 대파/RETAIL | rmse | 209.17894 | 194.24235 | -14.936592 | price | 7.1405809 | improved |
+| 1 | 대파/RETAIL | rmae | 0.99682694 | 0.94851638 | -0.04831056 | ratio | 4.846434 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7321563 | 5.6767171 | -0.055439277 | %p | 0.96716268 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.66403 | 118.16206 | -1.5019763 | price | 1.255161 | improved |
+| 2 | 대파/WHOLESALE | rmse | 178.73898 | 180.41648 | 1.677497 | price | -0.93851769 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1.0338057 | 1.0208298 | -0.012975926 | ratio | 1.255161 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.6804386 | 2.8490079 | 0.16856934 | %p | -6.2888714 | worsened |
+| 7 | 양파/WHOLESALE | mae | 490.60474 | 511.02767 | 20.422925 | price | -4.1628062 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 779.08186 | 776.16565 | -2.9162091 | price | 0.37431356 | improved |
+| 7 | 양파/WHOLESALE | rmae | 0.94693999 | 0.98635927 | 0.039419277 | ratio | -4.1628062 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5910002 | 4.3325655 | -0.25843477 | %p | 5.6291605 | improved |
+| 8 | 양파/RETAIL | mae | 102.95618 | 97.047809 | -5.9083665 | price | 5.7387199 | improved |
+| 8 | 양파/RETAIL | rmse | 165.03507 | 153.53836 | -11.496708 | price | 6.9662215 | improved |
+| 8 | 양파/RETAIL | rmae | 1.0230404 | 0.96433096 | -0.058709422 | ratio | 5.7387199 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0666711 | 0.99760887 | -0.069062278 | %p | 6.4745614 | improved |
+| 9 | 깐마늘/WHOLESALE | mae | 1711.4688 | 1606.8571 | -104.61161 | price | 6.1123878 | improved |
+| 9 | 깐마늘/WHOLESALE | rmse | 2838.9402 | 2714.1601 | -124.78012 | price | 4.3953064 | improved |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2851793 | 1.2066242 | -0.078555146 | ratio | 6.1123878 | improved |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.5386936 | 3.3681079 | -0.17058569 | %p | 4.8205837 | improved |
+| 10 | 깐마늘/RETAIL | mae | 378.0751 | 361.35573 | -16.719368 | price | 4.4222345 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 565.37403 | 531.65732 | -33.716714 | price | 5.9636121 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1.0269037 | 0.98149162 | -0.045412091 | ratio | 4.4222345 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7784957 | 4.8569905 | 0.078494744 | %p | -1.6426664 | worsened |
+| 9001 | 배추/RETAIL | mae | 225.22222 | 228.37302 | 3.1507937 | price | -1.398971 | worsened |
+| 9001 | 배추/RETAIL | rmse | 373.33966 | 368.92545 | -4.4142125 | price | 1.1823583 | improved |
+| 9001 | 배추/RETAIL | rmae | 0.90250767 | 0.91513349 | 0.012625821 | ratio | -1.398971 | worsened |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.078732 | 8.0718832 | -0.0068488141 | %p | 0.084775855 | improved |
+| 9002 | 배추/WHOLESALE | mae | 964.14229 | 981.81028 | 17.667984 | price | -1.832508 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1703.9703 | 1741.5083 | 37.538086 | price | -2.2029778 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91889835 | 0.93573724 | 0.016838885 | ratio | -1.832508 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6490033 | 3.4551199 | -0.19388336 | %p | 5.3133238 | improved |
+| 9011 | 무/RETAIL | mae | 97.142292 | 91.612648 | -5.5296443 | price | 5.692314 | improved |
+| 9011 | 무/RETAIL | rmse | 155.16118 | 144.55506 | -10.606119 | price | 6.8355492 | improved |
+| 9011 | 무/RETAIL | rmae | 1.0116073 | 0.95402346 | -0.057583865 | ratio | 5.692314 | improved |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.2175931 | 7.1589377 | -0.058655421 | %p | 0.81267287 | improved |
+| 9012 | 무/WHOLESALE | mae | 1428.4111 | 1417.4822 | -10.928854 | price | 0.76510565 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2295.2384 | 2277.5499 | -17.688526 | price | 0.77066184 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0536063 | 1.0455451 | -0.008061201 | ratio | 0.76510565 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 8, 'worsened': 2, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### MARKET: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.5011413 | 4.5281307 | 0.026989341 | %p | -0.59961106 | worsened |
+| mae | 557.9753 | 554.48788 | -3.4874273 | price | 0.62501463 | improved |
+| rmse | 915.84853 | 908.27189 | -7.5766393 | price | 0.82728083 | improved |
+| rmae | 0.99470404 | 0.99585915 | 0.0011551007 | ratio | -0.11612506 | worsened |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.4264277 | 4.5143682 | 0.087940455 | %p | -1.9867139 | worsened |
+| 1 | 대파/RETAIL | mae | 128.74704 | 131.1502 | 2.4031621 | price | -1.8665766 | worsened |
+| 1 | 대파/RETAIL | rmse | 191.58023 | 194.24235 | 2.6621218 | price | -1.3895598 | worsened |
+| 1 | 대파/RETAIL | rmae | 0.93113601 | 0.94851638 | 0.017380367 | ratio | -1.8665766 | worsened |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7329145 | 5.6767171 | -0.056197467 | %p | 0.98025998 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.51779 | 118.16206 | -1.3557312 | price | 1.1343343 | improved |
+| 2 | 대파/WHOLESALE | rmse | 180.87209 | 180.41648 | -0.45560463 | price | 0.25189328 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0325423 | 1.0208298 | -0.011712481 | ratio | 1.1343343 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.7343152 | 2.8490079 | 0.11469271 | %p | -4.194568 | worsened |
+| 7 | 양파/WHOLESALE | mae | 493.7747 | 511.02767 | 17.252964 | price | -3.4940965 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 788.25789 | 776.16565 | -12.092242 | price | 1.5340464 | improved |
+| 7 | 양파/WHOLESALE | rmae | 0.95305848 | 0.98635927 | 0.033300783 | ratio | -3.4940965 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.4251885 | 4.3325655 | -0.092623043 | %p | 2.0930869 | improved |
+| 8 | 양파/RETAIL | mae | 98.860558 | 97.047809 | -1.812749 | price | 1.8336423 | improved |
+| 8 | 양파/RETAIL | rmse | 158.71298 | 153.53836 | -5.1746164 | price | 3.2603613 | improved |
+| 8 | 양파/RETAIL | rmae | 0.98234363 | 0.96433096 | -0.018012668 | ratio | 1.8336423 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0408994 | 0.99760887 | -0.043290521 | %p | 4.1589534 | improved |
+| 9 | 깐마늘/WHOLESALE | mae | 1681.6964 | 1606.8571 | -74.839286 | price | 4.4502256 | improved |
+| 9 | 깐마늘/WHOLESALE | rmse | 2794.4083 | 2714.1601 | -80.248223 | price | 2.8717429 | improved |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2628227 | 1.2066242 | -0.056198458 | ratio | 4.4502256 | improved |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.4576913 | 3.3681079 | -0.089583477 | %p | 2.5908466 | improved |
+| 10 | 깐마늘/RETAIL | mae | 369.85375 | 361.35573 | -8.4980237 | price | 2.2976713 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 551.58736 | 531.65732 | -19.930044 | price | 3.6132163 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1.0045734 | 0.98149162 | -0.023081795 | ratio | 2.2976713 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7542722 | 4.8569905 | 0.10271829 | %p | -2.1605471 | worsened |
+| 9001 | 배추/RETAIL | mae | 222.59921 | 228.37302 | 5.7738095 | price | -2.5938141 | worsened |
+| 9001 | 배추/RETAIL | rmse | 357.26432 | 368.92545 | 11.661121 | price | -3.2640037 | worsened |
+| 9001 | 배추/RETAIL | rmae | 0.89199676 | 0.91513349 | 0.023136737 | ratio | -2.5938141 | worsened |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.9397931 | 8.0718832 | 0.13209009 | %p | -1.6636465 | worsened |
+| 9002 | 배추/WHOLESALE | mae | 959.84585 | 981.81028 | 21.964427 | price | -2.2883286 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1709.8839 | 1741.5083 | 31.624444 | price | -1.8495082 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91480353 | 0.93573724 | 0.020933711 | ratio | -2.2883286 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.3570825 | 3.4551199 | 0.098037444 | %p | -2.9203168 | worsened |
+| 9011 | 무/RETAIL | mae | 89.268775 | 91.612648 | 2.3438735 | price | -2.6256365 | worsened |
+| 9011 | 무/RETAIL | rmse | 141.13088 | 144.55506 | 3.4241836 | price | -2.4262469 | worsened |
+| 9011 | 무/RETAIL | rmae | 0.92961515 | 0.95402346 | 0.024408314 | ratio | -2.6256365 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.1428288 | 7.1589377 | 0.016108933 | %p | -0.22552596 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1415.5889 | 1417.4822 | 1.8932806 | price | -0.13374509 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2284.7874 | 2277.5499 | -7.2375332 | price | 0.31677053 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0441486 | 1.0455451 | 0.0013964974 | ratio | -0.13374509 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+## ridge-v2-20261119T071507226244Z-d25300ae926d4849bcb9d333658e1457
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T071507226244Z-d25300ae926d4849bcb9d333658e1457 | market_w1095 | 4.4740934 | 547.13572 | 905.10261 | 0.98437208 | 2.8692717 (direct) | 2.8867675 (direct) | 9 |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6070894 | 4.4740934 | -0.13299596 | %p | 2.8867675 | improved |
+| mae | 532.31701 | 547.13572 | 14.81871 | price | -2.7838131 | worsened |
+| rmse | 943.1701 | 905.10261 | -38.067486 | price | 4.036121 | improved |
+| rmae | 1 | 0.98437208 | -0.015627919 | ratio | 1.5627919 | improved |
+| success_rate_pct | 100 | 99.239392 | -0.76060849 | %p | -0.76060849 | worsened |
+| valid_predictions | 2498 | 2479 | -19 | count | -0.76060849 | count_change |
+| failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.7684965 | 4.4789178 | -0.28957877 | %p | 6.0727479 | improved |
+| 1 | 대파/RETAIL | mae | 138.26877 | 130.2253 | -8.0434783 | price | 5.8172775 | improved |
+| 1 | 대파/RETAIL | rmse | 210.78605 | 193.39622 | -17.389828 | price | 8.2499898 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.94182723 | -0.058172775 | ratio | 5.8172775 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.5020618 | 5.6420098 | 0.13994805 | %p | -2.5435565 | worsened |
+| 2 | 대파/WHOLESALE | mae | 115.75099 | 117.53755 | 1.7865613 | price | -1.5434523 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 171.13609 | 179.14689 | 8.0108015 | price | -4.6809539 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.0154345 | 0.015434523 | ratio | -1.5434523 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.8934034 | 2.7721383 | -0.1212651 | %p | 4.1910888 | improved |
+| 7 | 양파/WHOLESALE | mae | 518.09486 | 497.69565 | -20.399209 | price | 3.9373503 | improved |
+| 7 | 양파/WHOLESALE | rmse | 828.46348 | 780.00111 | -48.462369 | price | 5.8496687 | improved |
+| 7 | 양파/WHOLESALE | rmae | 1 | 0.9606265 | -0.039373503 | ratio | 3.9373503 | improved |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5066419 | 4.3404477 | -0.16619425 | %p | 3.6877625 | improved |
+| 8 | 양파/RETAIL | mae | 100.63745 | 96.972112 | -3.6653386 | price | 3.6421219 | improved |
+| 8 | 양파/RETAIL | rmse | 158.86309 | 154.78166 | -4.0814313 | price | 2.5691501 | improved |
+| 8 | 양파/RETAIL | rmae | 1 | 0.96357878 | -0.036421219 | ratio | 3.6421219 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79734567 | 0.99076824 | 0.19342257 | %p | -24.258308 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1331.6964 | 1599.942 | 268.24554 | price | -20.143144 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2873.1904 | 2709.7253 | -163.46515 | price | 5.6893252 | improved |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.2014314 | 0.20143144 | ratio | -20.143144 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 91.517857 | -8.4821429 | %p | -8.4821429 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 224 | 205 | -19 | count | -8.4821429 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.449684 | 3.3809871 | -0.068696973 | %p | 1.991399 | improved |
+| 10 | 깐마늘/RETAIL | mae | 368.16996 | 362.13834 | -6.0316206 | price | 1.6382707 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 552.35443 | 534.16947 | -18.184961 | price | 3.2922631 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 0.98361729 | -0.016382707 | ratio | 1.6382707 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.3318013 | 4.7581164 | -0.57368481 | %p | 10.759681 | improved |
+| 9001 | 배추/RETAIL | mae | 249.55159 | 222.09921 | -27.452381 | price | 11.000684 | improved |
+| 9001 | 배추/RETAIL | rmse | 410.05649 | 362.771 | -47.285487 | price | 11.531457 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.88999316 | -0.11000684 | ratio | 11.000684 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.5865937 | 8.0267942 | -0.55979955 | %p | 6.51946 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1049.2372 | 971.64032 | -77.596838 | price | 7.3955481 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1830.8586 | 1734.6243 | -96.234323 | price | 5.25624 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.92604452 | -0.073955481 | ratio | 7.3955481 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6275579 | 3.4018057 | -0.22575226 | %p | 6.2232573 | improved |
+| 9011 | 무/RETAIL | mae | 96.027668 | 90.387352 | -5.6403162 | price | 5.8736366 | improved |
+| 9011 | 무/RETAIL | rmse | 154.88288 | 141.9757 | -12.907185 | price | 8.333513 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 0.94126363 | -0.058736366 | ratio | 5.8736366 | improved |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 6.6073073 | 6.9489488 | 0.34164151 | %p | -5.1706618 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1355.7352 | 1382.7194 | 26.98419 | price | -1.9903732 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2241.1094 | 2260.4345 | 19.32507 | price | -0.86229927 | worsened |
+| 9012 | 무/WHOLESALE | rmae | 1 | 1.0199037 | 0.019903732 | ratio | -1.9903732 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 7, 'worsened': 3, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### CONTROL: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6062595 | 4.4740934 | -0.1321661 | %p | 2.8692717 | improved |
+| mae | 565.55167 | 547.13572 | -18.415956 | price | 3.2562817 | improved |
+| rmse | 926.40586 | 905.10261 | -21.303245 | price | 2.2995586 | improved |
+| rmae | 1.0199316 | 0.98437208 | -0.035559487 | ratio | 3.4864581 | improved |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.729811 | 4.4789178 | -0.25089324 | %p | 5.3045089 | improved |
+| 1 | 대파/RETAIL | mae | 137.83004 | 130.2253 | -7.6047431 | price | 5.5174787 | improved |
+| 1 | 대파/RETAIL | rmse | 209.17894 | 193.39622 | -15.78272 | price | 7.5450808 | improved |
+| 1 | 대파/RETAIL | rmae | 0.99682694 | 0.94182723 | -0.054999714 | ratio | 5.5174787 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7321563 | 5.6420098 | -0.090146505 | %p | 1.5726456 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.66403 | 117.53755 | -2.1264822 | price | 1.7770438 | improved |
+| 2 | 대파/WHOLESALE | rmse | 178.73898 | 179.14689 | 0.4079071 | price | -0.22821384 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1.0338057 | 1.0154345 | -0.01837118 | ratio | 1.7770438 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.6804386 | 2.7721383 | 0.091699704 | %p | -3.4210709 | worsened |
+| 7 | 양파/WHOLESALE | mae | 490.60474 | 497.69565 | 7.0909091 | price | -1.4453405 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 779.08186 | 780.00111 | 0.91925427 | price | -0.117992 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.94693999 | 0.9606265 | 0.013686507 | ratio | -1.4453405 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5910002 | 4.3404477 | -0.25055258 | %p | 5.4574727 | improved |
+| 8 | 양파/RETAIL | mae | 102.95618 | 96.972112 | -5.9840637 | price | 5.8122436 | improved |
+| 8 | 양파/RETAIL | rmse | 165.03507 | 154.78166 | -10.253407 | price | 6.2128657 | improved |
+| 8 | 양파/RETAIL | rmae | 1.0230404 | 0.96357878 | -0.059461599 | ratio | 5.8122436 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0666711 | 0.99076824 | -0.075902904 | %p | 7.1158673 | improved |
+| 9 | 깐마늘/WHOLESALE | mae | 1711.4688 | 1599.942 | -111.52679 | price | 6.5164372 | improved |
+| 9 | 깐마늘/WHOLESALE | rmse | 2838.9402 | 2709.7253 | -129.21491 | price | 4.5515194 | improved |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2851793 | 1.2014314 | -0.083747905 | ratio | 6.5164372 | improved |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.5386936 | 3.3809871 | -0.15770649 | %p | 4.4566303 | improved |
+| 10 | 깐마늘/RETAIL | mae | 378.0751 | 362.13834 | -15.936759 | price | 4.2152363 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 565.37403 | 534.16947 | -31.204563 | price | 5.5192777 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1.0269037 | 0.98361729 | -0.043286418 | ratio | 4.2152363 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7784957 | 4.7581164 | -0.020379294 | %p | 0.42647927 | improved |
+| 9001 | 배추/RETAIL | mae | 225.22222 | 222.09921 | -3.1230159 | price | 1.3866375 | improved |
+| 9001 | 배추/RETAIL | rmse | 373.33966 | 362.771 | -10.568659 | price | 2.8308428 | improved |
+| 9001 | 배추/RETAIL | rmae | 0.90250767 | 0.88999316 | -0.01251451 | ratio | 1.3866375 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.078732 | 8.0267942 | -0.05193778 | %p | 0.6428952 | improved |
+| 9002 | 배추/WHOLESALE | mae | 964.14229 | 971.64032 | 7.4980237 | price | -0.7776885 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1703.9703 | 1734.6243 | 30.654027 | price | -1.7989767 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91889835 | 0.92604452 | 0.0071461668 | ratio | -0.7776885 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6490033 | 3.4018057 | -0.2471976 | %p | 6.774387 | improved |
+| 9011 | 무/RETAIL | mae | 97.142292 | 90.387352 | -6.7549407 | price | 6.9536559 | improved |
+| 9011 | 무/RETAIL | rmse | 155.16118 | 141.9757 | -13.185483 | price | 8.4979265 | improved |
+| 9011 | 무/RETAIL | rmae | 1.0116073 | 0.94126363 | -0.070343692 | ratio | 6.9536559 | improved |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.2175931 | 6.9489488 | -0.26864429 | %p | 3.7220758 | improved |
+| 9012 | 무/WHOLESALE | mae | 1428.4111 | 1382.7194 | -45.6917 | price | 3.198778 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2295.2384 | 2260.4345 | -34.803895 | price | 1.5163521 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0536063 | 1.0199037 | -0.033702526 | ratio | 3.198778 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 9, 'worsened': 1, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### MARKET: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.5011413 | 4.4740934 | -0.027047923 | %p | 0.60091255 | improved |
+| mae | 557.9753 | 547.13572 | -10.839587 | price | 1.9426644 | improved |
+| rmse | 915.84853 | 905.10261 | -10.745923 | price | 1.1733297 | improved |
+| rmae | 0.99470404 | 0.98437208 | -0.010331964 | ratio | 1.0386973 | improved |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.4264277 | 4.4789178 | 0.052490022 | %p | -1.1858326 | worsened |
+| 1 | 대파/RETAIL | mae | 128.74704 | 130.2253 | 1.4782609 | price | -1.1481902 | worsened |
+| 1 | 대파/RETAIL | rmse | 191.58023 | 193.39622 | 1.8159932 | price | -0.94790221 | worsened |
+| 1 | 대파/RETAIL | rmae | 0.93113601 | 0.94182723 | 0.010691213 | ratio | -1.1481902 | worsened |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7329145 | 5.6420098 | -0.090904695 | %p | 1.5856628 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.51779 | 117.53755 | -1.9802372 | price | 1.6568556 | improved |
+| 2 | 대파/WHOLESALE | rmse | 180.87209 | 179.14689 | -1.7251945 | price | 0.95382022 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0325423 | 1.0154345 | -0.017107734 | ratio | 1.6568556 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.7343152 | 2.7721383 | 0.03782308 | %p | -1.3832743 | worsened |
+| 7 | 양파/WHOLESALE | mae | 493.7747 | 497.69565 | 3.9209486 | price | -0.79407645 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 788.25789 | 780.00111 | -8.2567782 | price | 1.0474717 | improved |
+| 7 | 양파/WHOLESALE | rmae | 0.95305848 | 0.9606265 | 0.0075680129 | ratio | -0.79407645 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.4251885 | 4.3404477 | -0.084740855 | %p | 1.914966 | improved |
+| 8 | 양파/RETAIL | mae | 98.860558 | 96.972112 | -1.8884462 | price | 1.910212 | improved |
+| 8 | 양파/RETAIL | rmse | 158.71298 | 154.78166 | -3.9313151 | price | 2.4769967 | improved |
+| 8 | 양파/RETAIL | rmae | 0.98234363 | 0.96357878 | -0.018764846 | ratio | 1.910212 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0408994 | 0.99076824 | -0.050131146 | %p | 4.8161375 | improved |
+| 9 | 깐마늘/WHOLESALE | mae | 1681.6964 | 1599.942 | -81.754464 | price | 4.8614282 | improved |
+| 9 | 깐마늘/WHOLESALE | rmse | 2794.4083 | 2709.7253 | -84.683014 | price | 3.0304453 | improved |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2628227 | 1.2014314 | -0.061391217 | ratio | 4.8614282 | improved |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.4576913 | 3.3809871 | -0.076704281 | %p | 2.2183669 | improved |
+| 10 | 깐마늘/RETAIL | mae | 369.85375 | 362.13834 | -7.715415 | price | 2.0860718 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 551.58736 | 534.16947 | -17.417893 | price | 3.157776 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1.0045734 | 0.98361729 | -0.020956123 | ratio | 2.0860718 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7542722 | 4.7581164 | 0.0038442503 | %p | -0.080858861 | worsened |
+| 9001 | 배추/RETAIL | mae | 222.59921 | 222.09921 | -0.5 | price | 0.22461895 | improved |
+| 9001 | 배추/RETAIL | rmse | 357.26432 | 362.771 | 5.5066743 | price | -1.5413446 | worsened |
+| 9001 | 배추/RETAIL | rmae | 0.89199676 | 0.88999316 | -0.0020035937 | ratio | 0.22461895 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.9397931 | 8.0267942 | 0.087001125 | %p | -1.0957606 | worsened |
+| 9002 | 배추/WHOLESALE | mae | 959.84585 | 971.64032 | 11.794466 | price | -1.2287876 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1709.8839 | 1734.6243 | 24.740385 | price | -1.4469044 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91480353 | 0.92604452 | 0.011240992 | ratio | -1.2287876 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.3570825 | 3.4018057 | 0.044723201 | %p | -1.3322044 | worsened |
+| 9011 | 무/RETAIL | mae | 89.268775 | 90.387352 | 1.1185771 | price | -1.2530441 | worsened |
+| 9011 | 무/RETAIL | rmse | 141.13088 | 141.9757 | 0.84481935 | price | -0.59860702 | worsened |
+| 9011 | 무/RETAIL | rmae | 0.92961515 | 0.94126363 | 0.011648487 | ratio | -1.2530441 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.1428288 | 6.9489488 | -0.19387993 | %p | 2.7143298 | improved |
+| 9012 | 무/WHOLESALE | mae | 1415.5889 | 1382.7194 | -32.869565 | price | 2.3219711 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2284.7874 | 2260.4345 | -24.352902 | price | 1.0658717 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0441486 | 1.0199037 | -0.024244827 | ratio | 2.3219711 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 5, 'worsened': 5, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+## ridge-v2-20261119T071531887732Z-89a04d11073b4ca8966721be8da416c9
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T071531887732Z-89a04d11073b4ca8966721be8da416c9 | no_ow_pricedyn | 4.5712055 | 579.95203 | 934.2908 | 1.0289936 | 0.76100735 (direct) | 0.77888294 (direct) | 6 |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6070894 | 4.5712055 | -0.035883833 | %p | 0.77888294 | improved |
+| mae | 532.31701 | 579.95203 | 47.63502 | price | -8.948619 | worsened |
+| rmse | 943.1701 | 934.2908 | -8.8793013 | price | 0.94143159 | improved |
+| rmae | 1 | 1.0289936 | 0.028993597 | ratio | -2.8993597 | worsened |
+| success_rate_pct | 100 | 99.239392 | -0.76060849 | %p | -0.76060849 | worsened |
+| valid_predictions | 2498 | 2479 | -19 | count | -0.76060849 | count_change |
+| failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.7684965 | 4.4698804 | -0.29861614 | %p | 6.2622703 | improved |
+| 1 | 대파/RETAIL | mae | 138.26877 | 129.88142 | -8.3873518 | price | 6.0659768 | improved |
+| 1 | 대파/RETAIL | rmse | 210.78605 | 196.69348 | -14.092572 | price | 6.6857235 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.93934023 | -0.060659768 | ratio | 6.0659768 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.5020618 | 5.6914844 | 0.18942264 | %p | -3.4427575 | worsened |
+| 2 | 대파/WHOLESALE | mae | 115.75099 | 118.36364 | 2.6126482 | price | -2.2571282 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 171.13609 | 175.81669 | 4.6806041 | price | -2.7350187 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.0225713 | 0.022571282 | ratio | -2.2571282 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.8934034 | 3.0870506 | 0.19364726 | %p | -6.6927157 | worsened |
+| 7 | 양파/WHOLESALE | mae | 518.09486 | 557.25296 | 39.158103 | price | -7.5580952 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 828.46348 | 871.22298 | 42.759495 | price | -5.1613012 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 1 | 1.075581 | 0.075580952 | ratio | -7.5580952 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5066419 | 4.609785 | 0.10314311 | %p | -2.2886912 | worsened |
+| 8 | 양파/RETAIL | mae | 100.63745 | 102.72112 | 2.0836653 | price | -2.0704671 | worsened |
+| 8 | 양파/RETAIL | rmse | 158.86309 | 162.01641 | 3.1533228 | price | -1.984931 | worsened |
+| 8 | 양파/RETAIL | rmae | 1 | 1.0207047 | 0.020704671 | ratio | -2.0704671 | worsened |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79734567 | 1.1848472 | 0.38750151 | %p | -48.598936 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1331.6964 | 1874.5357 | 542.83929 | price | -40.76299 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2873.1904 | 2900.9644 | 27.774007 | price | -0.96666086 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.4076299 | 0.4076299 | ratio | -40.76299 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 91.517857 | -8.4821429 | %p | -8.4821429 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 224 | 205 | -19 | count | -8.4821429 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.449684 | 3.4270407 | -0.022643312 | %p | 0.656388 | improved |
+| 10 | 깐마늘/RETAIL | mae | 368.16996 | 364.7668 | -3.4031621 | price | 0.92434539 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 552.35443 | 567.6617 | 15.307265 | price | -2.7712758 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 0.99075655 | -0.0092434539 | ratio | 0.92434539 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.3318013 | 4.6807361 | -0.65106519 | %p | 12.21098 | improved |
+| 9001 | 배추/RETAIL | mae | 249.55159 | 222.64683 | -26.904762 | price | 10.781243 | improved |
+| 9001 | 배추/RETAIL | rmse | 410.05649 | 360.47983 | -49.576652 | price | 12.090201 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.89218757 | -0.10781243 | ratio | 10.781243 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.5865937 | 8.0197986 | -0.5667951 | %p | 6.6009307 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1049.2372 | 964.11858 | -85.118577 | price | 8.112425 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1830.8586 | 1715.7007 | -115.15793 | price | 6.289832 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.91887575 | -0.08112425 | ratio | 8.112425 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6275579 | 3.6574163 | 0.029858422 | %p | -0.82309979 | worsened |
+| 9011 | 무/RETAIL | mae | 96.027668 | 97.304348 | 1.2766798 | price | -1.3294917 | worsened |
+| 9011 | 무/RETAIL | rmse | 154.88288 | 147.39839 | -7.4844959 | price | 4.8323583 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 1.0132949 | 0.013294917 | ratio | -1.3294917 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 6.6073073 | 6.8840158 | 0.27670846 | %p | -4.1879157 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1355.7352 | 1367.9289 | 12.193676 | price | -0.89941429 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2241.1094 | 2244.9534 | 3.8439448 | price | -0.17151973 | worsened |
+| 9012 | 무/WHOLESALE | rmae | 1 | 1.0089941 | 0.0089941429 | ratio | -0.89941429 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### CONTROL: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6062595 | 4.5712055 | -0.035053973 | %p | 0.76100735 | improved |
+| mae | 565.55167 | 579.95203 | 14.400354 | price | -2.5462491 | worsened |
+| rmse | 926.40586 | 934.2908 | 7.8849396 | price | -0.85113231 | worsened |
+| rmae | 1.0199316 | 1.0289936 | 0.0090620288 | ratio | -0.88849381 | worsened |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.729811 | 4.4698804 | -0.25993061 | %p | 5.4955814 | improved |
+| 1 | 대파/RETAIL | mae | 137.83004 | 129.88142 | -7.9486166 | price | 5.7669697 | improved |
+| 1 | 대파/RETAIL | rmse | 209.17894 | 196.69348 | -12.485465 | price | 5.9687963 | improved |
+| 1 | 대파/RETAIL | rmae | 0.99682694 | 0.93934023 | -0.057486707 | ratio | 5.7669697 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7321563 | 5.6914844 | -0.040671911 | %p | 0.70953945 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.66403 | 118.36364 | -1.3003953 | price | 1.0867052 | improved |
+| 2 | 대파/WHOLESALE | rmse | 178.73898 | 175.81669 | -2.9222903 | price | 1.6349485 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0338057 | 1.0225713 | -0.01123442 | ratio | 1.0867052 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.6804386 | 3.0870506 | 0.40661207 | %p | -15.16961 | worsened |
+| 7 | 양파/WHOLESALE | mae | 490.60474 | 557.25296 | 66.648221 | price | -13.584912 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 779.08186 | 871.22298 | 92.141118 | price | -11.826885 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.94693999 | 1.075581 | 0.12864096 | ratio | -13.584912 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5910002 | 4.609785 | 0.018784783 | %p | -0.40916536 | worsened |
+| 8 | 양파/RETAIL | mae | 102.95618 | 102.72112 | -0.23505976 | price | 0.2283105 | improved |
+| 8 | 양파/RETAIL | rmse | 165.03507 | 162.01641 | -3.0186531 | price | 1.829098 | improved |
+| 8 | 양파/RETAIL | rmae | 1.0230404 | 1.0207047 | -0.0023357086 | ratio | 0.2283105 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0666711 | 1.1848472 | 0.11817603 | %p | -11.078957 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1711.4688 | 1874.5357 | 163.06696 | price | -9.5278961 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2838.9402 | 2900.9644 | 62.024243 | price | -2.1847675 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2851793 | 1.4076299 | 0.12245055 | ratio | -9.5278961 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.5386936 | 3.4270407 | -0.11165283 | %p | 3.1551992 | improved |
+| 10 | 깐마늘/RETAIL | mae | 378.0751 | 364.7668 | -13.3083 | price | 3.5200151 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 565.37403 | 567.6617 | 2.287663 | price | -0.40462824 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1.0269037 | 0.99075655 | -0.036147165 | ratio | 3.5200151 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7784957 | 4.6807361 | -0.097759675 | %p | 2.0458253 | improved |
+| 9001 | 배추/RETAIL | mae | 225.22222 | 222.64683 | -2.5753968 | price | 1.1434914 | improved |
+| 9001 | 배추/RETAIL | rmse | 373.33966 | 360.47983 | -12.859824 | price | 3.4445374 | improved |
+| 9001 | 배추/RETAIL | rmae | 0.90250767 | 0.89218757 | -0.010320098 | ratio | 1.1434914 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.078732 | 8.0197986 | -0.058933335 | %p | 0.72948744 | improved |
+| 9002 | 배추/WHOLESALE | mae | 964.14229 | 964.11858 | -0.023715415 | price | 0.0024597422 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1703.9703 | 1715.7007 | 11.730419 | price | -0.6884169 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91889835 | 0.91887575 | -2.2602531e-05 | ratio | 0.0024597422 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6490033 | 3.6574163 | 0.0084130834 | %p | -0.2305584 | worsened |
+| 9011 | 무/RETAIL | mae | 97.142292 | 97.304348 | 0.16205534 | price | -0.16682264 | worsened |
+| 9011 | 무/RETAIL | rmse | 155.16118 | 147.39839 | -7.7627937 | price | 5.0030514 | improved |
+| 9011 | 무/RETAIL | rmae | 1.0116073 | 1.0132949 | 0.00168759 | ratio | -0.16682264 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.2175931 | 6.8840158 | -0.33357734 | %p | 4.6217255 | improved |
+| 9012 | 무/WHOLESALE | mae | 1428.4111 | 1367.9289 | -60.482213 | price | 4.2342302 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2295.2384 | 2244.9534 | -50.285021 | price | 2.1908409 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0536063 | 1.0089941 | -0.044612115 | ratio | 4.2342302 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 6, 'worsened': 4, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### MARKET: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.5011413 | 4.5712055 | 0.070064202 | %p | -1.5565875 | worsened |
+| mae | 557.9753 | 579.95203 | 21.976723 | price | -3.9386551 | worsened |
+| rmse | 915.84853 | 934.2908 | 18.442262 | price | -2.0136804 | worsened |
+| rmae | 0.99470404 | 1.0289936 | 0.034289552 | ratio | -3.4472115 | worsened |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.4264277 | 4.4698804 | 0.043452653 | %p | -0.98166411 | worsened |
+| 1 | 대파/RETAIL | mae | 128.74704 | 129.88142 | 1.1343874 | price | -0.88109784 | worsened |
+| 1 | 대파/RETAIL | rmse | 191.58023 | 196.69348 | 5.1132484 | price | -2.6689854 | worsened |
+| 1 | 대파/RETAIL | rmae | 0.93113601 | 0.93934023 | 0.0082042193 | ratio | -0.88109784 | worsened |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7329145 | 5.6914844 | -0.041430101 | %p | 0.72267083 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.51779 | 118.36364 | -1.1541502 | price | 0.96567233 | improved |
+| 2 | 대파/WHOLESALE | rmse | 180.87209 | 175.81669 | -5.0553919 | price | 2.7950095 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0325423 | 1.0225713 | -0.0099709749 | ratio | 0.96567233 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.7343152 | 3.0870506 | 0.35273545 | %p | -12.900321 | worsened |
+| 7 | 양파/WHOLESALE | mae | 493.7747 | 557.25296 | 63.478261 | price | -12.855713 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 788.25789 | 871.22298 | 82.965086 | price | -10.52512 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.95305848 | 1.075581 | 0.12252247 | ratio | -12.855713 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.4251885 | 4.609785 | 0.18459651 | %p | -4.1714948 | worsened |
+| 8 | 양파/RETAIL | mae | 98.860558 | 102.72112 | 3.8605578 | price | -3.9050536 | worsened |
+| 8 | 양파/RETAIL | rmse | 158.71298 | 162.01641 | 3.3034389 | price | -2.0813918 | worsened |
+| 8 | 양파/RETAIL | rmae | 0.98234363 | 1.0207047 | 0.038361045 | ratio | -3.9050536 | worsened |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0408994 | 1.1848472 | 0.14394779 | %p | -13.829174 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1681.6964 | 1874.5357 | 192.83929 | price | -11.46695 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2794.4083 | 2900.9644 | 106.55614 | price | -3.8131915 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2628227 | 1.4076299 | 0.14480724 | ratio | -11.46695 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.4576913 | 3.4270407 | -0.030650621 | %p | 0.88644757 | improved |
+| 10 | 깐마늘/RETAIL | mae | 369.85375 | 364.7668 | -5.0869565 | price | 1.3753967 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 551.58736 | 567.6617 | 16.074333 | price | -2.9141952 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1.0045734 | 0.99075655 | -0.01381687 | ratio | 1.3753967 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7542722 | 4.6807361 | -0.073536131 | %p | 1.5467379 | improved |
+| 9001 | 배추/RETAIL | mae | 222.59921 | 222.64683 | 0.047619048 | price | -0.021392281 | worsened |
+| 9001 | 배추/RETAIL | rmse | 357.26432 | 360.47983 | 3.2155089 | price | -0.90003637 | worsened |
+| 9001 | 배추/RETAIL | rmae | 0.89199676 | 0.89218757 | 0.00019081845 | ratio | -0.021392281 | worsened |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.9397931 | 8.0197986 | 0.08000557 | %p | -1.0076531 | worsened |
+| 9002 | 배추/WHOLESALE | mae | 959.84585 | 964.11858 | 4.2727273 | price | -0.44514724 | worsened |
+| 9002 | 배추/WHOLESALE | rmse | 1709.8839 | 1715.7007 | 5.816777 | price | -0.3401855 | worsened |
+| 9002 | 배추/WHOLESALE | rmae | 0.91480353 | 0.91887575 | 0.0040722226 | ratio | -0.44514724 | worsened |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.3570825 | 3.6574163 | 0.30033389 | %p | -8.9462767 | worsened |
+| 9011 | 무/RETAIL | mae | 89.268775 | 97.304348 | 8.0355731 | price | -9.0015497 | worsened |
+| 9011 | 무/RETAIL | rmse | 141.13088 | 147.39839 | 6.2675087 | price | -4.4409195 | worsened |
+| 9011 | 무/RETAIL | rmae | 0.92961515 | 1.0132949 | 0.083679769 | ratio | -9.0015497 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.1428288 | 6.8840158 | -0.25881298 | %p | 3.6233962 | improved |
+| 9012 | 무/WHOLESALE | mae | 1415.5889 | 1367.9289 | -47.660079 | price | 3.3668022 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2284.7874 | 2244.9534 | -39.834028 | price | 1.7434457 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0441486 | 1.0089941 | -0.035154416 | ratio | 3.3668022 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+## ridge-v2-20261119T071638648394Z-000b81edc5714703b2eb65c7ada9dc50
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T071638648394Z-000b81edc5714703b2eb65c7ada9dc50 | market_pricedyn | 4.4506682 | 553.23161 | 935.52427 | 0.9848346 | 3.3778233 (direct) | 3.3952275 (direct) | 9 |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6070894 | 4.4506682 | -0.15642116 | %p | 3.3952275 | improved |
+| mae | 532.31701 | 553.23161 | 20.914609 | price | -3.9289764 | worsened |
+| rmse | 943.1701 | 935.52427 | -7.6458292 | price | 0.81065221 | improved |
+| rmae | 1 | 0.9848346 | -0.015165404 | ratio | 1.5165404 | improved |
+| success_rate_pct | 100 | 99.239392 | -0.76060849 | %p | -0.76060849 | worsened |
+| valid_predictions | 2498 | 2479 | -19 | count | -0.76060849 | count_change |
+| failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.7684965 | 4.3696509 | -0.39884564 | %p | 8.3641801 | improved |
+| 1 | 대파/RETAIL | mae | 138.26877 | 126.98024 | -11.288538 | price | 8.1641987 | improved |
+| 1 | 대파/RETAIL | rmse | 210.78605 | 188.28836 | -22.497692 | price | 10.673236 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.91835801 | -0.081641987 | ratio | 8.1641987 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.5020618 | 5.6167728 | 0.11471098 | %p | -2.0848726 | worsened |
+| 2 | 대파/WHOLESALE | mae | 115.75099 | 117.37549 | 1.6245059 | price | -1.4034489 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 171.13609 | 175.6796 | 4.5435053 | price | -2.6549077 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.0140345 | 0.014034489 | ratio | -1.4034489 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.8934034 | 2.6982202 | -0.19518313 | %p | 6.7457975 | improved |
+| 7 | 양파/WHOLESALE | mae | 518.09486 | 488.72332 | -29.371542 | price | 5.6691436 | improved |
+| 7 | 양파/WHOLESALE | rmse | 828.46348 | 812.08509 | -16.378391 | price | 1.9769599 | improved |
+| 7 | 양파/WHOLESALE | rmae | 1 | 0.94330856 | -0.056691436 | ratio | 5.6691436 | improved |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5066419 | 4.4263814 | -0.080260478 | %p | 1.7809376 | improved |
+| 8 | 양파/RETAIL | mae | 100.63745 | 99.414343 | -1.2231076 | price | 1.2153603 | improved |
+| 8 | 양파/RETAIL | rmse | 158.86309 | 158.14932 | -0.713773 | price | 0.44930071 | improved |
+| 8 | 양파/RETAIL | rmae | 1 | 0.9878464 | -0.012153603 | ratio | 1.2153603 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79734567 | 1.0526305 | 0.25528482 | %p | -32.016831 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1331.6964 | 1695.3884 | 363.69196 | price | -27.310426 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2873.1904 | 3048.9585 | 175.76805 | price | -6.1175217 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.2731043 | 0.27310426 | ratio | -27.310426 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 91.517857 | -8.4821429 | %p | -8.4821429 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 224 | 205 | -19 | count | -8.4821429 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 19 | 19 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.449684 | 3.357354 | -0.092330068 | %p | 2.676479 | improved |
+| 10 | 깐마늘/RETAIL | mae | 368.16996 | 359.19763 | -8.972332 | price | 2.4370082 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 552.35443 | 539.70516 | -12.649268 | price | 2.2900637 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 0.97562992 | -0.024370082 | ratio | 2.4370082 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.3318013 | 4.5836562 | -0.74814506 | %p | 14.031751 | improved |
+| 9001 | 배추/RETAIL | mae | 249.55159 | 213.89286 | -35.65873 | price | 14.289122 | improved |
+| 9001 | 배추/RETAIL | rmse | 410.05649 | 338.74031 | -71.316178 | price | 17.391794 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.85710878 | -0.14289122 | ratio | 14.289122 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.5865937 | 7.9330853 | -0.65350846 | %p | 7.6107998 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1049.2372 | 952.04743 | -97.189723 | price | 9.2628938 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1830.8586 | 1681.0031 | -149.85549 | price | 8.1849842 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.90737106 | -0.092628938 | ratio | 9.2628938 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6275579 | 3.4290786 | -0.19847933 | %p | 5.471431 | improved |
+| 9011 | 무/RETAIL | mae | 96.027668 | 90.992095 | -5.0355731 | price | 5.2438773 | improved |
+| 9011 | 무/RETAIL | rmse | 154.88288 | 139.27081 | -15.612069 | price | 10.079919 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 0.94756123 | -0.052438773 | ratio | 5.2438773 | improved |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 6.6073073 | 7.039852 | 0.43254472 | %p | -6.5464599 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1355.7352 | 1388.3043 | 32.56917 | price | -2.4023254 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2241.1094 | 2273.3624 | 32.253013 | price | -1.4391539 | worsened |
+| 9012 | 무/WHOLESALE | rmae | 1 | 1.0240233 | 0.024023254 | ratio | -2.4023254 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 7, 'worsened': 3, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### CONTROL: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.6062595 | 4.4506682 | -0.1555913 | %p | 3.3778233 | improved |
+| mae | 565.55167 | 553.23161 | -12.320057 | price | 2.178414 | improved |
+| rmse | 926.40586 | 935.52427 | 9.1184117 | price | -0.98427829 | worsened |
+| rmae | 1.0199316 | 0.9848346 | -0.035096972 | ratio | 3.4411105 | improved |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.729811 | 4.3696509 | -0.36016011 | %p | 7.6146829 | improved |
+| 1 | 대파/RETAIL | mae | 137.83004 | 126.98024 | -10.849802 | price | 7.8718706 | improved |
+| 1 | 대파/RETAIL | rmse | 209.17894 | 188.28836 | -20.890584 | price | 9.9869442 | improved |
+| 1 | 대파/RETAIL | rmae | 0.99682694 | 0.91835801 | -0.078468927 | ratio | 7.8718706 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7321563 | 5.6167728 | -0.11538358 | %p | 2.0129174 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.66403 | 117.37549 | -2.2885375 | price | 1.912469 | improved |
+| 2 | 대파/WHOLESALE | rmse | 178.73898 | 175.6796 | -3.0593891 | price | 1.7116518 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0338057 | 1.0140345 | -0.019771214 | ratio | 1.912469 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.6804386 | 2.6982202 | 0.017781676 | %p | -0.66338683 | worsened |
+| 7 | 양파/WHOLESALE | mae | 490.60474 | 488.72332 | -1.8814229 | price | 0.38349057 | improved |
+| 7 | 양파/WHOLESALE | rmse | 779.08186 | 812.08509 | 33.003232 | price | -4.23617 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.94693999 | 0.94330856 | -0.0036314256 | ratio | 0.38349057 | improved |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.5910002 | 4.4263814 | -0.16461881 | %p | 3.5856851 | improved |
+| 8 | 양파/RETAIL | mae | 102.95618 | 99.414343 | -3.5418327 | price | 3.4401362 | improved |
+| 8 | 양파/RETAIL | rmse | 165.03507 | 158.14932 | -6.8857489 | price | 4.1722944 | improved |
+| 8 | 양파/RETAIL | rmae | 1.0230404 | 0.9878464 | -0.035193983 | ratio | 3.4401362 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0666711 | 1.0526305 | -0.014040655 | %p | 1.3163059 | improved |
+| 9 | 깐마늘/WHOLESALE | mae | 1711.4688 | 1695.3884 | -16.080357 | price | 0.93956475 | improved |
+| 9 | 깐마늘/WHOLESALE | rmse | 2838.9402 | 3048.9585 | 210.01828 | price | -7.3977706 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2851793 | 1.2731043 | -0.012075092 | ratio | 0.93956475 | improved |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.5386936 | 3.357354 | -0.18133959 | %p | 5.1244784 | improved |
+| 10 | 깐마늘/RETAIL | mae | 378.0751 | 359.19763 | -18.87747 | price | 4.9930478 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 565.37403 | 539.70516 | -25.66887 | price | 4.5401572 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1.0269037 | 0.97562992 | -0.051273793 | ratio | 4.9930478 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7784957 | 4.5836562 | -0.19483955 | %p | 4.0774244 | improved |
+| 9001 | 배추/RETAIL | mae | 225.22222 | 213.89286 | -11.329365 | price | 5.0303052 | improved |
+| 9001 | 배추/RETAIL | rmse | 373.33966 | 338.74031 | -34.59935 | price | 9.267526 | improved |
+| 9001 | 배추/RETAIL | rmae | 0.90250767 | 0.85710878 | -0.04539889 | ratio | 5.0303052 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 8.078732 | 7.9330853 | -0.14564669 | %p | 1.802841 | improved |
+| 9002 | 배추/WHOLESALE | mae | 964.14229 | 952.04743 | -12.094862 | price | 1.2544685 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1703.9703 | 1681.0031 | -22.967137 | price | 1.3478602 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 0.91889835 | 0.90737106 | -0.011527291 | ratio | 1.2544685 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.6490033 | 3.4290786 | -0.21992467 | %p | 6.0269792 | improved |
+| 9011 | 무/RETAIL | mae | 97.142292 | 90.992095 | -6.1501976 | price | 6.3311226 | improved |
+| 9011 | 무/RETAIL | rmse | 155.16118 | 139.27081 | -15.890367 | price | 10.2412 | improved |
+| 9011 | 무/RETAIL | rmae | 1.0116073 | 0.94756123 | -0.0640461 | ratio | 6.3311226 | improved |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.2175931 | 7.039852 | -0.17774108 | %p | 2.4626087 | improved |
+| 9012 | 무/WHOLESALE | mae | 1428.4111 | 1388.3043 | -40.106719 | price | 2.8077855 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2295.2384 | 2273.3624 | -21.875952 | price | 0.95310154 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0536063 | 1.0240233 | -0.029583004 | ratio | 2.8077855 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 9, 'worsened': 1, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+### MARKET: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.5011413 | 4.4506682 | -0.050473129 | %p | 1.1213407 | improved |
+| mae | 557.9753 | 553.23161 | -4.7436885 | price | 0.85016101 | improved |
+| rmse | 915.84853 | 935.52427 | 19.675734 | price | -2.1483612 | worsened |
+| rmae | 0.99470404 | 0.9848346 | -0.0098694485 | ratio | 0.99219949 | improved |
+| success_rate_pct | 99.239392 | 99.239392 | 0 | %p | 0 | same |
+| valid_predictions | 2479 | 2479 | 0 | count | 0 | count_change |
+| failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 4.4264277 | 4.3696509 | -0.056776842 | %p | 1.2826786 | improved |
+| 1 | 대파/RETAIL | mae | 128.74704 | 126.98024 | -1.7667984 | price | 1.3723022 | improved |
+| 1 | 대파/RETAIL | rmse | 191.58023 | 188.28836 | -3.2918707 | price | 1.7182726 | improved |
+| 1 | 대파/RETAIL | rmae | 0.93113601 | 0.91835801 | -0.012778 | ratio | 1.3723022 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.7329145 | 5.6167728 | -0.11614177 | %p | 2.0258764 | improved |
+| 2 | 대파/WHOLESALE | mae | 119.51779 | 117.37549 | -2.1422925 | price | 1.7924466 | improved |
+| 2 | 대파/WHOLESALE | rmse | 180.87209 | 175.6796 | -5.1924907 | price | 2.8708082 | improved |
+| 2 | 대파/WHOLESALE | rmae | 1.0325423 | 1.0140345 | -0.018507768 | ratio | 1.7924466 | improved |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 2.7343152 | 2.6982202 | -0.036094948 | %p | 1.3200727 | improved |
+| 7 | 양파/WHOLESALE | mae | 493.7747 | 488.72332 | -5.0513834 | price | 1.0230138 | improved |
+| 7 | 양파/WHOLESALE | rmse | 788.25789 | 812.08509 | 23.8272 | price | -3.022767 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 0.95305848 | 0.94330856 | -0.0097499199 | ratio | 1.0230138 | improved |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.4251885 | 4.4263814 | 0.0011929178 | %p | -0.026957445 | worsened |
+| 8 | 양파/RETAIL | mae | 98.860558 | 99.414343 | 0.55378486 | price | -0.56016765 | worsened |
+| 8 | 양파/RETAIL | rmse | 158.71298 | 158.14932 | -0.56365682 | price | 0.35514224 | improved |
+| 8 | 양파/RETAIL | rmae | 0.98234363 | 0.9878464 | 0.0055027712 | ratio | -0.56016765 | worsened |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 251 | 251 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 1.0408994 | 1.0526305 | 0.011731103 | %p | -1.127016 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1681.6964 | 1695.3884 | 13.691964 | price | -0.81417574 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2794.4083 | 3048.9585 | 254.55018 | price | -9.1092695 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1.2628227 | 1.2731043 | 0.010281596 | ratio | -0.81417574 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 91.517857 | 91.517857 | 0 | %p | 0 | same |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 205 | 205 | 0 | count | 0 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 19 | 19 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.4576913 | 3.357354 | -0.10033738 | %p | 2.9018604 | improved |
+| 10 | 깐마늘/RETAIL | mae | 369.85375 | 359.19763 | -10.656126 | price | 2.881173 | improved |
+| 10 | 깐마늘/RETAIL | rmse | 551.58736 | 539.70516 | -11.8822 | price | 2.1541828 | improved |
+| 10 | 깐마늘/RETAIL | rmae | 1.0045734 | 0.97562992 | -0.028943498 | ratio | 2.881173 | improved |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 4.7542722 | 4.5836562 | -0.17061601 | %p | 3.5886882 | improved |
+| 9001 | 배추/RETAIL | mae | 222.59921 | 213.89286 | -8.7063492 | price | 3.911222 | improved |
+| 9001 | 배추/RETAIL | rmse | 357.26432 | 338.74031 | -18.524017 | price | 5.1849613 | improved |
+| 9001 | 배추/RETAIL | rmae | 0.89199676 | 0.85710878 | -0.034887974 | ratio | 3.911222 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 252 | 252 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.9397931 | 7.9330853 | -0.006707785 | %p | 0.084483121 | improved |
+| 9002 | 배추/WHOLESALE | mae | 959.84585 | 952.04743 | -7.798419 | price | 0.81246577 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1709.8839 | 1681.0031 | -28.880779 | price | 1.6890491 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 0.91480353 | 0.90737106 | -0.0074324655 | ratio | 0.81246577 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 3.3570825 | 3.4290786 | 0.071996136 | %p | -2.1446043 | worsened |
+| 9011 | 무/RETAIL | mae | 89.268775 | 90.992095 | 1.7233202 | price | -1.9304848 | worsened |
+| 9011 | 무/RETAIL | rmse | 141.13088 | 139.27081 | -1.8600644 | price | 1.3179713 | improved |
+| 9011 | 무/RETAIL | rmae | 0.92961515 | 0.94756123 | 0.017946079 | ratio | -1.9304848 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 7.1428288 | 7.039852 | -0.10297672 | %p | 1.4416799 | improved |
+| 9012 | 무/WHOLESALE | mae | 1415.5889 | 1388.3043 | -27.284585 | price | 1.927437 | improved |
+| 9012 | 무/WHOLESALE | rmse | 2284.7874 | 2273.3624 | -11.424959 | price | 0.50004474 | improved |
+| 9012 | 무/WHOLESALE | rmae | 1.0441486 | 1.0240233 | -0.020125306 | ratio | 1.927437 | improved |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 253 | 253 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 7, 'worsened': 3, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+## ridge-v2-20261119T084634364391Z-fe6c5bac24aa4b5795455f62f2d4c2fa
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T084634364391Z-fe6c5bac24aa4b5795455f62f2d4c2fa | no_ow_w1095 | 5.0256149 | 673.25961 | 1040.3136 | 1.0820577 | N/A | -2.3016198 (direct) | N/A |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.9125468 | 5.0256149 | 0.11306815 | %p | -2.3016198 | worsened |
+| mae | 569.79222 | 673.25961 | 103.46739 | price | -18.158792 | worsened |
+| rmse | 989.64537 | 1040.3136 | 50.668185 | price | -5.1198324 | worsened |
+| rmae | 1 | 1.0820577 | 0.082057697 | ratio | -8.2057697 | worsened |
+| success_rate_pct | 100 | 99.201774 | -0.79822616 | %p | -0.79822616 | worsened |
+| valid_predictions | 11275 | 11185 | -90 | count | -0.79822616 | count_change |
+| failed_predictions | 0 | 90 | 90 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 5.1984334 | 5.0153245 | -0.18310888 | %p | 3.5223859 | improved |
+| 1 | 대파/RETAIL | mae | 149.08566 | 144.68706 | -4.3986014 | price | 2.9503852 | improved |
+| 1 | 대파/RETAIL | rmse | 216.99605 | 206.44659 | -10.549463 | price | 4.8615923 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.97049615 | -0.029503852 | ratio | 2.9503852 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.9408146 | 6.3617979 | 0.42098334 | %p | -7.0862898 | worsened |
+| 2 | 대파/WHOLESALE | mae | 124.70979 | 131.77448 | 7.0646853 | price | -5.6649003 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 178.65144 | 186.32215 | 7.6707102 | price | -4.2936738 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.056649 | 0.056649003 | ratio | -5.6649003 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 3.183793 | 3.6006523 | 0.41685931 | %p | -13.093166 | worsened |
+| 7 | 양파/WHOLESALE | mae | 574.59965 | 653.09091 | 78.491259 | price | -13.660165 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 921.70243 | 985.05607 | 63.353641 | price | -6.8735461 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 1 | 1.1366016 | 0.13660165 | ratio | -13.660165 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.8732295 | 4.8530827 | -0.020146815 | %p | 0.41341815 | improved |
+| 8 | 양파/RETAIL | mae | 108.3254 | 106.67196 | -1.6534392 | price | 1.5263633 | improved |
+| 8 | 양파/RETAIL | rmse | 170.67764 | 163.86548 | -6.8121677 | price | 3.9912478 | improved |
+| 8 | 양파/RETAIL | rmae | 1 | 0.98473637 | -0.015263633 | ratio | 1.5263633 | improved |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 1134 | 1134 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79998097 | 1.4529708 | 0.65298987 | %p | -81.625675 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1336.6197 | 2286.2414 | 949.62173 | price | -71.046515 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2880.4307 | 3388.2468 | 507.81602 | price | -17.629864 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.7104652 | 0.71046515 | ratio | -71.046515 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 90.945674 | -9.054326 | %p | -9.054326 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 994 | 904 | -90 | count | -9.054326 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 90 | 90 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.8302262 | 3.8879836 | 0.057757391 | %p | -1.5079368 | worsened |
+| 10 | 깐마늘/RETAIL | mae | 408.16434 | 410.54371 | 2.3793706 | price | -0.58294428 | worsened |
+| 10 | 깐마늘/RETAIL | rmse | 568.62765 | 572.03407 | 3.4064159 | price | -0.59905913 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 1.0058294 | 0.0058294428 | ratio | -0.58294428 | worsened |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.2405422 | 4.8436732 | -0.39686901 | %p | 7.5730524 | improved |
+| 9001 | 배추/RETAIL | mae | 240.76558 | 225.40123 | -15.364355 | price | 6.381458 | improved |
+| 9001 | 배추/RETAIL | rmse | 389.84049 | 357.1766 | -32.663889 | price | 8.3787831 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.93618542 | -0.06381458 | ratio | 6.381458 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 1139 | 1139 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.1934766 | 7.1406158 | -0.052860859 | %p | 0.73484438 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1004.0428 | 989.88199 | -14.160839 | price | 1.410382 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1655.5564 | 1625.7467 | -29.809699 | price | 1.8005849 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.98589618 | -0.01410382 | ratio | 1.410382 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 4.2492996 | 4.2900494 | 0.040749776 | %p | -0.95897631 | worsened |
+| 9011 | 무/RETAIL | mae | 111.17308 | 112.81731 | 1.6442308 | price | -1.4789829 | worsened |
+| 9011 | 무/RETAIL | rmse | 175.91296 | 170.21935 | -5.6936092 | price | 3.2366058 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 1.0147898 | 0.014789829 | ratio | -1.4789829 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 8.6156715 | 8.8099989 | 0.19432737 | %p | -2.2555105 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1640.4362 | 1671.486 | 31.049825 | price | -1.8927786 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2738.0579 | 2748.0218 | 9.9638895 | price | -0.36390354 | worsened |
+| 9012 | 무/WHOLESALE | rmae | 1 | 1.0189278 | 0.018927786 | ratio | -1.8927786 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+
+
+## ridge-v2-20261119T084708506807Z-5eb236c29d114fb1a29f58ce1fe8c4ef
+
+| 실행 ID | 실험 | MAPE (%) | MAE | RMSE | rMAE | CONTROL 대비 MAPE 개선률 (%) | Naive 대비 개선률 (%) | 개선 계열 수 |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| ridge-v2-20261119T084708506807Z-5eb236c29d114fb1a29f58ce1fe8c4ef | no_ow | 5.0025012 | 637.7138 | 994.90324 | 1.0562536 | N/A | -1.8311162 (direct) | N/A |
+
+Precision: unrounded errors from common final integer predictions. All aggregate MAE/RMSE values are descriptive macro averages across price units.
+
+
+### Naive: direct
+
+Matched evaluation conditions; numerical improvements alone do not establish causality.
+Metric scope: policy includes Naive fallback. model_only uses successful model predictions; paired_analysis.common_success uses the identical successful observation set (comparison.json).
+Reasons: identical recorded evaluation conditions
+
+| 전체 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | ---: | ---: | ---: | --- | ---: | --- |
+| mape | 4.9125468 | 5.0025012 | 0.089954437 | %p | -1.8311162 | worsened |
+| mae | 569.79222 | 637.7138 | 67.921577 | price | -11.920411 | worsened |
+| rmse | 989.64537 | 994.90324 | 5.2578757 | price | -0.53128887 | worsened |
+| rmae | 1 | 1.0562536 | 0.056253581 | ratio | -5.6253581 | worsened |
+| success_rate_pct | 100 | 99.201774 | -0.79822616 | %p | -0.79822616 | worsened |
+| valid_predictions | 11275 | 11185 | -90 | count | -0.79822616 | count_change |
+| failed_predictions | 0 | 90 | 90 | count | N/A | count_change |
+
+| 계열 | 품목/시장 | 지표 | 기준 | 신규 | 절대 차이 | 단위 | 상대 개선/변화 (%) | 판정 |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: | --- |
+| 1 | 대파/RETAIL | mape | 5.1984334 | 4.9718494 | -0.22658403 | %p | 4.3586984 | improved |
+| 1 | 대파/RETAIL | mae | 149.08566 | 143.56993 | -5.5157343 | price | 3.699708 | improved |
+| 1 | 대파/RETAIL | rmse | 216.99605 | 205.79299 | -11.203065 | price | 5.1627968 | improved |
+| 1 | 대파/RETAIL | rmae | 1 | 0.96300292 | -0.03699708 | ratio | 3.699708 | improved |
+| 1 | 대파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 1 | 대파/RETAIL | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 1 | 대파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 2 | 대파/WHOLESALE | mape | 5.9408146 | 6.4407329 | 0.49991834 | %p | -8.4149797 | worsened |
+| 2 | 대파/WHOLESALE | mae | 124.70979 | 133.43182 | 8.722028 | price | -6.9938599 | worsened |
+| 2 | 대파/WHOLESALE | rmse | 178.65144 | 188.56164 | 9.9102013 | price | -5.5472272 | worsened |
+| 2 | 대파/WHOLESALE | rmae | 1 | 1.0699386 | 0.069938599 | ratio | -6.9938599 | worsened |
+| 2 | 대파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 2 | 대파/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 2 | 대파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 7 | 양파/WHOLESALE | mape | 3.183793 | 3.4821235 | 0.2983305 | %p | -9.3702858 | worsened |
+| 7 | 양파/WHOLESALE | mae | 574.59965 | 631.5778 | 56.978147 | price | -9.9161472 | worsened |
+| 7 | 양파/WHOLESALE | rmse | 921.70243 | 967.20419 | 45.501756 | price | -4.9367078 | worsened |
+| 7 | 양파/WHOLESALE | rmae | 1 | 1.0991615 | 0.099161472 | ratio | -9.9161472 | worsened |
+| 7 | 양파/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 7 | 양파/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 7 | 양파/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 8 | 양파/RETAIL | mape | 4.8732295 | 4.9703306 | 0.097101059 | %p | -1.9925402 | worsened |
+| 8 | 양파/RETAIL | mae | 108.3254 | 109.74427 | 1.4188713 | price | -1.3098233 | worsened |
+| 8 | 양파/RETAIL | rmse | 170.67764 | 169.05435 | -1.6232917 | price | 0.95108631 | improved |
+| 8 | 양파/RETAIL | rmae | 1 | 1.0130982 | 0.013098233 | ratio | -1.3098233 | worsened |
+| 8 | 양파/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 8 | 양파/RETAIL | valid_predictions | 1134 | 1134 | 0 | count | 0 | count_change |
+| 8 | 양파/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9 | 깐마늘/WHOLESALE | mape | 0.79998097 | 1.233205 | 0.43322399 | %p | -54.154287 | worsened |
+| 9 | 깐마늘/WHOLESALE | mae | 1336.6197 | 1946.7837 | 610.16398 | price | -45.649782 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmse | 2880.4307 | 2934.2328 | 53.802052 | price | -1.8678474 | worsened |
+| 9 | 깐마늘/WHOLESALE | rmae | 1 | 1.4564978 | 0.45649782 | ratio | -45.649782 | worsened |
+| 9 | 깐마늘/WHOLESALE | success_rate_pct | 100 | 90.945674 | -9.054326 | %p | -9.054326 | worsened |
+| 9 | 깐마늘/WHOLESALE | valid_predictions | 994 | 904 | -90 | count | -9.054326 | count_change |
+| 9 | 깐마늘/WHOLESALE | failed_predictions | 0 | 90 | 90 | count | N/A | count_change |
+| 10 | 깐마늘/RETAIL | mape | 3.8302262 | 4.0419281 | 0.21170194 | %p | -5.5271394 | worsened |
+| 10 | 깐마늘/RETAIL | mae | 408.16434 | 428.80332 | 20.638986 | price | -5.0565383 | worsened |
+| 10 | 깐마늘/RETAIL | rmse | 568.62765 | 603.48841 | 34.860756 | price | -6.1306825 | worsened |
+| 10 | 깐마늘/RETAIL | rmae | 1 | 1.0505654 | 0.050565383 | ratio | -5.0565383 | worsened |
+| 10 | 깐마늘/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 10 | 깐마늘/RETAIL | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 10 | 깐마늘/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9001 | 배추/RETAIL | mape | 5.2405422 | 4.6990516 | -0.54149062 | %p | 10.332721 | improved |
+| 9001 | 배추/RETAIL | mae | 240.76558 | 219.37752 | -21.38806 | price | 8.8833542 | improved |
+| 9001 | 배추/RETAIL | rmse | 389.84049 | 346.13609 | -43.704397 | price | 11.210841 | improved |
+| 9001 | 배추/RETAIL | rmae | 1 | 0.91116646 | -0.088833542 | ratio | 8.8833542 | improved |
+| 9001 | 배추/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9001 | 배추/RETAIL | valid_predictions | 1139 | 1139 | 0 | count | 0 | count_change |
+| 9001 | 배추/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9002 | 배추/WHOLESALE | mape | 7.1934766 | 7.0881637 | -0.1053129 | %p | 1.4640056 | improved |
+| 9002 | 배추/WHOLESALE | mae | 1004.0428 | 983.2535 | -20.789336 | price | 2.0705626 | improved |
+| 9002 | 배추/WHOLESALE | rmse | 1655.5564 | 1606.9724 | -48.583961 | price | 2.9346002 | improved |
+| 9002 | 배추/WHOLESALE | rmae | 1 | 0.97929437 | -0.020705626 | ratio | 2.0705626 | improved |
+| 9002 | 배추/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9002 | 배추/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 9002 | 배추/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9011 | 무/RETAIL | mape | 4.2492996 | 4.239191 | -0.010108629 | %p | 0.23788929 | improved |
+| 9011 | 무/RETAIL | mae | 111.17308 | 111.42832 | 0.25524476 | price | -0.22959224 | worsened |
+| 9011 | 무/RETAIL | rmse | 175.91296 | 169.52038 | -6.3925785 | price | 3.633944 | improved |
+| 9011 | 무/RETAIL | rmae | 1 | 1.0022959 | 0.0022959224 | ratio | -0.22959224 | worsened |
+| 9011 | 무/RETAIL | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9011 | 무/RETAIL | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 9011 | 무/RETAIL | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+| 9012 | 무/WHOLESALE | mape | 8.6156715 | 8.8584362 | 0.24276473 | %p | -2.817711 | worsened |
+| 9012 | 무/WHOLESALE | mae | 1640.4362 | 1669.1678 | 28.731643 | price | -1.7514636 | worsened |
+| 9012 | 무/WHOLESALE | rmse | 2738.0579 | 2758.0692 | 20.011286 | price | -0.73085695 | worsened |
+| 9012 | 무/WHOLESALE | rmae | 1 | 1.0175146 | 0.017514636 | ratio | -1.7514636 | worsened |
+| 9012 | 무/WHOLESALE | success_rate_pct | 100 | 100 | 0 | %p | 0 | same |
+| 9012 | 무/WHOLESALE | valid_predictions | 1144 | 1144 | 0 | count | 0 | count_change |
+| 9012 | 무/WHOLESALE | failed_predictions | 0 | 0 | 0 | count | N/A | count_change |
+
+Series counts: {'improved': 4, 'worsened': 6, 'same': 0, 'unavailable': 0}/10
+
+Point set differences and paired policy/common-success metrics: see comparison.json.
+

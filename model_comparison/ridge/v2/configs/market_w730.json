@@ -1,0 +1,27 @@
+{
+  "name": "market_w730",
+  "model": "Ridge",
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "window_days": 730,
+  "seed": 42,
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "refit": "weekly_first_origin",
+  "bundles": [
+    "MARKET"
+  ],
+  "blocks": [
+    "SERIES_ID"
+  ],
+  "comparison": {
+    "reference": "market",
+    "added": [],
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, alpha=10, seed=42; only window 1825 -> 730",
+    "note": "v2 튜닝 규칙(PR #54) Ridge 시도 31~36. 판단은 XGBoost(v1feat_xgb_tuned)+LightGBM 앙상블 10% 기여"
+  }
+}

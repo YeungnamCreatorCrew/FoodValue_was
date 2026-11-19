@@ -1,0 +1,66 @@
+{
+  "blocks": [
+    "GARAK",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "MACRO",
+    "PRODUCTION"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [],
+    "note": "v2 튜닝 규칙(PR #54) Ridge 시도 31~36. 판단은 XGBoost(v1feat_xgb_tuned)+LightGBM 앙상블 10% 기여",
+    "reference": "no_ow",
+    "removed": [],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, alpha=10, seed=42; only window 1825 -> 1095"
+  },
+  "config_id": "920e2218",
+  "config_sha256": "b89bfb850f33b164539b1afb8d07be30c73a75daff1f197a5c2563c5ecbb225e",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261119T084634364391Z-fe6c5bac24aa4b5795455f62f2d4c2fa",
+  "extra_features": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "MACRO",
+    "PRODUCTION",
+    "GARAK",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "feature_count": 58,
+  "feature_set": "v2:1095",
+  "git_sha": "d7ee655086a7ca8d529202cfc6c0d6118e46fc50",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "no_ow_w1095",
+  "origin_list": "validation",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1095
+}

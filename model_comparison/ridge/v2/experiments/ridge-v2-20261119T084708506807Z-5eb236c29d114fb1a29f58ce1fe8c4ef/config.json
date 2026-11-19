@@ -1,0 +1,68 @@
+{
+  "blocks": [
+    "GARAK",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "MACRO",
+    "PRODUCTION"
+  ],
+  "class": "model_comparison.ridge.v2.model:PooledRidgeV2",
+  "comparison": {
+    "added": [],
+    "note": "팀 v2 configs/no_ow.json과 같은 특징 구성. 내용은 no_origin_weather.json와 같고 이름만 팀 기준으로 통일(기존 파일은 과거 실행 기록용으로 보존)",
+    "reference": "all",
+    "removed": [
+      "ORIGIN_WEATHER"
+    ],
+    "unchanged": "pooled 10-series, 7 horizon-specific models, window=1825, alpha=10, seed=42"
+  },
+  "config_id": "c173dc07",
+  "config_sha256": "0099f7200d712acfdaac2df57141ef2e7e321bcbde20faf4cebfb86085b4b631",
+  "data_version": "fv-snap-20261031-v1",
+  "experiment_id": "ridge-v2-20261119T084708506807Z-5eb236c29d114fb1a29f58ce1fe8c4ef",
+  "extra_features": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT",
+    "MACRO",
+    "PRODUCTION",
+    "GARAK",
+    "CROSS_ITEM",
+    "SERIES_ID"
+  ],
+  "feature_count": 58,
+  "feature_set": "v2:1825",
+  "git_sha": "d7ee655086a7ca8d529202cfc6c0d6118e46fc50",
+  "implementation_version": "ridge-v2.1",
+  "model": "Ridge",
+  "month": null,
+  "name": "no_ow",
+  "origin_list": "validation",
+  "params": {
+    "alpha": 10,
+    "solver": "lsqr"
+  },
+  "phase": "v2",
+  "refit": "weekly_first_origin",
+  "seed": 42,
+  "series": [
+    1,
+    2,
+    7,
+    8,
+    9,
+    10,
+    9001,
+    9002,
+    9011,
+    9012
+  ],
+  "strategy": "direct_per_horizon",
+  "target_transform": "change_ratio",
+  "window_days": 1825
+}

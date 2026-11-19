@@ -129,7 +129,7 @@ v2 튜닝은 기준서(`MODEL_TRAINING_STANDARD.md` §6)의 "집중 튜닝(3단�
 | --- | --- | --- |
 | LightGBM | 15 / 40 | 검증 확인 후 종료, 기본값(`v1feat_lgbm`) 유지 (§7) |
 | XGBoost | 21 / 40 (+ 중단 1회, 결과 없음) | 검증 확인 후 종료, `combo` → `v1feat_xgb_tuned` 후보. 검증에서 앙상블 개선(4.592 → 4.561%)으로 채택 조건 충족, 시드 확인 예정 (§8). v2 구조를 정한 9회(§3)는 세지 않음(팀 결정 2026-11-19) |
-| Ridge | 30 / 40 | 검증 확인 전. 앙상블 10% 최선 `no_ow` 4.278%(기준 4.285%, −0.007%p)로 채택 조건 미달 → 구성원 후보로만 둠 (§6). 기록 `ridge_tune/tuning_log.csv`(Ridge v2 실행기, 실패 4회 포함) |
+| Ridge | 36 / 40 | 검증 확인 후 종료. 검증: XGBoost 튜닝판+LightGBM에 10% 더하면 4.5925 → 4.5833%(`no_ow_w1095`), AutoARIMA p2까지 넣은 3모델(4.5614%)에 더하면 4.5652% (§10). 기록 `ridge_tune/tuning_log.csv`(Ridge v2 실행기, 실패 4회 포함) |
 | AutoARIMA | 6 / 40 | 검증 확인 후 종료, p2 유지. 튜닝 목록 최고 p1(명절 없음)이 검증에서 같음(4.5612 vs 4.5614%) (§9). 기록 `model_comparison/autoarima/v2_tune/tuning_log.csv`. v1 p1·p2 시도는 v1 예산으로 따로 셈 |
 
 결과는 [RESULTS.md](RESULTS.md).
