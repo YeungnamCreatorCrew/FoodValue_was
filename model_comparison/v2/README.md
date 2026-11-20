@@ -78,8 +78,9 @@ uv run --extra prices python -m model_comparison.v2.run_pooled --config model_co
 | `all.json` | 모든 자료 |
 | `no_ow.json`, `no_garak.json`, `no_cross.json` | 모든 자료에서 하나씩 빼기 — 무엇이 기여했는지 |
 | `v1feat_garak.json`, `v1feat_cross.json`, `v1feat_anom.json` | v1 효과 묶음에 하나씩 더하기 |
-| `v1feat_xgb_robust.json` | v1feat + Huber 손실 + 계열 변동 크기 가중(앙상블 구성원 1) |
-| `v1feat_lgbm.json` | v1feat를 LightGBM(`PooledLGBM`, 제곱 오차)으로(앙상블 구성원 2) |
+| `v1feat_xgb_tuned.json` | **현재 XGBoost 구성원.** robust에서 트리 600·깊이 6·min_child_weight 5·Huber 0.03 (§8, 팀 결정 2026-11-20) |
+| `v1feat_xgb_robust.json` | v1feat + Huber 손실 + 계열 변동 크기 가중. 이전 XGBoost 구성원(§3~§7 숫자의 기준, 재현·비교용) |
+| `v1feat_lgbm.json` | **현재 LightGBM 구성원.** v1feat를 LightGBM(`PooledLGBM`, 제곱 오차)으로 (§7 튜닝 후 기본값 유지) |
 | `v1feat_xgb_robust_krei.json`, `v1feat_lgbm_krei.json` | 위 두 구성원 + `KREI` 묶음 |
 
 ### 학습 방식 옵션 (`params`에 넣음)
@@ -96,15 +97,51 @@ uv run --extra prices python -m model_comparison.v2.run_pooled --config model_co
 ### 앙상블
 
 끝난 실험 폴더의 예측을 평균해 같은 평가기로 채점한다(재학습 없음, 몇 초). 같은 기준일 목록으로 돌린 실험만 합칠 수 있다.
+옵션: `--weights 0.3,0.3,0.4`(순서는 폴더 순서), `--how median`.
+
+## 현재 앙상블 구성 (기준, 2026-11-20)
+
+> **사람·AI 공통 작업 기준.** v2에서 앙상블을 만들거나 "현재 앙상블에 넣었을 때"를 판단할 때는 이 표의 구성원과 설정만 쓴다.
+> 여기 없는 설정(예: `v1feat_xgb_robust`)으로 만든 앙상블 숫자는 이전 기준이라 지금 결과와 직접 비교하지 않는다.
+> 구성원을 바꾸려면 [튜닝 규칙](#튜닝-규칙-v2-앙상블-구성원)대로 튜닝 기준일에서 고르고 검증에서 한 번 확인한 뒤, 이 표를 고치는 PR을 팀 합의로 머지한다.
+
+| 구성원 | 설정 | 실행기 | 상태 |
+| --- | --- | --- | --- |
+| XGBoost | `model_comparison/v2/configs/v1feat_xgb_tuned.json` | `model_comparison.v2.run_pooled` | 확정 (§8: 21회 튜닝, 검증·시드 42·43·44 확인) |
+| LightGBM | `model_comparison/v2/configs/v1feat_lgbm.json` | `model_comparison.v2.run_pooled` | 확정 (§7: 15회 튜닝, 기본값 유지) |
+| AutoARIMA | `model_comparison/autoarima/config_p2_event.json` (p2) | v1 실행기 `tools.run_backtest` | 확정 (§9: 6회 튜닝, p2 유지. p1은 성능 같고 26% 빠름 — 단순한 쪽을 고를지는 팀 판단) |
+| Ridge | `model_comparison/ridge/v2/` (`no_ow_w1095`) | Ridge v2 실행기 | **넣지 않음** (§10: 3모델에 10% 더하면 4.5614 → 4.5652%로 나빠짐) |
+
+- 섞는 방식: 같은 비중 평균(구성원별 1/3). 비중 조정은 아직 정하지 않음(정할 때도 튜닝 기준일에서 고르고 검증은 한 번)
+- **현재 기준 숫자** (모두 Windows PC, 같은 비중)
+
+| 기준일 | 앙상블 | MAPE | naive 대비 |
+| --- | --- | --- | --- |
+| 튜닝 53개 (naive 4.607%) | XGBoost 튜닝판 + LightGBM | 4.2777% | |
+| 튜닝 53개 | **XGBoost 튜닝판 + LightGBM + AutoARIMA p2** | **4.2637%** | |
+| 검증 244개 (naive 4.913%) | XGBoost 튜닝판 + LightGBM | 4.5925% | +6.51% |
+| 검증 244개 | **XGBoost 튜닝판 + LightGBM + AutoARIMA p2** | **4.5614%** | **+7.15%** (관문 5개 통과) |
+
+### 현재 앙상블 재현 (PowerShell, 저장소 루트)
 
 ```powershell
-uv run --extra prices python -m model_comparison.v2.run_pooled --config model_comparison/v2/configs/v1feat_xgb_robust.json
+# 1) 구성원 예측 (검증 244개). 튜닝 기준일이면 각 명령에 --origins tune
+uv run --extra prices python -m model_comparison.v2.run_pooled --config model_comparison/v2/configs/v1feat_xgb_tuned.json
 uv run --extra prices python -m model_comparison.v2.run_pooled --config model_comparison/v2/configs/v1feat_lgbm.json
-uv run --extra prices python -m model_comparison.v2.ensemble experiments_v2/v1feat_xgb_robust-validation-<날짜>-01 `
-    experiments_v2/v1feat_lgbm-validation-<날짜>-01 --name ens-robust-lgbm     # --weights 0.5,0.5, --how median
+# AutoARIMA 검증 예측은 저장소에 있음: experiments/arima-p2-20261112-01
+# AutoARIMA 튜닝 기준일 예측은 직접 실행(약 40분):
+uv run --extra prices python -m tools.run_backtest --config model_comparison/autoarima/config_p2_event.json --phase focus --origins tune --out runs/arima-v2
+
+# 2) 같은 비중 앙상블 (폴더 이름의 날짜·번호는 실행 결과에 맞게)
+uv run --extra prices python -m model_comparison.v2.ensemble `
+    experiments_v2/v1feat_xgb_tuned-validation-<날짜>-01 `
+    experiments_v2/v1feat_lgbm-validation-<날짜>-01 `
+    experiments/arima-p2-20261112-01 --name ens-current
 ```
 
-새 자료를 시험할 때도 같은 두 구성원 설정에 `bundles`·`blocks`만 바꿔 넣고 앙상블로 비교하면 된다.
+- 실행 시간(Windows PC 기준): XGBoost 튜닝판은 robust보다 2~3배 느림(튜닝 기준일 약 7분), LightGBM 약 2분, AutoARIMA 튜닝 기준일 약 40분
+- 결과 폴더(`experiments_v2/`, `runs/`)는 커밋하지 않는다. 숫자는 [RESULTS.md](RESULTS.md)에 남긴다
+- 새 자료·새 모델을 시험할 때도 이 3모델 앙상블에 넣었을 때 좋아지는지로 판단한다
 
 ## 튜닝 규칙 (v2 앙상블 구성원)
 
