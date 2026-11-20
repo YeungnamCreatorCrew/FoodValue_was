@@ -14,5 +14,6 @@
 | `tuning_log.csv` | 팀 규칙 형식(`trial, config_id, params, macro_mape, ensemble_mape_with_lgbm, seconds, status`). 중단된 22번째(ABORTED) 포함 |
 | `tune.py` | 실행 스크립트(기준 → 후보 → 합친 설정 → 검증 1회). 결과 폴더는 `experiments_v2/`(커밋하지 않음) |
 | `seeds.py` | 기준·최고 설정을 시드 43·44로 다시 돌려 앙상블 비교(시도로 세지 않음) |
+| `seed_check.csv` | 시드 확인 결과: 세 시드 모두 combo가 앙상블 개선(평균 −0.0145%p) |
 
 결과 요약은 `../RESULTS.md` §8.

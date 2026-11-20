@@ -1,0 +1,8 @@
+config_id,seed,macro_mape,ensemble_mape_with_lgbm
+xgb_base,42,4.3261,4.2847
+xgb_base,43,4.3429,4.2922
+xgb_base,44,4.3403,4.292
+xgb_combo,42,4.2919,4.2777
+xgb_combo,43,4.2774,4.2697
+xgb_combo,44,4.2889,4.2779
+note: LightGBM 기본값(v1feat_lgbm) 시드 42 고정, XGBoost 시드만 42·43·44. 튜닝 목록 53개. 시도로 세지 않음(v2 튜닝 규칙)
