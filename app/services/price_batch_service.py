@@ -5,8 +5,11 @@ from statistics import mean
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.models.price import COUNTERPART, RETAIL, PriceForecast, PriceInsight, PriceModelRun, PriceSeries
+from app.models.fridge import Item
+from app.models.price import (COUNTERPART, RETAIL, PriceForecast, PriceForecastExplanation, PriceForecastFactor,
+    PriceInsight, PriceModelRun, PriceSeries)
 from app.repositories import covariate_repository, series_repository
+from app.services import price_explanation, price_summary
 from app.services.exogenous import WEATHER_LAG_DAYS, COUNTERPART_LAG_DAYS
 from app.services.fridge_service import today
 from app.services.price_prediction import InsufficientDataError, MODEL_VERSION, predict
@@ -86,6 +89,15 @@ def external_factors(covariates,base_date,result,market=RETAIL):
     return factors
 
 
+def explanation_rows(explanation):
+    """Explanation → price_forecast_factor 행. NaN은 NULL로 바꾼다(JSONB는 NaN을 받지 않는다)."""
+    if explanation is None:
+        return []
+    return [{'feature':name,'value':explanation.values.get(name),'contribution':round(value,4),
+             'history':[{'date':d,'value':price_explanation.clean(v)} for d,v in explanation.history.get(name,[])]}
+            for name,value in explanation.contributions.items()]
+
+
 HISTORY_DAYS=1854
 
 
@@ -110,12 +122,14 @@ def _run(engine,series_id,base_date):
         if newest and base_date<newest:
             raise ValueError('최신 공개 기준일보다 과거인 배치는 실행할 수 없습니다')
         rows,covariates=load_inputs(db,series,base_date)
+        item_name=db.get(Item,series.item_id).name
+        market=series.market
         run=PriceModelRun(series_id=series_id,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
         db.add(run)
         db.commit()
         run_id=run.id
     try:
-        result=predict([(d,p) for d,p in rows],base_date,covariates)
+        result=predict([(d,p) for d,p in rows],base_date,covariates,explain=True)
         if len(result.prices)!=7 or len(result.lower)!=7 or len(result.upper)!=7:
             raise ValueError('예측 결과는 7개여야 합니다')
         current=rows[-1][1]
@@ -126,6 +140,12 @@ def _run(engine,series_id,base_date):
                   'dataDate':rows[-1][0].isoformat(),'mean7Observed':round(mean(week),2) if week else None,
                   'description':'관측된 최근 가격 통계입니다. 모델의 인과적 기여도가 아닙니다.'}]
         factors+=external_factors(covariates,base_date,result,series.market)
+        explanation=result.explanation
+        shap_rows=explanation_rows(explanation)
+        display=price_explanation.display_factors(shap_rows,market) if shap_rows else []
+        # LLM 호출은 DB 연결을 잡지 않은 상태에서 한다. 실패해도 고정 문장으로 대체되어 배치는 계속된다.
+        summary,generator,summary_model,prompt_version=price_summary.generate(
+            item_name,market,current,result.prices[-1],price_explanation.category_totals(display),display)
         with Session(engine,expire_on_commit=False) as db:
             # 같은 날 다시 실행해도 이전 실행의 예측은 지우지 않는다. 공개는 최신 성공 실행을 고른다.
             for index,price in enumerate(result.prices):
@@ -133,7 +153,15 @@ def _run(engine,series_id,base_date):
                     predicted_price=price,lower_price=result.lower[index],upper_price=result.upper[index],model_run_id=run_id))
             score=result.metrics['evaluation'][result.model]
             db.add(PriceInsight(recommendation=recommendation,
-                buy_after_days=after,expected_saving=saving,mape=score['mape'],factors=factors,model_run_id=run_id))
+                buy_after_days=after,expected_saving=saving,mape=score['mape'],factors=factors,model_run_id=run_id,
+                summary=summary,summary_generator=generator,summary_model=summary_model,summary_prompt_version=prompt_version))
+            if explanation:
+                db.add(PriceForecastExplanation(model_run_id=run_id,horizon_days=explanation.horizon,method=explanation.method,
+                    current_price=round(explanation.current_price,2),damping=explanation.damping,
+                    base_price=round(explanation.base_price,2),predicted_price=explanation.predicted_price))
+                db.flush()
+                db.add_all(PriceForecastFactor(model_run_id=run_id,feature=row['feature'],feature_value=row['value'],
+                    contribution=row['contribution'],history=row['history']) for row in shap_rows)
             run=db.get(PriceModelRun,run_id)
             run.status='SUCCESS'
             run.model_name=result.model

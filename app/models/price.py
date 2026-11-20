@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, Numeric, SmallInteger, String, func
+from sqlalchemy import BigInteger, Date, DateTime, Double, ForeignKey, Integer, Numeric, SmallInteger, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -81,7 +81,36 @@ class PriceInsight(Base):
     expected_saving: Mapped[int | None] = mapped_column(Integer)
     mape: Mapped[Decimal | None] = mapped_column(Numeric(12,4))
     factors: Mapped[list | None] = mapped_column(JSONB)
+    summary: Mapped[dict | None] = mapped_column(JSONB)
+    summary_generator: Mapped[str | None] = mapped_column(String(20))
+    summary_model: Mapped[str | None] = mapped_column(String(60))
+    summary_prompt_version: Mapped[str | None] = mapped_column(String(20))
     model_run_id: Mapped[int] = mapped_column(ForeignKey('price_model_run.id'))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class PriceForecastExplanation(Base):
+    """7일 뒤 예측의 SHAP 설명 머리 정보(학습 모델로 공개된 실행만)"""
+    __tablename__ = 'price_forecast_explanation'
+    model_run_id: Mapped[int] = mapped_column(ForeignKey('price_model_run.id'), primary_key=True)
+    horizon_days: Mapped[int] = mapped_column(SmallInteger)
+    method: Mapped[str] = mapped_column(String(30))
+    current_price: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    damping: Mapped[Decimal] = mapped_column(Numeric(8, 4))
+    base_price: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    predicted_price: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class PriceForecastFactor(Base):
+    """특징별 SHAP 기여(원)와 최근 90일 특징값"""
+    __tablename__ = 'price_forecast_factor'
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    model_run_id: Mapped[int] = mapped_column(ForeignKey('price_forecast_explanation.model_run_id'))
+    feature: Mapped[str] = mapped_column(String(40))
+    feature_value: Mapped[float | None] = mapped_column(Double)
+    contribution: Mapped[Decimal] = mapped_column(Numeric(14, 4))
+    history: Mapped[list] = mapped_column(JSONB, server_default='[]')
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

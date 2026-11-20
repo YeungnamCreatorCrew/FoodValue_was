@@ -8,7 +8,7 @@ from app.core.db import get_db
 from app.core.deps import get_optional_user
 from app.models.user import User
 from app.schemas.common import Page
-from app.schemas.price import ForecastResponse, PriceCategory, PriceDetail, PriceFactors, PriceHistory, PriceMarket, PriceSort, PriceSummary
+from app.schemas.price import FactorHistory, ForecastResponse, PriceCategory, PriceDetail, PriceFactors, PriceHistory, PriceMarket, PriceSort, PriceSummary
 from app.services import price_service as service
 
 router=APIRouter(prefix='/prices',tags=['prices'])
@@ -52,3 +52,14 @@ def forecast(item_id:Id,db:Db,viewer:Viewer,market:Market=PriceMarket.RETAIL):
 @router.get('/items/{item_id}/factors',response_model=PriceFactors)
 def factors(item_id:Id,db:Db,viewer:Viewer,market:Market=PriceMarket.RETAIL):
     return call(service.factors,db,item_id,market)
+
+
+@router.get('/items/{item_id}/factors/{factor_id}/history',response_model=FactorHistory)
+def factor_history(item_id:Id,db:Db,viewer:Viewer,factor_id:str=Path(pattern=r'^[A-Za-z0-9]{1,40}$'),
+                   days:int=Query(30,ge=14,le=90),market:Market=PriceMarket.RETAIL):
+    if days not in (14,30,90):
+        raise HTTPException(400,'기간은 14, 30, 90일 중 선택해 주세요')
+    try:
+        return call(service.factor_history,db,item_id,factor_id,days,market)
+    except service.FactorNotFoundError:
+        raise HTTPException(404,'공개 예측에 이 요인의 추이가 없습니다') from None
