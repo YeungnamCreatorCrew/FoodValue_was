@@ -109,7 +109,8 @@ def test_template_sentences(monkeypatch):
 
 @pytest.fixture
 def no_gemini_key(monkeypatch):
-    monkeypatch.setattr(price_summary, '_retryable', lambda: True)
+    """키가 있는 것처럼 Gemini 경로를 연다(실제 호출은 각 테스트가 가짜로 바꾼다)."""
+    monkeypatch.setattr(price_summary, '_llm_enabled', lambda: True)
 
 
 def test_gemini_text_is_used_when_valid(monkeypatch, no_gemini_key):
@@ -137,14 +138,14 @@ def test_invalid_gemini_output_falls_back_to_template(monkeypatch, no_gemini_key
     summary, generator, llm, _ = price_summary.generate('대파', 'RETAIL', 3004, 2903, CATEGORIES, [])
     assert (generator, llm) == ('TEMPLATE', None)
     assert summary['categories'] == price_summary.template(CATEGORIES)['categories']
-    assert len(calls) == 2  # 1회 + 재시도 1회
+    assert len(calls) == 1  # 무료 플랜 한도 때문에 재시도하지 않는다
 
 
 def test_missing_key_and_baseline_never_call_gemini(monkeypatch):
     def fail(prompt):
         raise RuntimeError('GEMINI_API_KEY 없음')
     monkeypatch.setattr(price_summary, '_call_gemini', fail)
-    monkeypatch.setattr(price_summary, '_retryable', lambda: False)
+    monkeypatch.setattr(price_summary, '_llm_enabled', lambda: False)
     assert price_summary.generate('대파', 'RETAIL', 3004, 2903, CATEGORIES, [])[1] == 'TEMPLATE'
     called = []
     monkeypatch.setattr(price_summary, '_call_gemini', lambda prompt: called.append(1))
@@ -158,3 +159,30 @@ def test_clean_handles_nan():
 
 def test_tiny_change_is_written_in_won():
     assert price_summary.headline('대파', 'WHOLESALE', 2707, 2706).endswith('2,706원으로 1원 낮아질 것으로 예측되었습니다.')
+
+
+def test_quota_error_stops_further_calls_for_this_batch(monkeypatch):
+    monkeypatch.setattr(price_summary, '_quota_exhausted', False)
+    monkeypatch.delenv(price_summary.LLM_ENV, raising=False)
+    from app.core.config import get_settings
+    settings = get_settings()
+    monkeypatch.setattr(settings, 'gemini_api_key', 'test-key')
+    monkeypatch.setattr(settings, 'gemini_model', 'gemini-test')
+    calls = []
+
+    class Quota(Exception):
+        code = 429
+
+    def quota(prompt):
+        calls.append(1)
+        raise Quota()
+    monkeypatch.setattr(price_summary, '_call_gemini', quota)
+    for _ in range(3):  # 품목 3개 배치
+        assert price_summary.generate('대파', 'RETAIL', 3004, 2903, CATEGORIES, [])[1] == 'TEMPLATE'
+    assert len(calls) == 1
+
+
+def test_llm_can_be_turned_off_by_env(monkeypatch):
+    monkeypatch.setattr(price_summary, '_quota_exhausted', False)
+    monkeypatch.setenv(price_summary.LLM_ENV, '0')
+    assert price_summary._llm_enabled() is False

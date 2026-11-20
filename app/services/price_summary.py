@@ -5,9 +5,10 @@
 - Gemini 키가 없거나, 호출·JSON·검증(입력에 없는 숫자, 길이, 분류 불일치)에 실패하면 고정 문장을 쓴다. 배치는 실패시키지 않는다.
 """
 import json
+import os
 import re
 
-from app.core.constants import GEMINI_MAX_RETRIES, GEMINI_TIMEOUT_SECONDS
+from app.core.constants import GEMINI_TIMEOUT_SECONDS
 
 PROMPT_VERSION = 'price-summary-v2'
 MAX_SENTENCE = 120
@@ -140,27 +141,40 @@ def _call_gemini(prompt):
 
 
 def generate(name, market, current, forecast, categories, factors):
-    """(summary, generator, model, prompt_version). 기준 모델 실행(categories 없음)은 LLM을 부르지 않는다."""
+    """(summary, generator, model, prompt_version). Gemini 무료 플랜 한도를 아끼려고 실행당 최대 1회만 부른다.
+
+    - 기준 모델 실행(categories 없음), 키·모델명 없음, FOODVALUE_PRICE_SUMMARY_LLM=0이면 부르지 않는다.
+    - 재시도하지 않는다. 호출·JSON·검증 실패는 바로 고정 문장으로 대체한다.
+    - 한도 초과(429)를 한 번 받으면 이 프로세스(배치 1회)가 끝날 때까지 더 부르지 않는다.
+    """
+    global _quota_exhausted
     summary = {'headline': headline(name, market, current, forecast)}
-    fallback = template(categories)
-    if categories:
+    if categories and _llm_enabled():
         data = payload(name, market, current, forecast, categories, factors)
         prompt = _PROMPT.format(max_len=MAX_SENTENCE, payload=json.dumps(data, ensure_ascii=False))
-        for _ in range(1 + GEMINI_MAX_RETRIES):
-            try:
-                text, model = _call_gemini(prompt)
-                checked = validate(json.loads(text), data)
-            except Exception:  # 키 없음·네트워크·JSON 오류 모두 고정 문장으로 대체한다. 원문은 남기지 않는다.
-                checked, model = None, None
-                if not _retryable():
-                    break
-            if checked:
-                return {**summary, **checked}, 'GEMINI', model, PROMPT_VERSION
-    return {**summary, **fallback}, 'TEMPLATE', None, PROMPT_VERSION
+        try:
+            text, model = _call_gemini(prompt)
+            checked = validate(json.loads(text), data)
+        except Exception as error:  # 원문은 남기지 않는다(키가 섞일 수 있음)
+            checked, model = None, None
+            if _is_quota_error(error):
+                _quota_exhausted = True
+        if checked:
+            return {**summary, **checked}, 'GEMINI', model, PROMPT_VERSION
+    return {**summary, **template(categories)}, 'TEMPLATE', None, PROMPT_VERSION
 
 
-def _retryable():
+LLM_ENV = 'FOODVALUE_PRICE_SUMMARY_LLM'  # 0이면 Gemini를 쓰지 않고 고정 문장만 만든다
+_quota_exhausted = False
+
+
+def _llm_enabled():
+    if _quota_exhausted or os.getenv(LLM_ENV, '1') == '0':
+        return False
     from app.core.config import get_settings
     settings = get_settings()
     return bool(settings.gemini_api_key and settings.gemini_model)
 
+
+def _is_quota_error(error):
+    return getattr(error, 'code', None) == 429 or 'RESOURCE_EXHAUSTED' in str(getattr(error, 'status', ''))
