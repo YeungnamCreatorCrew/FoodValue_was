@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from statistics import mean
 
-from app.services import weighting
-from app.services.exogenous import Covariates, ExogenousFeatures
+from app.services import price_explanation, weighting
+from app.services.exogenous import GROUP_FEATURES, Covariates, ExogenousFeatures
 
 HORIZON = 7
 MIN_TRAIN = 120
@@ -45,6 +45,7 @@ class Prediction:
     lower: list[int | None]
     upper: list[int | None]
     metrics: dict
+    explanation: object = None  # price_explanation.Explanation (explain=True이고 학습 모델이 선택됐을 때만)
 
 
 def normalize(observations: list[tuple[date, int]], base_date: date):
@@ -177,7 +178,54 @@ def _better(candidate, baseline):
     return candidate['mape'] < baseline['mape']*.99 and candidate['mae'] <= baseline['mae']
 
 
-def predict(observations, base_date, covariates: Covariates | None = None):
+def _model_names(name, exogenous, experts):
+    """모델별 입력 특징 이름. vector()가 만드는 순서와 같다."""
+    if name == 'XGBOOST':
+        return list(PRICE_FEATURES)
+    if name == 'XGBOOST_EXT':
+        return PRICE_FEATURES + exogenous.names
+    block = next(b for b, n in experts.items() if n == name)
+    return PRICE_FEATURES + [f for group in exogenous.groups if group in exogenous.blocks[block]
+                             for f in GROUP_FEATURES[group]]
+
+
+def _explain(estimators, selected, experts, final_weights, exogenous, vector, days, values, ages, last, change, guess):
+    """공개 예측(7일 뒤)의 SHAP 기여와 최근 90일 특징값. 예측에 쓴 모델을 그대로 설명한다."""
+    parts = {}
+    for name, estimator in estimators.items():
+        parts[name] = price_explanation.contributions(estimator, vector(name, last, HORIZON),
+                                                      _model_names(name, exogenous, experts))
+    if selected == 'XGBOOST_WEIGHTED':
+        weights = {b: final_weights.values.get(b, 0.0) for b in experts}
+        rest = 1 - sum(weights.values())
+        combined = [(rest, *parts['XGBOOST'])] + [(weights[b], *parts[n]) for b, n in experts.items()]
+        contrib, bias = price_explanation.combine(combined)
+    else:
+        contrib, bias = parts[selected]
+    if abs(sum(contrib.values()) + bias - change) > price_explanation.TOLERANCE:
+        raise price_explanation.ExplanationError('결합한 SHAP 합이 공개 변화율과 다릅니다')
+    names = PRICE_FEATURES + (exogenous.names if exogenous else [])
+
+    def full(origin):
+        row = features(days, values, ages, origin, HORIZON)
+        if row is None:
+            return None
+        return dict(zip(names, row + (exogenous.vector(origin, HORIZON) if exogenous and exogenous.names else [])))
+
+    now = full(last)
+    history = {name: [] for name in contrib}
+    for origin in range(max(0, last - price_explanation.HISTORY_DAYS + 1), last + 1):
+        row = full(origin)
+        if row is None:
+            continue
+        for name in contrib:
+            history[name].append((days[origin].isoformat(), price_explanation.clean(row.get(name))))
+    return price_explanation.to_won(contrib, bias, values[last], damping(), guess,
+                                    {name: now.get(name) for name in contrib}, HORIZON, history)
+
+
+def predict(observations, base_date, covariates: Covariates | None = None, explain: bool = False):
+    """explain=True면 7일 뒤 예측의 변수별 기여(SHAP)와 최근 90일 특징값을 함께 만든다. 예측값은 같다."""
     days, values, observed, ages = normalize(observations, base_date)
     last = len(days)-1
     if features(days, values, ages, last, 1) is None:
@@ -317,12 +365,21 @@ def predict(observations, base_date, covariates: Covariates | None = None):
     needed = {'XGBOOST': ['XGBOOST'], 'XGBOOST_EXT': ['XGBOOST_EXT'],
               'XGBOOST_WEIGHTED': list(dict.fromkeys(['XGBOOST', *experts.values()]))}.get(selected, [])
     result, lower, upper, interval_metrics = [], [], [], []
+    explanation = explanation_error = None
     for horizon in range(1,8):
         if selected in learners:
-            changes = {name: float(fit(name, last, horizon).predict([vector(name, last, horizon)])[0]) for name in needed}
+            estimators = {name: fit(name, last, horizon) for name in needed}
+            changes = {name: float(estimator.predict([vector(name, last, horizon)])[0]) for name, estimator in estimators.items()}
             change = (final_weights.combine(changes['XGBOOST'], {b: changes[n] for b, n in experts.items()})
                       if selected == 'XGBOOST_WEIGHTED' else changes[selected])
             guess = _from_change(values[last], change)
+            if explain and horizon == HORIZON:
+                try:
+                    explanation = _explain(estimators, selected, experts, final_weights, exogenous, vector, days,
+                                           values, ages, last, change, guess)
+                except price_explanation.ExplanationError as error:
+                    # 설명 실패는 예측 공개를 막지 않는다. 설명 없이 공개하고 사유를 남긴다.
+                    explanation_error = str(error)
         else:
             guess = baseline_guess(selected, last)
         result.append(guess)
@@ -348,7 +405,7 @@ def predict(observations, base_date, covariates: Covariates | None = None):
         'expertRefitEveryDays': EXPERT_REFIT_DAYS, 'windowDays': weighting.WINDOW_DAYS, 'kappas': list(weighting.KAPPAS),
         'minGain': weighting.MIN_GAIN, 'minSamples': weighting.MIN_SAMPLES,
     } if external else None
-    return Prediction(selected, 'VALIDATED' if validated else 'BASELINE', result, lower, upper,
+    return Prediction(selected, 'VALIDATED' if validated else 'BASELINE', result, lower, upper, explanation=explanation, metrics=
                       {'selection':{n:_score(r) for n,r in scores[0].items()}, 'evaluation':final_metrics,
                        'candidates':candidates, 'selectedInSelection':selected_in_selection,
                        'selectedModel':selected,'baselineModel':baseline, 'intervals':interval_metrics,
@@ -359,4 +416,5 @@ def predict(observations, base_date, covariates: Covariates | None = None):
                        'intervalMethod':'absolute_error_quantile', 'nominalCoverage':.95,
                        'evaluationStart':days[evaluate_origins[0]].isoformat(),
                        'evaluationEnd':days[evaluate_origins[-1]].isoformat(),
-                       'sourceObservations':sum(observed), 'refitEveryDays':REFIT_DAYS})
+                       'sourceObservations':sum(observed), 'refitEveryDays':REFIT_DAYS,
+                       **({'explanationError': explanation_error} if explanation_error else {})})

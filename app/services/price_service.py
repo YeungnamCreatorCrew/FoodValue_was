@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -8,8 +8,10 @@ from app.models.price import RETAIL, PriceModelRun
 from app.repositories import series_repository
 from app.repositories import price_repository as repo
 from app.schemas.common import Page
-from app.schemas.price import (ForecastPoint, ForecastResponse, FridgeHolding, HistoryPoint,
-    PriceDetail, PriceFactors, PriceGuide, PriceHistory, PriceSummary)
+from app.schemas.price import (FactorCategory, FactorHistory, FactorHistoryPoint, ForecastPoint, ForecastResponse,
+    FridgeHolding, HistoryPoint, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
+    PriceSummaryText)
+from app.services import price_explanation
 from app.services.fridge_service import today
 
 
@@ -38,8 +40,8 @@ def state(price, run, as_of):
     return 'READY' if run.quality=='VALIDATED' else 'BASELINE'
 
 
-def summary(item,series,price,previous,run,last,as_of):
-    return PriceSummary(id=item.id,name=item.name,category=item.category,market=series.market,series_id=series.id,
+def summary(item,series,price,previous,run,last,as_of,aliases=()):
+    return PriceSummary(id=item.id,name=item.name,aliases=list(aliases),category=item.category,market=series.market,series_id=series.id,
         unit_label=series.unit_label,source=series.source,
         price_date=price.price_date if price else None,current_price=price.price if price else None,
         weekly_change_percent=change(price.price,previous.price) if price and previous else None,
@@ -54,7 +56,9 @@ def list_items(db,category,keyword,sort,page,size,market=RETAIL):
     as_of=today()
     rows=repo.catalog(db,category,keyword,market)
     prices,previous,runs,forecasts=repo.overview_rows(db,[s for _,s in rows],as_of)
-    result=[summary(item,s,prices.get(s.id),previous.get(s.id),runs.get(s.id),forecasts.get(s.id),as_of) for item,s in rows]
+    names=repo.aliases(db,[item.id for item,_ in rows])
+    result=[summary(item,s,prices.get(s.id),previous.get(s.id),runs.get(s.id),forecasts.get(s.id),as_of,names.get(item.id,()))
+            for item,s in rows]
     if sort!='name':
         field='weekly_change_percent' if sort=='change' else 'forecast_change_percent'
         result.sort(key=lambda row:(getattr(row,field) is None,getattr(row,field) or 0,row.name,row.id))
@@ -103,9 +107,11 @@ def detail(db,item_id,user,market=RETAIL):
         for row in rows:
             quantities[row.unit]=quantities.get(row.unit,Decimal(0))+row.quantity
         holdings=FridgeHolding(ingredient_count=len(rows),quantities={k:str(v) for k,v in quantities.items()})
-    return PriceDetail(item=summary(item,series,prices.get(series.id),previous.get(series.id),run,points[-1] if points else None,as_of),
+    names=repo.aliases(db,[item_id])
+    return PriceDetail(item=summary(item,series,prices.get(series.id),previous.get(series.id),run,points[-1] if points else None,
+                                    as_of,names.get(item_id,())),
         forecast=forecast_result(db,item_id,series,as_of,run,points),
-        guide=PriceGuide.model_validate(guide) if guide else None,fridge=holdings)
+        guide=PriceGuide.model_validate(guide) if guide else None,summary=summary_text(guide),fridge=holdings)
 
 
 def history(db,item_id,days,market=RETAIL):
@@ -117,9 +123,71 @@ def history(db,item_id,days,market=RETAIL):
         points=[HistoryPoint(date=start+timedelta(days=i),price=lookup.get(start+timedelta(days=i))) for i in range(days)])
 
 
+def summary_text(guide):
+    if guide is None or not guide.summary:
+        return None
+    return PriceSummaryText(**guide.summary,generator=guide.summary_generator)
+
+
+def _previous(history,base_date,days=7):
+    """기준일과 정확히 7일 전의 같은 특징값. 근처 날짜로 대신하지 않는다."""
+    target=(base_date-timedelta(days=days)).isoformat()
+    hit=next((point for point in history if point['date']==target),None)
+    return (hit['value'],date.fromisoformat(target)) if hit and hit['value'] is not None else (None,None)
+
+
 def factors(db,item_id,market=RETAIL):
+    """7일 뒤 예측의 변수별 SHAP 기여(원). 기준 모델로 공개된 실행은 설명이 없다(unavailableReason=BASELINE_MODEL)."""
     _,series=require_item(db,item_id,market)
-    run,points,guide=repo.snapshot(db,series.id,today())
-    result=forecast_result(db,item_id,series,today(),run,points)
-    return PriceFactors(item_id=item_id,market=series.market,base_date=result.base_date,status=result.status,
-                        factors=guide.factors or [] if guide else [])
+    as_of=today()
+    run,points,guide=repo.snapshot(db,series.id,as_of)
+    result=forecast_result(db,item_id,series,as_of,run,points)
+    response=PriceFactors(item_id=item_id,market=series.market,base_date=result.base_date,status=result.status,
+                          model_name=result.model_name,summary=summary_text(guide))
+    if run is None:
+        response.unavailable_reason='NO_FORECAST'
+        return response
+    header,rows=repo.explanation(db,run.id)
+    if header is None:
+        response.unavailable_reason='BASELINE_MODEL' if run.quality=='BASELINE' else 'NOT_EXPLAINED'
+        return response
+    display=price_explanation.display_factors(rows,series.market)
+    histories={row['feature']:row['history'] or [] for row in rows}
+    texts=response.summary.categories if response.summary else {}
+    response.explained=True
+    response.method=header.method
+    response.horizon_days=header.horizon_days
+    response.target_date=run.base_date+timedelta(days=header.horizon_days)
+    response.current_price=float(header.current_price)
+    response.base_price=float(header.base_price)
+    response.predicted_price=header.predicted_price
+    response.categories=[FactorCategory(**c,description=texts.get(c['category']))
+                         for c in price_explanation.category_totals(display)]
+    items=[]
+    for factor in display:
+        previous,previous_date=(_previous(histories.get(factor['id'],[]),run.base_date) if factor['hasHistory'] else (None,None))
+        items.append(PriceFactor(**factor,previous_value=price_explanation.display_value(factor['id'],previous),
+                                 previous_date=previous_date))
+    response.factors=items
+    return response
+
+
+class FactorNotFoundError(Exception):
+    pass
+
+
+def factor_history(db,item_id,factor_id,days,market=RETAIL):
+    """공개 실행 기준일까지 최근 days일의 특징값(화면 단위). 배치가 예측 시점에 저장한 값이다."""
+    _,series=require_item(db,item_id,market)
+    run,_,_=repo.snapshot(db,series.id,today())
+    header,rows=repo.explanation(db,run.id) if run else (None,[])
+    row=next((r for r in rows if r['feature']==factor_id),None)
+    if row is None:
+        raise FactorNotFoundError
+    start=run.base_date-timedelta(days=days-1)
+    points=[FactorHistoryPoint(date=point['date'],value=price_explanation.display_value(factor_id,point['value']))
+            for point in row['history'] or [] if date.fromisoformat(point['date'])>=start]
+    meta=price_explanation.FEATURES.get(factor_id,(factor_id,'','PRICE',1))
+    return FactorHistory(item_id=item_id,market=series.market,factor_id=factor_id,
+                         label=price_explanation.label(factor_id,series.market),unit=meta[1],
+                         base_date=run.base_date,days=days,points=points)

@@ -28,6 +28,7 @@ class PriceSort(StrEnum):
 class PriceSummary(CamelModel):
     id: int
     name: str
+    aliases: list[str] = Field(default_factory=list)
     category: PriceCategory
     market: PriceMarket
     series_id: int
@@ -83,6 +84,14 @@ class ForecastResponse(CamelModel):
     updated_at: datetime | None = None
 
 
+class PriceSummaryText(CamelModel):
+    """AI 예측 요약 문장. generator=GEMINI는 LLM이 다듬은 문장(숫자 검증 통과), TEMPLATE은 고정 문장"""
+    headline: str
+    detail: str
+    categories: dict[str, str] = Field(default_factory=dict)
+    generator: str | None = None
+
+
 class PriceGuide(CamelModel):
     recommendation: str
     buy_after_days: int | None
@@ -100,7 +109,29 @@ class PriceDetail(CamelModel):
     item: PriceSummary
     forecast: ForecastResponse
     guide: PriceGuide | None
+    summary: PriceSummaryText | None = None
     fridge: FridgeHolding | None
+
+
+class FactorCategory(CamelModel):
+    category: str
+    label: str
+    contribution: float
+    direction: str
+    description: str | None = None
+
+
+class PriceFactor(CamelModel):
+    id: str
+    label: str
+    category: str
+    value: float | None
+    unit: str
+    previous_value: float | None = None
+    previous_date: date | None = None
+    contribution: float
+    direction: str
+    has_history: bool
 
 
 class PriceFactors(CamelModel):
@@ -108,4 +139,31 @@ class PriceFactors(CamelModel):
     market: PriceMarket
     base_date: date | None
     status: str
-    factors: list[dict]
+    explained: bool = False
+    unavailable_reason: str | None = None
+    model_name: str | None = None
+    method: str | None = None
+    horizon_days: int | None = None
+    target_date: date | None = None
+    current_price: float | None = None
+    base_price: float | None = None
+    predicted_price: int | None = None
+    summary: PriceSummaryText | None = None
+    categories: list[FactorCategory] = Field(default_factory=list)
+    factors: list[PriceFactor] = Field(default_factory=list)
+
+
+class FactorHistoryPoint(CamelModel):
+    date: date
+    value: float | None
+
+
+class FactorHistory(CamelModel):
+    item_id: int
+    market: PriceMarket
+    factor_id: str
+    label: str
+    unit: str
+    base_date: date
+    days: int
+    points: list[FactorHistoryPoint]

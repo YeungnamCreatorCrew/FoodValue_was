@@ -58,7 +58,7 @@ def test_real_training_and_public_api(pricing):
 
 def test_retry_failure_preserves_previous_result_and_no_duplicates(pricing,monkeypatch):
     client,engine,item_id,_,_,series_id=pricing
-    monkeypatch.setattr(batch,'predict',lambda *args:fake_prediction())
+    monkeypatch.setattr(batch,'predict',lambda *args,**kwargs:fake_prediction())
     first=batch.run(engine,series_id)
     second=batch.run(engine,series_id)
     assert first['runId']!=second['runId']
@@ -67,13 +67,13 @@ def test_retry_failure_preserves_previous_result_and_no_duplicates(pricing,monke
         runs='SELECT id FROM price_model_run WHERE series_id=:id'
         assert conn.scalar(text(f'SELECT count(*) FROM price_forecast WHERE model_run_id IN ({runs})'),{'id':series_id})==14
         assert conn.scalar(text(f'SELECT count(*) FROM price_insight WHERE model_run_id IN ({runs})'),{'id':series_id})==2
-    def insufficient(*args):
+    def insufficient(*args,**kwargs):
         raise InsufficientDataError('test')
     monkeypatch.setattr(batch,'predict',insufficient)
     assert batch.run(engine,series_id)['status']=='INSUFFICIENT_DATA'
     forecast=client.get(f'{ROOT}/items/{item_id}/forecast').json()
     assert forecast['modelRunId']==second['runId'] and forecast['latestAttemptStatus']=='INSUFFICIENT_DATA'
-    def invalid(*args):
+    def invalid(*args,**kwargs):
         result=fake_prediction()
         result.prices[0]=0
         return result
@@ -88,7 +88,7 @@ def test_retry_failure_preserves_previous_result_and_no_duplicates(pricing,monke
 def test_advisory_lock_rejects_concurrent_batch_and_releases(pricing,monkeypatch):
     _,engine,item_id,_,_,series_id=pricing
     entered,release=Event(),Event()
-    def blocked(*args):
+    def blocked(*args,**kwargs):
         entered.set()
         assert release.wait(timeout=15)
         return fake_prediction()
@@ -102,7 +102,7 @@ def test_advisory_lock_rejects_concurrent_batch_and_releases(pricing,monkeypatch
         finally:
             release.set()
         assert future.result(timeout=15)['status']=='SUCCESS'
-    monkeypatch.setattr(batch,'predict',lambda *args:fake_prediction())
+    monkeypatch.setattr(batch,'predict',lambda *args,**kwargs:fake_prediction())
     assert batch.run(engine,series_id)['status']=='SUCCESS'
 
 

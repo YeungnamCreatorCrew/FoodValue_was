@@ -130,7 +130,7 @@ def pipeline(local, monkeypatch):
             # price_daily가 원본 행을 참조하므로 계열 자료를 먼저 지운다.
             series = 'SELECT id FROM price_series WHERE item_id=:id'
             runs = f'SELECT id FROM price_model_run WHERE series_id IN ({series})'
-            for table in ('price_insight', 'price_forecast'):
+            for table in ('price_forecast_factor', 'price_forecast_explanation', 'price_insight', 'price_forecast'):
                 conn.execute(text(f'DELETE FROM {table} WHERE model_run_id IN ({runs})'), {'id': item_id})
             conn.execute(text(f'DELETE FROM backtest_run WHERE series_id IN ({series})'), {'id': item_id})
             for table in ('price_model_run', 'price_daily', 'price_change_history'):
@@ -217,12 +217,21 @@ def test_full_pipeline_publishes_exogenous_forecast(pipeline):
     assert prediction['model'] in ('XGBOOST_EXT', 'XGBOOST_WEIGHTED') and prediction['quality'] == 'VALIDATED', metrics['evaluation']
     detail = client.get(f'/api/v1/prices/items/{item_id}').json()
     metrics = detail['forecast']['metrics']
-    assert metrics['externalGroups'] == ['COUNTERPART', 'WEATHER', 'CALENDAR']
+    # 전국 날씨·명절·환율은 공용 테이블이라 로컬 DB에 수집된 만큼 그룹이 더 붙을 수 있다. 이 테스트가 넣은 원천만 확인한다.
+    assert {'COUNTERPART', 'WEATHER', 'CALENDAR'} <= set(metrics['externalGroups'])
     assert metrics['externalCoverage']['COUNTERPART'] == 1.0
-    assert metrics['weighting']['blocks'] == {'MARKET': ['COUNTERPART'], 'WEATHER': ['WEATHER'], 'CALENDAR': ['CALENDAR']}
+    assert {'MARKET': ['COUNTERPART'], 'WEATHER': ['WEATHER'], 'CALENDAR': ['CALENDAR']}.items() <= \
+        {k: [g for g in v if g in ('COUNTERPART', 'WEATHER', 'CALENDAR')] for k, v in metrics['weighting']['blocks'].items()}.items()
     assert all(0.0 <= value <= 1.0 for value in metrics['weighting']['weights'].values())
-    names = [factor['name'] for factor in client.get(f'/api/v1/prices/items/{item_id}/factors').json()['factors']]
-    assert names[:3] == ['최근 가격', '도매가격', '주산지 기상']
+    observed = [factor['name'] for factor in detail['guide']['factors']]
+    assert observed[:3] == ['최근 가격', '도매가격', '주산지 기상']
+    # 학습 모델로 공개된 실행은 SHAP 설명이 함께 저장되고, 기대값 + 기여 합이 예측가와 맞는다.
+    factors = client.get(f'/api/v1/prices/items/{item_id}/factors').json()
+    assert factors['explained'] is True and factors['predictedPrice'] == detail['forecast']['points'][-1]['predictedPrice']
+    assert abs(factors['basePrice'] + sum(f['contribution'] for f in factors['factors']) - factors['predictedPrice']) < 1 + .05 * len(factors['factors'])
+    assert 'counterLast' in {f['id'] for f in factors['factors']} and factors['summary']['headline']
+    history = client.get(f'/api/v1/prices/items/{item_id}/factors/current/history?days=14').json()
+    assert history['points'] and history['points'][-1]['date'] == factors['baseDate']
     assert len(detail['forecast']['points']) == 7
     wholesale = client.get(f'/api/v1/prices/items/{item_id}/forecast?market=WHOLESALE').json()
     assert wholesale['market'] == 'WHOLESALE' and len(wholesale['points']) == 7

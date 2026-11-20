@@ -1,3 +1,4 @@
+import json
 from datetime import date, timedelta
 
 import pytest
@@ -38,8 +39,12 @@ def prices(api,monkeypatch):
         predicted_price INTEGER,lower_price INTEGER,upper_price INTEGER,model_run_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         '''CREATE TABLE price_insight(id INTEGER PRIMARY KEY,recommendation TEXT,
-        buy_after_days INTEGER,expected_saving INTEGER,mape NUMERIC,factors JSON,model_run_id INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        buy_after_days INTEGER,expected_saving INTEGER,mape NUMERIC,factors JSON,summary JSON,summary_generator TEXT,
+        summary_model TEXT,summary_prompt_version TEXT,model_run_id INTEGER,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE price_forecast_explanation(model_run_id INTEGER PRIMARY KEY,horizon_days INTEGER,method TEXT,
+        current_price NUMERIC,damping NUMERIC,base_price NUMERIC,predicted_price INTEGER,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE price_forecast_factor(id INTEGER PRIMARY KEY,model_run_id INTEGER,feature TEXT,feature_value REAL,
+        contribution NUMERIC,history JSON,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         "INSERT INTO item(id,name,category,default_unit,default_storage,food_type,price_source,price_unit_label) VALUES(2,'대파','VEGETABLE','단','FRIDGE','RAW','KAMIS','1kg')",
         # 계열 1: 대파 소매(가격·예측 있음), 계열 2: 두부 소매(자료 없음), 계열 3: 대파 도매(자료 없음)
         "INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(1,2,'RETAIL','211','00','01',1,'kg')",
@@ -178,3 +183,60 @@ def test_wholesale_market_is_separate_series(prices):
     assert forecast['seriesId']==3 and forecast['points']==[]
     assert client.get(ROOT+'/items/1?market=WHOLESALE').status_code==404
     assert client.get(ROOT+'/items/2?market=FARM').status_code==400
+
+
+def add_explanation(engine):
+    history=[{'date':(DAY-timedelta(days=d)).isoformat(),'value':0.02+d/1000} for d in range(89,-1,-1)]
+    history[-8]['value']=None  # 7일 전 값이 결측이면 비교하지 않는다
+    summary={'headline':'현재 1,000원인 대파 소매가격은 7일 후 930원으로 약 7.0% 낮아질 것으로 예측되었습니다.',
+             'detail':'이번 예측에서 달력·계절은 하락 방향, 최근 가격 흐름은 상승 방향으로 작용했습니다.',
+             'categories':{'CALENDAR':'달력·계절은 가격을 낮추는 방향으로 작용했습니다.','PRICE':'최근 가격 흐름은 높이는 방향입니다.'}}
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE price_insight SET summary=:s,summary_generator='GEMINI' WHERE model_run_id=1"),{'s':json.dumps(summary,ensure_ascii=False)})
+        conn.execute(text("INSERT INTO price_forecast_explanation VALUES(1,7,'XGBOOST_TREE_SHAP',1000,1,1010,930,CURRENT_TIMESTAMP)"))
+        rows=[('current',1000,12.5,[{'date':DAY.isoformat(),'value':1000}]),('change7',-.05,-3.25,history),
+              ('targetSeasonSin',.3,-60,[]),('targetSeasonCos',.9,-29.25,[]),('lag7',1100,0,[{'date':(DAY-timedelta(days=7)).isoformat(),'value':1100}])]
+        for feature,value,contribution,points in rows:
+            conn.execute(text("INSERT INTO price_forecast_factor(model_run_id,feature,feature_value,contribution,history) VALUES(1,:f,:v,:c,:h)"),
+                         {'f':feature,'v':value,'c':contribution,'h':json.dumps(points)})
+
+
+def test_factors_explain_published_run(prices):
+    client,engine,_=prices
+    add_explanation(engine)
+    body=client.get(ROOT+'/items/2/factors').json()
+    assert body['explained'] is True and body['unavailableReason'] is None
+    assert (body['basePrice'],body['predictedPrice'],body['targetDate'])==(1010,930,'2026-10-15')
+    assert [f['id'] for f in body['factors']]==['targetSeason','current','change7','lag7']
+    season,current,change,lag=body['factors']
+    assert season['contribution']==-89.2 and season['hasHistory'] is False and season['value'] is None
+    assert change['value']==-5.0 and change['unit']=='%' and change['previousValue'] is None
+    assert lag['direction']=='NEUTRAL' and (lag['previousValue'],lag['previousDate'])==(1100,'2026-10-01')
+    assert current['label']=='현재 가격' and current['direction']=='UP'
+    assert [(c['category'],c['direction'],c['description'] is not None) for c in body['categories']]==[('CALENDAR','DOWN',True),('PRICE','UP',True)]
+    assert body['summary']['generator']=='GEMINI'
+    detail=client.get(ROOT+'/items/2').json()
+    assert detail['summary']['headline'].startswith('현재 1,000원') and detail['item']['aliases']==['흙대파']
+
+
+def test_factor_history_window(prices):
+    client,engine,_=prices
+    add_explanation(engine)
+    body=client.get(ROOT+'/items/2/factors/change7/history?days=14').json()
+    assert body['unit']=='%' and len(body['points'])==14 and body['points'][-1]=={'date':DAY.isoformat(),'value':2.0}
+    assert body['points'][-8]['value'] is None
+    assert len(client.get(ROOT+'/items/2/factors/change7/history?days=90').json()['points'])==90
+    assert client.get(ROOT+'/items/2/factors/targetSeason/history').status_code==404
+    assert client.get(ROOT+'/items/2/factors/change7/history?days=20').status_code==400
+    assert client.get(ROOT+'/items/2/factors/bad-id!/history').status_code in (400,404)
+
+
+def test_factors_without_explanation(prices):
+    client,engine,_=prices
+    body=client.get(ROOT+'/items/2/factors').json()
+    assert body['explained'] is False and body['unavailableReason']=='NOT_EXPLAINED' and body['factors']==[]
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE price_model_run SET quality='BASELINE' WHERE id=1"))
+    assert client.get(ROOT+'/items/2/factors').json()['unavailableReason']=='BASELINE_MODEL'
+    assert client.get(ROOT+'/items/2/factors?market=WHOLESALE').json()['unavailableReason']=='NO_FORECAST'
+    assert client.get(ROOT+'/items/2/factors/change7/history').status_code==404

@@ -3,7 +3,8 @@ from datetime import timedelta
 from sqlalchemy import exists, func, select
 
 from app.models.fridge import Item, ItemAlias
-from app.models.price import RETAIL, PriceDaily, PriceForecast, PriceInsight, PriceModelRun, PriceSeries
+from app.models.price import (RETAIL, PriceDaily, PriceForecast, PriceForecastExplanation, PriceForecastFactor, PriceInsight,
+    PriceModelRun, PriceSeries)
 from app.repositories.fridge_repository import escape_like
 
 
@@ -85,3 +86,25 @@ def overview_rows(db, series_list, as_of):
         if (point.target_date-run.base_date).days==7:
             forecasts[run.series_id]=point
     return latest,previous,runs,forecasts
+
+
+def aliases(db, item_ids):
+    """품목 id → 별칭 목록(가나다순)"""
+    if not item_ids:
+        return {}
+    result = {}
+    for item_id, alias in db.execute(select(ItemAlias.item_id, ItemAlias.alias)
+                                     .where(ItemAlias.item_id.in_(item_ids)).order_by(ItemAlias.alias)).all():
+        result.setdefault(item_id, []).append(alias)
+    return result
+
+
+def explanation(db, run_id):
+    """실행의 SHAP 설명 머리와 특징별 행. 설명이 없으면 (None, [])"""
+    header = db.get(PriceForecastExplanation, run_id)
+    if header is None:
+        return None, []
+    columns = [PriceForecastFactor.feature, PriceForecastFactor.feature_value, PriceForecastFactor.contribution,
+               PriceForecastFactor.history]
+    rows = db.execute(select(*columns).where(PriceForecastFactor.model_run_id == run_id)).all()
+    return header, [{'feature': f, 'value': v, 'contribution': c, 'history': h} for f, v, c, h in rows]
