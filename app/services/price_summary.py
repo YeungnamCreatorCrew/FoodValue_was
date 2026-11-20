@@ -9,7 +9,7 @@ import re
 
 from app.core.constants import GEMINI_MAX_RETRIES, GEMINI_TIMEOUT_SECONDS
 
-PROMPT_VERSION = 'price-summary-v1'
+PROMPT_VERSION = 'price-summary-v2'
 MAX_SENTENCE = 120
 CAUSAL_WORDS = ('때문', '원인', '탓', '덕분')  # SHAP은 인과가 아니므로 이런 표현이 있으면 고정 문장을 쓴다
 MARKET_LABELS = {'RETAIL': '소매', 'WHOLESALE': '도매'}
@@ -25,7 +25,8 @@ _PROMPT = """너는 식자재 가격 예측 서비스의 설명 문장을 다듬
 - SHAP은 모델 예측에 대한 기여다. "때문에", "원인", "~해서 올랐다"처럼 인과를 단정하지 말고
   "가격을 높이는(낮추는) 방향으로 작용했습니다"처럼 쓴다.
 - 입력에 없는 사건(태풍, 작황 등)을 지어내지 않는다.
-- detail은 분류들이 어느 방향으로 작용했는지 한 문장으로 요약한다.
+- detail은 분류들이 어느 방향으로 작용했는지 한 문장으로 요약한다. 화면에서 바로 위에 예측가 문장이 있으므로
+  detail에는 가격·변화율 등 숫자를 쓰지 않는다.
 
 입력:
 {payload}
@@ -115,6 +116,8 @@ def validate(result, data):
         return None
     texts = [result['detail'], *result['categories'].values()]
     if any(not isinstance(t, str) or not t.strip() or len(t) > MAX_SENTENCE for t in texts):
+        return None
+    if _numbers(result['detail']):  # 예측가 문장(headline)과 숫자가 겹치지 않게 한다
         return None
     if any(word in t for t in texts for word in CAUSAL_WORDS):
         return None

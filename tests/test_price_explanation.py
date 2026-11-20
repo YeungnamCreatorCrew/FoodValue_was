@@ -127,6 +127,7 @@ def test_gemini_text_is_used_when_valid(monkeypatch, no_gemini_key):
     {'detail': '요약', 'categories': {'WEATHER': '낮춤'}},  # 분류 누락
     {'detail': '가' * 200, 'categories': {'WEATHER': '낮춤', 'PRICE': '높임'}},  # 너무 김
     {'detail': '기온 때문에 내렸습니다.', 'categories': {'WEATHER': '낮춤', 'PRICE': '높임'}},  # 인과 단정
+    {'detail': '대파 가격은 7일 뒤 2903원으로 3.4% 하락합니다.', 'categories': {'WEATHER': '낮춤', 'PRICE': '높임'}},  # headline 반복
     'not json',
 ])
 def test_invalid_gemini_output_falls_back_to_template(monkeypatch, no_gemini_key, answer):
