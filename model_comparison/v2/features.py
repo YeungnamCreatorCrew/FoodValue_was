@@ -17,6 +17,8 @@
                   56일 범위 안 위치, 91·365일 평균 대비, 전년 대비, 3일 변화,
                   작년 같은 시기 h일 변화(1~3년 전 평균, 목표 시점별) — 계절 흐름을 가격 자체에서 가져온다
 - KREI:           KREI 관측월보(별도 스냅샷, krei.py). 기준일 d−1까지 공개(available_from)된 최신 호의 품목 값 → 5개
+- KIND:           배추·무 작형 전환 신호(작형 이어 붙인 계열만, 나머지 계열은 NaN) → 5개. kind_state() 참고
+- KIND_OBS:       KIND 중 실제 관측 신호 3개만(후보 작형 연속 관측 수·가격 비율·경과일). 평년 달력 특징 제외
 """
 import csv
 import math
@@ -32,7 +34,10 @@ WEATHER_WEEKS = 52
 EXTREME_BLOCKS = 13  # 4주 블록
 GARAK_WEEKS = 8
 LAG = standard.EXTRA_LAG_DAYS
-V2_BLOCKS = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK', 'CROSS_ITEM', 'SERIES_ID', 'PRICE_DYN', 'KREI')
+V2_BLOCKS = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK', 'CROSS_ITEM', 'SERIES_ID', 'PRICE_DYN', 'KREI', 'KIND', 'KIND_OBS')
+KIND_NAMES = ['kd_cand_streak', 'kd_cand_logratio', 'kd_cand_age', 'kd_days_to_typical', 'kd_typical_jump']
+KIND_OBS_NAMES = KIND_NAMES[:3]  # 평년 달력 특징(전환 시기·점프) 없이 실제 관측 신호만
+KIND_SEEN_DAYS = 14  # 후보 작형 가격을 d−13..d 관측까지 본다
 NEEDS_EXTRA = ('ORIGIN_WEATHER', 'WEATHER_ANOM', 'GARAK')  # 추가 자료 폴더가 있어야 하는 묶음
 ANOM_BLOCKS = 13  # 4주 블록 × 13 = 52주
 ANOM_YEARS = 5
@@ -60,6 +65,10 @@ def block_names(block: str) -> list[str]:
         return PRICE_DYN_NAMES
     if block == 'KREI':
         return list(krei.NAMES)
+    if block == 'KIND':
+        return list(KIND_NAMES)
+    if block == 'KIND_OBS':
+        return list(KIND_OBS_NAMES)
     raise ValueError(block)
 
 
@@ -180,6 +189,14 @@ class V2Features:
                     raise FileNotFoundError('KREI 묶음에는 --krei 스냅샷 폴더가 필요')
                 self._krei = krei.KreiSnapshot(self.krei_dir)
             out = self._krei.features(s.item, s.start, s.filled)
+        elif block == 'KIND_OBS':
+            out = self.origin_block(series_id, 'KIND')[:, :len(KIND_OBS_NAMES)]
+        elif block == 'KIND':
+            out = np.full((n, len(KIND_NAMES)), np.nan)
+            obs = self._kind_rows().get(series_id)
+            if obs:
+                survey = [day for day, closed in self.snap.calendar if not closed]
+                out, _ = kind_state(obs, survey, s.start, n, s.filled)
         else:
             weather, garak = self._item_daily(s.item, s.start, n, head)
             if block == 'WEATHER_ANOM':
@@ -204,6 +221,17 @@ class V2Features:
             out = np.column_stack(cols)[head:]
         self._cache[key] = out
         return out
+
+    def _kind_rows(self):
+        """스냅샷 price_daily_kind.csv → {이어 붙인 계열 id: [(날짜, 작형, 가격)]}."""
+        if getattr(self, '_kinds', None) is None:
+            self._kinds = {}
+            path = self.snap.folder / 'price_daily_kind.csv'
+            if path.exists():
+                for r in _read(path):
+                    self._kinds.setdefault(int(r['merged_series_id']), []).append(
+                        (date.fromisoformat(r['price_date']), r['kind_code'], int(r['price'])))
+        return self._kinds
 
     def analog_by_horizon(self, series_id, origin_idx, horizons):
         s = self.snap.series[series_id]
@@ -288,6 +316,107 @@ def _analog(v, h):
     with np.errstate(all='ignore'):
         mean = np.nansum(stack, axis=0) / np.maximum(count, 1)
     return np.where(count > 0, mean, np.nan), count.astype(float)
+
+
+def kind_state(observations, survey_days, start: date, n: int, filled):
+    """배추·무 작형 전환 신호(KIND 묶음). 행 i = 날짜 start+i, 그날까지의 조사일 관측만 쓴다.
+
+    작형 이어 붙이기(loader.merge_kinds, 기준서 §2.3)와 같은 상태(현재 작형 K, 직전 작형 P, 작형별 연속 관측 수)를
+    날짜순으로 다시 따라가며, 전환 후보 = {next(K), 그 달 우선 작형} − {K, P}의 상태를 특징으로 남긴다.
+    - kd_cand_streak:     후보 작형의 연속 관측 조사일 수 최댓값(3이 되면 전환 — 이어 붙이기 규칙)
+    - kd_cand_logratio:   선두 후보의 최근 관측 가격(d−13..d) ÷ 현재 가격 v[d]의 로그. 없으면 NaN
+    - kd_cand_age:        그 관측이 며칠 전인지. 없으면 NaN
+    - kd_days_to_typical: 과거(그날까지 확정된) K → 다음 작형 전환일의 '올해 같은 날' 대비 일수 중앙값(원형, ±182일)
+    - kd_typical_jump:    과거 같은 전환(K에서 나갈 때)의 가격 점프 log(새 작형 첫 가격 / 직전 가격) 중앙값
+    시점: 기준일 d의 관측을 쓴다. 이어 붙인 계열 자체가 d의 작형별 관측으로 d의 작형을 정하므로(merge_kinds)
+    자기 계열(d까지)과 같은 시점 규칙이다. 조사일이 아닌 날은 직전 조사일 상태를 그대로 쓴다.
+    observations: (price_date, kind_code, price) 묶음, survey_days: 조사일 목록.
+    """
+    from tools.loader import _start_kind, next_kind
+    out = np.full((n, len(KIND_NAMES)), np.nan)
+    by_day = {}
+    for day, kind, price in observations:
+        by_day.setdefault(day, {})[kind] = int(price)
+    if not by_day:
+        return out, []
+    first = min(by_day)
+    current = previous = None
+    streak = {k: 0 for k in standard.KIND_CYCLE}
+    seen = {}  # kind → (마지막 관측일, 가격)
+    events = []  # (확정일, 전환일, 나간 작형, 점프)
+    switches = []
+    pending = None
+    last_price = None
+    missing, restart = 0, True
+    state = None  # (상태일, K, P, streak 복사, 그 달 우선 작형)
+    surveys = sorted(d for d in survey_days if d >= first)
+    end = start + timedelta(days=n - 1)
+    j = 0
+    for i in range(n):
+        day = start + timedelta(days=i)
+        while j < len(surveys) and surveys[j] <= day:
+            sday = surveys[j]
+            j += 1
+            observed = by_day.get(sday, {})
+            for k, p in observed.items():
+                seen[k] = (sday, p)
+            switched = False
+            if restart:
+                if not observed:
+                    continue
+                chosen = _start_kind(observed, sday.month)
+                if current is not None and chosen != current:
+                    switched, pending = True, (sday, current, last_price)
+                current, previous, missing, restart = chosen, None, 0, False
+                streak = {k: 0 for k in standard.KIND_CYCLE}
+            else:
+                for k in standard.KIND_CYCLE:
+                    streak[k] = streak[k] + 1 if k in observed else 0
+                priority = standard.KIND_PRIORITY_BY_MONTH[sday.month]
+                ready = sorted(k for k in {next_kind(current), priority} - {current, previous}
+                               if streak[k] >= standard.KIND_SWITCH_RUN)
+                if ready:
+                    chosen = priority if priority in ready else ready[0]
+                    switched, pending = True, (sday, current, last_price)
+                    previous, current, missing = current, chosen, 0
+                    streak = {k: 0 for k in standard.KIND_CYCLE}
+            if switched:
+                switches.append((sday, current))
+            if current in observed:
+                missing = 0
+                price = observed[current]
+                if pending is not None:
+                    sw_day, left, before = pending
+                    if before:
+                        events.append((sday, sw_day, left, math.log(price / before)))
+                    pending = None
+                last_price = price
+            else:
+                missing += 1
+                if missing >= standard.KIND_RESTART_GAP:
+                    restart = True
+            state = (sday, current, previous, dict(streak), standard.KIND_PRIORITY_BY_MONTH[sday.month])
+        if state is None or restart or day > end:
+            continue
+        _, k_now, k_prev, st, priority = state
+        candidates = sorted({next_kind(k_now), priority} - {k_now, k_prev},
+                            key=lambda k: (-st[k], k != next_kind(k_now)))
+        recent = [k for k in candidates if k in seen and (day - seen[k][0]).days < KIND_SEEN_DAYS]
+        lead = max(recent, key=lambda k: (st[k], seen[k][0], k == next_kind(k_now))) if recent else None
+        row = out[i]
+        row[0] = max(st[k] for k in candidates) if candidates else 0.0
+        if lead is not None and filled[i] == filled[i]:
+            row[1] = math.log(seen[lead][1] / filled[i])
+            row[2] = (day - seen[lead][0]).days
+        past = [(sw, jump) for known, sw, left, jump in events if known <= day and left == k_now]
+        if past:
+            offsets = []
+            for sw, _ in past:
+                this_year = date(day.year, sw.month, min(sw.day, 28) if sw.month == 2 else sw.day)
+                offsets.append(((this_year - day).days + 182) % 365 - 182)
+            row[3] = float(np.median(offsets))
+            row[4] = float(np.median([jump for _, jump in past]))
+    return out, switches
 
 
 def feature_names(bundles, blocks) -> list[str]:
