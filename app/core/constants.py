@@ -80,7 +80,7 @@ SEASONAL_BAND = 0.10  # 평년 대비 ±10% 밖이면 싼 편·비싼 편 (초�
 SEASONAL_WINDOW_DAYS = 28  # 비교 구간: 기준일까지 최근 28일 vs 과거 연도의 같은 28일
 SEASONAL_MIN_WINDOW_OBS = 10  # 구간의 관측일이 이보다 적으면 그 구간은 쓰지 않고, 이번 구간이면 방향을 말하지 않는다
 
-INDICATOR_SPEC_VERSION = 'ind-v2'  # 지표 규칙·임계값이 바뀌면 올린다(과거 스냅샷은 그대로 둔다)
+INDICATOR_SPEC_VERSION = 'ind-v3'  # 지표 규칙·임계값이 바뀌면 올린다(과거 스냅샷은 그대로 둔다)
 INDICATOR_REVALIDATE_DAYS = 31  # 마지막 검증의 data_end가 기준일보다 이만큼 오래되면 다시 검증한다
 INDICATOR_STALE_DAYS = 7  # 지표 기준일이 오늘보다 이만큼 넘게 지났으면 STALE
 INDICATOR_CHART_WEEKS = 26  # 도매·소매 지수 차트 길이

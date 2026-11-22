@@ -66,15 +66,20 @@ def gap_fact(retail: pd.Series, wholesale: pd.Series, as_of: date | None = None)
             'percentile': round(percentile(window, current), 3)}
 
 
-def volatility_fact(prices: pd.Series, as_of: date | None = None) -> dict | None:
+def volatility_fact(prices: pd.Series, as_of: date | None = None, breaks=()) -> dict | None:
+    """breaks: 작형 전환일. 구간은 마지막 전환일(그날부터 새 품종) 이후로 잘라서, 품종 교체 가격 차이를 출렁임으로 세지 않는다."""
     prices = _upto(prices, as_of)
     if prices.empty:
         return None
     end = prices.index[-1]
     days = C.VOLATILITY_WINDOW_DAYS
 
+    switch_days = sorted(pd.Timestamp(b) for b in breaks)
+
     def spread(t: pd.Timestamp):
-        w = prices[(prices.index > t - pd.Timedelta(days=days)) & (prices.index <= t)]
+        start = t - pd.Timedelta(days=days)
+        last = [b for b in switch_days if b <= t]
+        w = prices[(prices.index > start) & (prices.index <= t) & (prices.index >= last[-1] if last else True)]
         return float((w.max() - w.min()) / w.mean()) if len(w) >= C.VOLATILITY_MIN_OBS else np.nan
 
     dates = _last_year(prices, end).index

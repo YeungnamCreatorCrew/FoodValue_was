@@ -29,6 +29,7 @@ class PriceIndicatorRun(Base):
     spec_version: Mapped[str] = mapped_column(String(20))
     status: Mapped[str] = mapped_column(String(20))
     summary: Mapped[dict | None] = mapped_column(JSONB)
+    notices: Mapped[list] = mapped_column(JSONB, server_default='[]')
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

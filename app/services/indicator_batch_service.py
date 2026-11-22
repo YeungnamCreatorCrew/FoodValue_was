@@ -18,6 +18,23 @@ from app.services.indicators.series import weekly_mean
 
 LEAD, SEASON = 'WHOLESALE_LEAD', 'SEASONAL'
 POSITION, GAP, VOLATILITY = 'PRICE_POSITION', 'RETAIL_WHOLESALE_GAP', 'VOLATILITY'
+KIND_SWITCH = 'KIND_SWITCH'
+NOTICE_TEXT = {
+    LEAD: '작형(품종)이 막 바뀌어서 도매 흐름은 잠시 쉬어요. 서로 다른 품종의 가격을 견주면 잘못된 신호가 되기 때문이에요.',
+    VOLATILITY: '작형(품종)이 막 바뀌어서 가격 출렁임은 잠시 쉬어요. 같은 품종으로 최근 4주를 견줄 만큼 가격이 쌓이면 다시 보여드려요.',
+}
+
+
+def kind_switch_notice(key):
+    return {'key': key, 'reason': KIND_SWITCH, 'text': NOTICE_TEXT[key]}
+
+
+def lead_blocked_by_switch(retail: pd.Series, wholesale: pd.Series, as_of: date, retail_breaks, wholesale_breaks) -> bool:
+    """작형 전환만 아니었다면 도매 흐름 변화를 말할 수 있었는데, 전환을 걸쳐서 뺀 경우."""
+    cut = pd.Timestamp(as_of)
+    retail_w, wholesale_w = weekly_mean(retail[retail.index <= cut]), weekly_mean(wholesale[wholesale.index <= cut])
+    return (wholesale_lead.latest_changes(retail_w, wholesale_w) is not None
+            and wholesale_lead.latest_changes(retail_w, wholesale_w, retail_breaks=retail_breaks, wholesale_breaks=wholesale_breaks) is None)
 
 
 def _series(rows) -> pd.Series:
@@ -112,13 +129,13 @@ def gap_card(db, series_id, retail, wholesale, as_of, force):
             'fact': _json_safe(fact), 'evidence': evidence, 'chart': None}
 
 
-def lead_card(db, series_id, retail: pd.Series, wholesale: pd.Series, as_of: date, force: bool):
-    """검증이 PASS일 때만 카드. 반환: (카드 행 또는 None, 검증 행 또는 None)."""
+def lead_card(db, series_id, retail: pd.Series, wholesale: pd.Series, as_of: date, force: bool, retail_breaks=(), wholesale_breaks=()):
+    """검증이 PASS일 때만 카드. 작형 전환(retail_breaks·wholesale_breaks)을 걸친 변화는 검증과 카드에서 뺀다. 반환: (카드 행 또는 None, 검증 행 또는 None)."""
     spec = C.INDICATOR_SPEC_VERSION
     validation = None if force else repo.validation_before(db, series_id, LEAD, spec, as_of)
     if validation is None or (as_of - validation.data_end).days > C.INDICATOR_REVALIDATE_DAYS:
         cut = pd.Timestamp(as_of)
-        result = wholesale_lead.validate(retail[retail.index <= cut], wholesale[wholesale.index <= cut])
+        result = wholesale_lead.validate(retail[retail.index <= cut], wholesale[wholesale.index <= cut], retail_breaks, wholesale_breaks)
         stats = wholesale_lead.stats_for_storage(result)
         validation = repo.save_validation(db, series_id, LEAD, spec, result['verdict'], stats,
                                           result['period_start'], result['period_end'])
@@ -126,7 +143,7 @@ def lead_card(db, series_id, retail: pd.Series, wholesale: pd.Series, as_of: dat
         return None, validation
     cut = pd.Timestamp(as_of)
     retail_w, wholesale_w = weekly_mean(retail[retail.index <= cut]), weekly_mean(wholesale[wholesale.index <= cut])
-    latest = wholesale_lead.latest_changes(retail_w, wholesale_w)
+    latest = wholesale_lead.latest_changes(retail_w, wholesale_w, retail_breaks=retail_breaks, wholesale_breaks=wholesale_breaks)
     if latest is None:
         return None, validation
     card = {'indicator_key': LEAD, 'verdict': 'PASS', 'validation_id': validation.id,
@@ -150,7 +167,8 @@ def run(engine, item_id: int, as_of: date | None = None, validate: bool = False)
             raise ValueError('소매 가격이 없습니다')
         data_date = retail.index[-1].date()
         as_of = as_of or data_date
-        cards, validation = [], None
+        retail_breaks = [d for d in series_repository.kind_switch_dates(db, retail_series.id) if d <= as_of]
+        cards, validation, notices = [], None, []
         position = position_card(db, retail_series.id, retail, wholesale, as_of, validate)
         if position:
             cards.append(position)
@@ -158,18 +176,23 @@ def run(engine, item_id: int, as_of: date | None = None, validate: bool = False)
         if season:
             cards.append(season)
         if not wholesale.empty:
-            lead, validation = lead_card(db, retail_series.id, retail, wholesale, as_of, validate)
+            wholesale_breaks = [d for d in series_repository.kind_switch_dates(db, wholesale_series.id) if d <= as_of]
+            lead, validation = lead_card(db, retail_series.id, retail, wholesale, as_of, validate, retail_breaks, wholesale_breaks)
             if lead:
                 cards.append(lead)
+            elif validation.verdict == 'PASS' and lead_blocked_by_switch(retail, wholesale, as_of, retail_breaks, wholesale_breaks):
+                notices.append(kind_switch_notice(LEAD))
             gap = gap_card(db, retail_series.id, retail, wholesale, as_of, validate)
             if gap:
                 cards.append(gap)
-        cards += [c for c in [stat_card(VOLATILITY, price_stats.volatility_fact(retail, as_of), None,
-                                        '최근 4주 가격이 얼마나 출렁였는지, 최근 1년과 비교합니다.')] if c]
+        volatility = price_stats.volatility_fact(retail, as_of, retail_breaks)
+        if volatility is None and retail_breaks and price_stats.volatility_fact(retail, as_of) is not None:
+            notices.append(kind_switch_notice(VOLATILITY))
+        cards += [c for c in [stat_card(VOLATILITY, volatility, None, '최근 4주 가격이 얼마나 출렁였는지, 최근 1년과 비교합니다.')] if c]
         digest = summary.build(name, [{'key': c['indicator_key'], 'state': c['state']} for c in cards])
         status = 'SUCCESS' if cards else 'INSUFFICIENT_DATA'
         lead_verdict = validation.verdict if validation else None  # commit 뒤에는 세션이 닫혀 읽을 수 없다
-        repo.replace_run(db, retail_series.id, as_of, data_date, C.INDICATOR_SPEC_VERSION, status, digest, cards)
+        repo.replace_run(db, retail_series.id, as_of, data_date, C.INDICATOR_SPEC_VERSION, status, digest, cards, notices)
         db.commit()
     return {'status': status, 'asOfDate': as_of.isoformat(), 'dataDate': data_date.isoformat(),
             'cards': [c['indicator_key'] for c in cards],

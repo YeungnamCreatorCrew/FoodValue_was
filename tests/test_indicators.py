@@ -244,3 +244,60 @@ def test_level_sides_edge_signs():
     high = pd.Series(False, index=index)
     lo, hi = lv.level_sides(retail, low, high, ahead=1)
     assert lo.n == 1 and lo.rate == 1.0 and lo.edge > 0.9 and hi.n == 0
+
+
+# ---- 작형 전환(서로 다른 품종 가격을 이어 붙인 계열) ----
+from app.services.indicators import price_stats as ps  # noqa: E402
+from app.services.indicators import series as sr  # noqa: E402
+
+
+def test_week_flags_and_crossing_windows():
+    idx = pd.date_range('2024-01-07', periods=8, freq='W')  # 일요일 라벨
+    flags = sr.week_flags(idx, [date(2024, 1, 25)])  # 목요일 → 2024-01-28 주
+    assert flags[pd.Timestamp('2024-01-28')] and flags.sum() == 1
+    back = sr.crosses_back(flags, 2)  # 전환 주와 그 뒤 2주까지의 2주 변화가 걸친다
+    assert list(back[back].index) == list(pd.to_datetime(['2024-01-28', '2024-02-04', '2024-02-11']))
+    ahead = sr.crosses_forward(flags, 2)  # 전환 주와 그 앞 2주의 앞으로 2주 변화가 걸친다
+    assert list(ahead[ahead].index) == list(pd.to_datetime(['2024-01-14', '2024-01-21', '2024-01-28']))
+
+
+def test_lead_ignores_changes_across_switch():
+    w = pd.Series(random_walk(120, 1), index=pd.date_range('2020-01-05', periods=120, freq='W'))
+    r = pd.Series(random_walk(120, 2), index=w.index)
+    wb = sr.week_flags(w.index, [w.index[60].date()])
+    up_plain = wl._edges(r, w, 2, 2)[0]
+    up_masked = wl._edges(r, w, 2, 2, None, wb)[0]
+    assert not up_masked.iloc[60:63].any()  # 전환 주부터 2주 변화는 표본에서 빠진다
+    assert up_masked.iloc[:60].equals(up_plain.iloc[:60]) and up_masked.iloc[63:].equals(up_plain.iloc[63:])
+
+
+def test_latest_changes_none_when_latest_window_crosses_switch():
+    idx = pd.date_range('2024-01-07', periods=8, freq='W')
+    retail = pd.Series(np.linspace(100, 107, 8), index=idx)
+    wholesale = pd.Series([100, 100, 100, 100, 100, 100, 70, 70.0], index=idx)  # 마지막 달 전환으로 30% 하락처럼 보임
+    assert wl.latest_changes(retail, wholesale)['wholesaleChange2w'] < -0.2  # 전환을 모르면 큰 하락 신호
+    assert wl.latest_changes(retail, wholesale, wholesale_breaks=[idx[6].date()]) is None  # 전환을 알면 말하지 않는다
+    assert wl.latest_changes(retail, wholesale, wholesale_breaks=[idx[2].date()]) is not None  # 이미 지난 전환은 영향 없음
+
+
+def test_volatility_uses_only_days_since_last_switch():
+    days = pd.bdate_range('2025-01-01', periods=300)
+    prices = pd.Series(1000.0, index=days)
+    prices.iloc[-15:] = 600.0  # 15거래일 전 작형 전환으로 가격 수준이 바뀜(그 안에서는 평탄)
+    plain = ps.volatility_fact(prices)
+    assert plain['recentRange'] > 0.3  # 전환을 모르면 크게 출렁인 것으로 보인다
+    fixed = ps.volatility_fact(prices, breaks=[days[-15].date()])
+    assert fixed['recentRange'] == 0
+    assert ps.volatility_fact(prices, breaks=[days[-5].date()]) is None  # 전환 뒤 관측이 너무 적으면 말하지 않는다
+
+
+def test_lead_blocked_by_switch_only_when_switch_is_the_reason():
+    from app.services import indicator_batch_service as ibs
+    days = pd.bdate_range('2025-01-01', periods=120)
+    retail = pd.Series(1000.0, index=days)
+    wholesale = pd.Series(1000.0, index=days)
+    as_of = days[-1].date()
+    switch = [days[-3].date()]
+    assert ibs.lead_blocked_by_switch(retail, wholesale, as_of, [], switch)  # 최근 주에 전환 → 막힘
+    assert not ibs.lead_blocked_by_switch(retail, wholesale, as_of, [], [])  # 전환이 없으면 막힌 게 아님
+    assert not ibs.lead_blocked_by_switch(retail, wholesale, as_of, [], [days[10].date()])  # 오래전 전환은 영향 없음

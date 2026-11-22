@@ -193,6 +193,12 @@ class IndicatorCard(CamelModel):
     chart: dict | None = None
 
 
+class IndicatorNotice(CamelModel):
+    key: str  # 카드를 만들지 않은 지표 키
+    reason: str  # KIND_SWITCH
+    text: str
+
+
 class PriceIndicators(CamelModel):
     item_id: int
     market: PriceMarket
@@ -202,3 +208,4 @@ class PriceIndicators(CamelModel):
     unavailable_reason: str | None = None
     summary: IndicatorSummary | None = None
     cards: list[IndicatorCard] = Field(default_factory=list)
+    notices: list[IndicatorNotice] = Field(default_factory=list)  # 카드를 만들지 않은 이유(작형 전환 직후 등)

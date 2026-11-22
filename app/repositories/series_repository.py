@@ -3,6 +3,7 @@ from datetime import date
 
 from sqlalchemy import select
 
+from app.models.external import ExternalObservation
 from app.models.price import RETAIL, PriceDaily, PriceSeries
 
 
@@ -33,3 +34,10 @@ def prices(db, series_id, start: date | None = None, end: date | None = None) ->
         conditions.append(PriceDaily.price_date <= end)
     return [(day, price) for day, price in db.execute(select(PriceDaily.price_date, PriceDaily.price)
                                                       .where(*conditions).order_by(PriceDaily.price_date)).all()]
+
+
+def kind_switch_dates(db, series_id) -> list[date]:
+    """이어 붙인 계열(배추·무)에서 작형이 바뀐 날(새 작형 첫날). 원본 payload의 kindSwitch=1. 없는 계열은 빈 목록."""
+    return list(db.scalars(select(PriceDaily.price_date).join(ExternalObservation, ExternalObservation.id == PriceDaily.observation_id)
+                           .where(PriceDaily.series_id == series_id, ExternalObservation.payload['kindSwitch'].astext == '1')
+                           .order_by(PriceDaily.price_date)).all())

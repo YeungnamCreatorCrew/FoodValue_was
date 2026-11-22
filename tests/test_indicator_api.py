@@ -19,19 +19,20 @@ def indicators(prices, monkeypatch):
     monkeypatch.setattr(indicator_service, 'today', lambda: DAY)
     with engine.begin() as conn:
         conn.execute(text('''CREATE TABLE price_indicator_run(id INTEGER PRIMARY KEY,series_id INTEGER,as_of_date DATE,
-            data_date DATE,spec_version TEXT,status TEXT,summary JSON,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''))
+            data_date DATE,spec_version TEXT,status TEXT,summary JSON,notices JSON DEFAULT '[]',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''))
         conn.execute(text('''CREATE TABLE price_indicator_card(id INTEGER PRIMARY KEY,run_id INTEGER,indicator_key TEXT,
             validation_id INTEGER,verdict TEXT,state TEXT,fact JSON,evidence JSON,chart JSON,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''))
     yield client, engine
 
 
-def add_run(engine, series_id, as_of, status='SUCCESS', spec=SPEC, cards=True):
+def add_run(engine, series_id, as_of, status='SUCCESS', spec=SPEC, cards=True, notices=()):
     with engine.begin() as conn:
         run_id = conn.execute(text('SELECT COALESCE(MAX(id),0)+1 FROM price_indicator_run')).scalar()
-        conn.execute(text('INSERT INTO price_indicator_run(id,series_id,as_of_date,data_date,spec_version,status,summary) '
-                          'VALUES(:i,:s,:d,:d,:v,:st,:sm)'),
-                     {'i': run_id, 's': series_id, 'd': as_of, 'v': spec, 'st': status, 'sm': json.dumps(SUMMARY)})
+        conn.execute(text('INSERT INTO price_indicator_run(id,series_id,as_of_date,data_date,spec_version,status,summary,notices) '
+                          'VALUES(:i,:s,:d,:d,:v,:st,:sm,:n)'),
+                     {'i': run_id, 's': series_id, 'd': as_of, 'v': spec, 'st': status, 'sm': json.dumps(SUMMARY),
+                      'n': json.dumps(list(notices))})
         if cards:
             conn.execute(text('INSERT INTO price_indicator_card(run_id,indicator_key,verdict,state,fact,evidence,chart) '
                               'VALUES(:r,:k,:v,:s,:f,:e,:c)'),
@@ -49,6 +50,15 @@ def test_ready_run_returns_cards_with_camel_case(indicators):
     card = result['cards'][0]
     assert (card['key'], card['verdict'], card['state']) == ('SEASONAL', 'FACT', 'DOWN')
     assert card['fact'] == {'diffRate': -0.149} and card['chart']['type'] == 'SEASONAL_OVERLAY'
+
+
+def test_notices_explain_missing_cards(indicators):
+    client, engine = indicators
+    notice = {'key': 'WHOLESALE_LEAD', 'reason': 'KIND_SWITCH', 'text': '작형이 막 바뀌어서 잠시 쉬어요.'}
+    add_run(engine, 1, DAY, notices=[notice])
+    assert client.get(ROOT + '/items/2/indicators').json()['notices'] == [notice]
+    add_run(engine, 1, DAY - timedelta(days=1))
+    assert client.get(ROOT + '/items/2/indicators').json()['notices'] == [notice]  # 가장 최근 기준일의 실행만 쓴다
 
 
 def test_old_run_is_stale_but_still_shown(indicators):

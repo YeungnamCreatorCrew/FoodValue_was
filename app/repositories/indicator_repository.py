@@ -38,7 +38,7 @@ def save_validation(db, series_id, key, spec_version, verdict, stats, data_start
     return row
 
 
-def replace_run(db, series_id, as_of, data_date, spec_version, status, summary, card_rows):
+def replace_run(db, series_id, as_of, data_date, spec_version, status, summary, card_rows, notices=()):
     """같은 계열·기준일·규칙 버전의 실행을 카드와 함께 교체한다(재실행해도 중복 없음). 호출자가 commit한다."""
     old = db.scalars(select(PriceIndicatorRun.id).where(
         PriceIndicatorRun.series_id == series_id, PriceIndicatorRun.as_of_date == as_of,
@@ -48,7 +48,7 @@ def replace_run(db, series_id, as_of, data_date, spec_version, status, summary, 
         db.execute(delete(PriceIndicatorRun).where(PriceIndicatorRun.id.in_(old)))
         db.flush()
     run = PriceIndicatorRun(series_id=series_id, as_of_date=as_of, data_date=data_date, spec_version=spec_version,
-                            status=status, summary=summary)
+                            status=status, summary=summary, notices=list(notices))
     db.add(run)
     db.flush()
     for row in card_rows:
