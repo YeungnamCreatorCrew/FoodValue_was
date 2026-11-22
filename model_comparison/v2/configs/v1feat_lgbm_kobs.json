@@ -1,0 +1,17 @@
+{
+  "name": "v1feat_lgbm_kobs",
+  "model": "LightGBM",
+  "class": "model_comparison.v2.models:PooledLGBM",
+  "params": {},
+  "window_days": 1825,
+  "seed": 42,
+  "bundles": [
+    "MARKET",
+    "NATIONAL_WEATHER",
+    "EVENT"
+  ],
+  "blocks": [
+    "SERIES_ID",
+    "KIND_OBS"
+  ]
+}

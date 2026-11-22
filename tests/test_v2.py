@@ -364,3 +364,75 @@ def test_pooled_runner_with_krei_block(tmp_path, snap_dir):
                                             out=tmp_path / 'out'))
     record = json.loads((out / 'config.json').read_text(encoding='utf-8'))
     assert record['v2_krei']['snapshot_id'] == 'test' and record['feature_count'] == 15 + 6 + 5
+
+
+def fake_kind_observations(seed=0, years=(2019, 2020, 2021, 2022)):
+    """가짜 배추 작형별 관측: 작형마다 출하 기간 + 시작 전 띄엄띄엄 관측 + 겹치는 기간(떠나는 작형도 계속 관측)."""
+    rng = np.random.default_rng(seed)
+    seasons = [('06', (1, 1), (5, 15)), ('01', (5, 1), (7, 31)), ('02', (7, 15), (10, 31)), ('03', (10, 20), (12, 31))]
+    obs = {}
+    for year in years:
+        for kind, (m1, d1), (m2, d2) in seasons:
+            begin, end = date(year, m1, d1), date(year, m2, d2)
+            level = int(rng.integers(800, 3000))
+            day = begin - timedelta(days=12)
+            while day <= end + timedelta(days=10):
+                early = day < begin
+                if (not early or rng.random() < .3) and day.weekday() < 5:
+                    obs[day, kind] = level + int(rng.integers(-100, 100))
+                day += timedelta(days=1)
+    survey = []
+    day = date(years[0], 1, 1)
+    while day <= date(years[-1], 12, 31):
+        if day.weekday() < 5:
+            survey.append(day)
+        day += timedelta(days=1)
+    return [(d, k, p) for (d, k), p in sorted(obs.items())], survey
+
+
+def test_kind_state_replays_merge_rule_switches():
+    """KIND 묶음이 따라가는 작형 상태가 이어 붙이기(loader.merge_kinds)의 전환일과 같아야 한다."""
+    obs, survey = fake_kind_observations()
+    merged = loader.merge_kinds([(d, k, p, 1) for d, k, p in obs], survey)
+    expected = [(r.price_date, r.kind_code) for r in merged if r.kind_switch]
+    start = merged[0].price_date
+    n = (merged[-1].price_date - start).days + 1
+    filled = np.full(n, 1000.0)
+    _, switches = F.kind_state(obs, survey, start, n, filled)
+    assert switches == expected and len(expected) >= 8
+
+
+def test_kind_state_uses_only_observations_up_to_d():
+    """d 뒤 작형별 관측을 지워도 d까지의 KIND 특징은 같아야 한다(여러 d에서)."""
+    obs, survey = fake_kind_observations(seed=1)
+    start = obs[0][0]
+    n = (survey[-1] - start).days + 1
+    filled = np.linspace(900, 1500, n)
+    full, _ = F.kind_state(obs, survey, start, n, filled)
+    assert np.isfinite(full[:, 1]).sum() > 50 and np.isfinite(full[:, 4]).sum() > 100
+    for d in (date(2020, 4, 28), date(2021, 7, 12), date(2022, 10, 18), date(2022, 12, 30)):
+        part, _ = F.kind_state([o for o in obs if o[0] <= d], [s for s in survey if s <= d], start, n, filled)
+        i = (d - start).days
+        a, b = full[:i + 1], part[:i + 1]
+        assert ((a == b) | (np.isnan(a) & np.isnan(b))).all(), d
+
+
+def test_kind_state_real_snapshot_matches_merged_file():
+    """실제 스냅샷이 있으면: 다시 따라간 전환일이 price_daily_merged.csv의 kind_switch와 같아야 한다."""
+    folder = loader.Path(__file__).resolve().parents[1] / 'data' / 'snapshots' / standard.DATA_VERSION
+    if not (folder / 'price_daily_kind.csv').exists():
+        pytest.skip('실제 스냅샷 없음')
+    survey = [d for d, closed in loader.read_calendar(folder) if not closed]
+    kinds, merged = {}, {}
+    for r in loader.read_table(folder, 'price_daily_kind.csv'):
+        kinds.setdefault(int(r['merged_series_id']), []).append(
+            (date.fromisoformat(r['price_date']), r['kind_code'], int(r['price'])))
+    for r in loader.read_table(folder, 'price_daily_merged.csv'):
+        merged.setdefault(int(r['series_id']), []).append(r)
+    for sid, obs in kinds.items():
+        rows = merged[sid]
+        expected = [(date.fromisoformat(r['price_date']), r['kind_code']) for r in rows if r['kind_switch'] == '1']
+        start = date.fromisoformat(rows[0]['price_date'])
+        n = (date.fromisoformat(rows[-1]['price_date']) - start).days + 1
+        _, switches = F.kind_state(obs, survey, start, n, np.full(n, 1000.0))
+        assert switches == expected, sid
