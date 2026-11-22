@@ -42,8 +42,7 @@ def seasonal_card(retail: pd.Series, as_of: date):
     strength = seasonal.seasonal_strength(retail[retail.index <= pd.Timestamp(as_of)])
     return {'indicator_key': SEASON, 'verdict': 'FACT', 'state': state, 'validation_id': None,
             'fact': _json_safe(fact),
-            'evidence': {'text': ('계절마다 가격 수준이 달라서 같은 시기끼리 비교합니다. '
-                                  f'주차만으로 주간 가격 변동의 약 {max(0, round(strength["r2Adj"] * 100))}%를 설명합니다(우연히 생기는 몫을 뺀 값).'),
+            'evidence': {'text': f'주차(계절)만으로 주간 가격 변동의 약 {max(0, round(strength["r2Adj"] * 100))}%가 설명됩니다(우연 몫 제외).',
                          **strength},
             'chart': _json_safe(seasonal.seasonal_chart(retail, as_of))}
 
