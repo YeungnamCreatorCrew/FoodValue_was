@@ -167,3 +167,35 @@ class FactorHistory(CamelModel):
     base_date: date
     days: int
     points: list[FactorHistoryPoint]
+
+
+class IndicatorSignal(CamelModel):
+    key: str
+    label: str
+    state: str | None
+    state_label: str
+
+
+class IndicatorSummary(CamelModel):
+    headline: str
+    signals: list[IndicatorSignal]
+
+
+class IndicatorCard(CamelModel):
+    key: str
+    verdict: str  # FACT | PASS | CONDITIONAL
+    state: str | None  # UP | NEUTRAL | DOWN | null
+    fact: dict
+    evidence: dict
+    chart: dict | None = None
+
+
+class PriceIndicators(CamelModel):
+    item_id: int
+    market: PriceMarket
+    status: str  # READY | STALE | NO_DATA | INSUFFICIENT_HISTORY
+    as_of_date: date | None = None
+    spec_version: str | None = None
+    unavailable_reason: str | None = None
+    summary: IndicatorSummary | None = None
+    cards: list[IndicatorCard] = Field(default_factory=list)
