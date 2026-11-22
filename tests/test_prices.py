@@ -103,6 +103,15 @@ def test_history_preserves_missing_dates(prices):
     assert client.get(ROOT+'/items/2/history?days=15').status_code==400
 
 
+def test_history_long_periods(prices):
+    client,_,_=prices
+    for days in (180,365):
+        rows=client.get(ROOT+f'/items/2/history?days={days}').json()['points']
+        assert len(rows)==days and rows[-1]['price']==1000
+    assert client.get(ROOT+'/items/2/history?days=120').status_code==400
+    assert client.get(ROOT+'/items/2/history?days=366').status_code==400
+
+
 def test_empty_stale_partial_results(prices):
     client,engine,_=prices
     assert client.get(ROOT+'/items/1').json()['item']['status']=='NO_DATA'
