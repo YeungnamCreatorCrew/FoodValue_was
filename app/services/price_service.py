@@ -136,6 +136,15 @@ def _previous(history,base_date,days=7):
     return (hit['value'],date.fromisoformat(target)) if hit and hit['value'] is not None else (None,None)
 
 
+def _evaluation_period(run):
+    """실행 metrics에 저장된 최종 평가 구간(과거 검증 기간). 없거나 형식이 다르면 (None, None)."""
+    metrics=run.metrics if isinstance(run.metrics,dict) else {}
+    try:
+        return date.fromisoformat(metrics['evaluationStart']),date.fromisoformat(metrics['evaluationEnd'])
+    except (KeyError,TypeError,ValueError):
+        return None,None
+
+
 def factors(db,item_id,market=RETAIL):
     """7일 뒤 예측의 변수별 SHAP 기여(원). 기준 모델로 공개된 실행은 설명이 없다(unavailableReason=BASELINE_MODEL)."""
     _,series=require_item(db,item_id,market)
@@ -147,6 +156,7 @@ def factors(db,item_id,market=RETAIL):
     if run is None:
         response.unavailable_reason='NO_FORECAST'
         return response
+    response.evaluation_start,response.evaluation_end=_evaluation_period(run)
     header,rows=repo.explanation(db,run.id)
     if header is None:
         response.unavailable_reason='BASELINE_MODEL' if run.quality=='BASELINE' else 'NOT_EXPLAINED'

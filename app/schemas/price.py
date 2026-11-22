@@ -142,6 +142,9 @@ class PriceFactors(CamelModel):
     explained: bool = False
     unavailable_reason: str | None = None
     model_name: str | None = None
+    # 최종 평가(과거 검증) 구간. 모델 채택 여부를 이 기간의 백테스트로 정했다는 근거 표시용
+    evaluation_start: date | None = None
+    evaluation_end: date | None = None
     method: str | None = None
     horizon_days: int | None = None
     target_date: date | None = None

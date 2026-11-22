@@ -244,8 +244,12 @@ def test_factors_without_explanation(prices):
     client,engine,_=prices
     body=client.get(ROOT+'/items/2/factors').json()
     assert body['explained'] is False and body['unavailableReason']=='NOT_EXPLAINED' and body['factors']==[]
+    assert body['evaluationStart'] is None and body['evaluationEnd'] is None
     with engine.begin() as conn:
-        conn.execute(text("UPDATE price_model_run SET quality='BASELINE' WHERE id=1"))
-    assert client.get(ROOT+'/items/2/factors').json()['unavailableReason']=='BASELINE_MODEL'
+        conn.execute(text("UPDATE price_model_run SET quality='BASELINE',metrics=:m WHERE id=1"),
+                     {'m':json.dumps({'evaluationStart':'2026-09-07','evaluationEnd':'2026-10-29'})})
+    baseline=client.get(ROOT+'/items/2/factors').json()
+    assert baseline['unavailableReason']=='BASELINE_MODEL'
+    assert (baseline['evaluationStart'],baseline['evaluationEnd'])==('2026-09-07','2026-10-29')
     assert client.get(ROOT+'/items/2/factors?market=WHOLESALE').json()['unavailableReason']=='NO_FORECAST'
     assert client.get(ROOT+'/items/2/factors/change7/history').status_code==404
