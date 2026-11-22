@@ -52,7 +52,7 @@ def external_factors(covariates,base_date,result,market=RETAIL):
     def note(block):
         if result.model == 'XGBOOST_WEIGHTED':
             return f'가중 결합 모델에서 이 자료 묶음의 가중치는 {weights.get(block, 0):.2f}입니다.'
-        return '외부 원천 특징을 포함한 모델이 선택되었습니다.' if used_by(block) else '외부 원천 특징을 포함한 모델은 백테스트에서 선택되지 않았습니다.'
+        return '외부 원천 특징을 포함한 모델이 선택되었습니다.' if used_by(block) else '과거 검증에서 외부 원천 특징을 포함한 모델이 선택되지 않았습니다.'
 
     def tag(block):
         return {'usedByModel': used_by(block), **({'modelWeight': round(weights.get(block, 0), 4)} if weights else {})}

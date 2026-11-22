@@ -250,6 +250,9 @@ def test_factors_without_explanation(prices):
                      {'m':json.dumps({'evaluationStart':'2026-09-07','evaluationEnd':'2026-10-29'})})
     baseline=client.get(ROOT+'/items/2/factors').json()
     assert baseline['unavailableReason']=='BASELINE_MODEL'
+    # 기준 모델이면 '예측되었습니다'가 아니라 직전 가격을 그대로 보여준다고 밝힌다(상세·요인 응답 모두)
+    for summary in (baseline['summary'],client.get(ROOT+'/items/2').json()['summary']):
+        assert '직전 가격을 그대로' in summary['headline'] and '예측되었' not in summary['headline'] and summary['categories']=={}
     assert (baseline['evaluationStart'],baseline['evaluationEnd'])==('2026-09-07','2026-10-29')
     assert client.get(ROOT+'/items/2/factors?market=WHOLESALE').json()['unavailableReason']=='NO_FORECAST'
     assert client.get(ROOT+'/items/2/factors/change7/history').status_code==404
