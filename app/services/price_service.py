@@ -62,7 +62,7 @@ def list_indicators(db,series_list,as_of):
             continue
         fact=position.fact if position and isinstance(position.fact,dict) else {}
         year_range=YearRange(low=fact.get('low'),high=fact.get('high'),percentile=fact.get('percentile')) if position else None
-        result[series_id]=ListIndicators(as_of_date=run.as_of_date,stale=(as_of-run.as_of_date).days>C.INDICATOR_STALE_DAYS,
+        result[series_id]=ListIndicators(as_of_date=run.as_of_date,stale=(as_of-run.as_of_date).days>C.INDICATOR_STALE_DAYS,headline=run.summary.get('headline'),
             signals=[IndicatorSignal(**s) for s in run.summary.get('signals',[])],year_range=year_range)
     return result
 

@@ -99,7 +99,7 @@ def test_list_items_carry_indicator_signals_and_year_range(indicators):
     rows = {r['seriesId']: r for r in client.get(ROOT + '/items').json()['items']}
     hit = rows[1]['indicators']
     assert hit['asOfDate'] == DAY.isoformat() and hit['stale'] is False
-    assert hit['signals'][0]['stateLabel'] == '싼 편'
+    assert hit['signals'][0]['stateLabel'] == '싼 편' and hit['headline'] == SUMMARY['headline']
     assert hit['yearRange'] == {'low': 1000, 'high': 3000, 'percentile': 0.2}
     assert all(r['indicators'] is None for sid, r in rows.items() if sid != 1)
     assert client.get(ROOT + '/items/2').json()['item']['indicators'] is None

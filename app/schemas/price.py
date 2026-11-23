@@ -197,6 +197,7 @@ class ListIndicators(CamelModel):
     """목록 한 줄에 쓰는 지표 요약. state/stateLabel은 /indicators 상세와 같은 스냅샷에서 가져온다(다시 계산하지 않는다)."""
     as_of_date: date
     stale: bool
+    headline: str | None = None  # 상세의 한 줄 요약과 같은 문장
     signals: list[IndicatorSignal]
     year_range: YearRange | None = None
 
