@@ -48,6 +48,13 @@ def headline(name, market, current, forecast):
     return f'{subject} {amount} {"낮아질" if change < 0 else "높아질"} 것으로 예측되었습니다.'
 
 
+def baseline_summary():
+    """기준 모델(직전 가격 유지)로 공개된 실행의 요약. AI가 예측한 값이 아니므로 예측했다고 쓰지 않는다. 숫자가 없어 읽을 때마다 만든다."""
+    # 왜 기준 모델인지(과거 검증 기간 포함)는 모델 의견 탭 상단 안내가 말한다. 여기서는 같은 말을 되풀이하지 않는다.
+    return {'headline': '이번 7일 값은 AI 예측이 아니라 직전 가격을 그대로 둔 값입니다.',
+            'detail': '변수별 영향은 제공하지 않습니다.', 'categories': {}}
+
+
 def template(categories):
     """고정 문장. categories: price_explanation.category_totals 결과"""
     if not categories:

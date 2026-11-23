@@ -103,6 +103,15 @@ def test_history_preserves_missing_dates(prices):
     assert client.get(ROOT+'/items/2/history?days=15').status_code==400
 
 
+def test_history_long_periods(prices):
+    client,_,_=prices
+    for days in (180,365):
+        rows=client.get(ROOT+f'/items/2/history?days={days}').json()['points']
+        assert len(rows)==days and rows[-1]['price']==1000
+    assert client.get(ROOT+'/items/2/history?days=120').status_code==400
+    assert client.get(ROOT+'/items/2/history?days=366').status_code==400
+
+
 def test_empty_stale_partial_results(prices):
     client,engine,_=prices
     assert client.get(ROOT+'/items/1').json()['item']['status']=='NO_DATA'
@@ -235,8 +244,25 @@ def test_factors_without_explanation(prices):
     client,engine,_=prices
     body=client.get(ROOT+'/items/2/factors').json()
     assert body['explained'] is False and body['unavailableReason']=='NOT_EXPLAINED' and body['factors']==[]
+    assert body['evaluationStart'] is None and body['evaluationEnd'] is None
     with engine.begin() as conn:
-        conn.execute(text("UPDATE price_model_run SET quality='BASELINE' WHERE id=1"))
-    assert client.get(ROOT+'/items/2/factors').json()['unavailableReason']=='BASELINE_MODEL'
+        conn.execute(text("UPDATE price_model_run SET quality='BASELINE',metrics=:m WHERE id=1"),
+                     {'m':json.dumps({'evaluationStart':'2026-09-07','evaluationEnd':'2026-10-29'})})
+    baseline=client.get(ROOT+'/items/2/factors').json()
+    assert baseline['unavailableReason']=='BASELINE_MODEL'
+    # 기준 모델이면 '예측되었습니다'가 아니라 직전 가격을 그대로 보여준다고 밝힌다(상세·요인 응답 모두)
+    for summary in (baseline['summary'],client.get(ROOT+'/items/2').json()['summary']):
+        assert '직전 가격을 그대로' in summary['headline'] and '예측되었' not in summary['headline'] and summary['categories']=={}
+    assert (baseline['evaluationStart'],baseline['evaluationEnd'])==('2026-09-07','2026-10-29')
     assert client.get(ROOT+'/items/2/factors?market=WHOLESALE').json()['unavailableReason']=='NO_FORECAST'
     assert client.get(ROOT+'/items/2/factors/change7/history').status_code==404
+
+
+def test_unlisted_item_is_hidden_from_catalog(prices):
+    client,engine,_=prices
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO item(id,name,category,default_unit,default_storage,food_type,is_price_listed) VALUES(9,'배추(월동)','VEGETABLE','포기','FRIDGE','RAW',0)"))
+        conn.execute(text("INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(9,9,'RETAIL','211','06','04',1,'포기')"))
+    names=[row['name'] for row in client.get(ROOT+'/items?size=50').json()['items']]
+    assert '배추(월동)' not in names and '대파' in names
+    assert client.get(ROOT+'/items/9').status_code==200  # 직접 접근은 가능(원본 확인용)

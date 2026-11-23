@@ -11,7 +11,7 @@ from app.schemas.common import Page
 from app.schemas.price import (FactorCategory, FactorHistory, FactorHistoryPoint, ForecastPoint, ForecastResponse,
     FridgeHolding, HistoryPoint, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
     PriceSummaryText)
-from app.services import price_explanation
+from app.services import price_explanation, price_summary
 from app.services.fridge_service import today
 
 
@@ -111,7 +111,7 @@ def detail(db,item_id,user,market=RETAIL):
     return PriceDetail(item=summary(item,series,prices.get(series.id),previous.get(series.id),run,points[-1] if points else None,
                                     as_of,names.get(item_id,())),
         forecast=forecast_result(db,item_id,series,as_of,run,points),
-        guide=PriceGuide.model_validate(guide) if guide else None,summary=summary_text(guide),fridge=holdings)
+        guide=PriceGuide.model_validate(guide) if guide else None,summary=summary_text(guide,run),fridge=holdings)
 
 
 def history(db,item_id,days,market=RETAIL):
@@ -123,7 +123,10 @@ def history(db,item_id,days,market=RETAIL):
         points=[HistoryPoint(date=start+timedelta(days=i),price=lookup.get(start+timedelta(days=i))) for i in range(days)])
 
 
-def summary_text(guide):
+def summary_text(guide,run=None):
+    """저장된 요약 문장. 기준 모델 실행은 저장된 '…로 예측되었습니다'를 쓰지 않고 직전 가격을 그대로 보여준다고 밝힌다."""
+    if run is not None and run.quality=='BASELINE':
+        return PriceSummaryText(**price_summary.baseline_summary(),generator='TEMPLATE')
     if guide is None or not guide.summary:
         return None
     return PriceSummaryText(**guide.summary,generator=guide.summary_generator)
@@ -136,6 +139,15 @@ def _previous(history,base_date,days=7):
     return (hit['value'],date.fromisoformat(target)) if hit and hit['value'] is not None else (None,None)
 
 
+def _evaluation_period(run):
+    """실행 metrics에 저장된 최종 평가 구간(과거 검증 기간). 없거나 형식이 다르면 (None, None)."""
+    metrics=run.metrics if isinstance(run.metrics,dict) else {}
+    try:
+        return date.fromisoformat(metrics['evaluationStart']),date.fromisoformat(metrics['evaluationEnd'])
+    except (KeyError,TypeError,ValueError):
+        return None,None
+
+
 def factors(db,item_id,market=RETAIL):
     """7일 뒤 예측의 변수별 SHAP 기여(원). 기준 모델로 공개된 실행은 설명이 없다(unavailableReason=BASELINE_MODEL)."""
     _,series=require_item(db,item_id,market)
@@ -143,10 +155,11 @@ def factors(db,item_id,market=RETAIL):
     run,points,guide=repo.snapshot(db,series.id,as_of)
     result=forecast_result(db,item_id,series,as_of,run,points)
     response=PriceFactors(item_id=item_id,market=series.market,base_date=result.base_date,status=result.status,
-                          model_name=result.model_name,summary=summary_text(guide))
+                          model_name=result.model_name,summary=summary_text(guide,run))
     if run is None:
         response.unavailable_reason='NO_FORECAST'
         return response
+    response.evaluation_start,response.evaluation_end=_evaluation_period(run)
     header,rows=repo.explanation(db,run.id)
     if header is None:
         response.unavailable_reason='BASELINE_MODEL' if run.quality=='BASELINE' else 'NOT_EXPLAINED'

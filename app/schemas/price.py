@@ -142,6 +142,9 @@ class PriceFactors(CamelModel):
     explained: bool = False
     unavailable_reason: str | None = None
     model_name: str | None = None
+    # 최종 평가(과거 검증) 구간. 모델 채택 여부를 이 기간의 백테스트로 정했다는 근거 표시용
+    evaluation_start: date | None = None
+    evaluation_end: date | None = None
     method: str | None = None
     horizon_days: int | None = None
     target_date: date | None = None
@@ -167,3 +170,42 @@ class FactorHistory(CamelModel):
     base_date: date
     days: int
     points: list[FactorHistoryPoint]
+
+
+class IndicatorSignal(CamelModel):
+    key: str
+    label: str
+    state: str | None
+    state_label: str
+
+
+class IndicatorSummary(CamelModel):
+    headline: str
+    signals: list[IndicatorSignal]
+
+
+class IndicatorCard(CamelModel):
+    key: str
+    verdict: str  # FACT | PASS | CONDITIONAL
+    state: str | None  # UP | NEUTRAL | DOWN | null
+    fact: dict
+    evidence: dict
+    chart: dict | None = None
+
+
+class IndicatorNotice(CamelModel):
+    key: str  # 카드를 만들지 않은 지표 키
+    reason: str  # KIND_SWITCH
+    text: str
+
+
+class PriceIndicators(CamelModel):
+    item_id: int
+    market: PriceMarket
+    status: str  # READY | STALE | NO_DATA | INSUFFICIENT_HISTORY
+    as_of_date: date | None = None
+    spec_version: str | None = None
+    unavailable_reason: str | None = None
+    summary: IndicatorSummary | None = None
+    cards: list[IndicatorCard] = Field(default_factory=list)
+    notices: list[IndicatorNotice] = Field(default_factory=list)  # 카드를 만들지 않은 이유(작형 전환 직후 등)

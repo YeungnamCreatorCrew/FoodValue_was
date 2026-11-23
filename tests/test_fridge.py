@@ -38,7 +38,7 @@ def api(monkeypatch):
         'CREATE TABLE users(id INTEGER PRIMARY KEY)',
         '''CREATE TABLE item(id INTEGER PRIMARY KEY, name TEXT, category TEXT, default_unit TEXT,
         default_storage TEXT, food_type TEXT DEFAULT 'RAW', grams_per_unit NUMERIC,
-        density_g_per_ml NUMERIC, price_source TEXT, price_code TEXT, price_unit_label TEXT,
+        density_g_per_ml NUMERIC, price_source TEXT, price_code TEXT, price_unit_label TEXT, is_price_listed INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         '''CREATE TABLE item_alias(id INTEGER PRIMARY KEY, item_id INTEGER, alias TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',

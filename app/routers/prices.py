@@ -8,7 +8,8 @@ from app.core.db import get_db
 from app.core.deps import get_optional_user
 from app.models.user import User
 from app.schemas.common import Page
-from app.schemas.price import FactorHistory, ForecastResponse, PriceCategory, PriceDetail, PriceFactors, PriceHistory, PriceMarket, PriceSort, PriceSummary
+from app.schemas.price import FactorHistory, ForecastResponse, PriceCategory, PriceDetail, PriceFactors, PriceHistory, PriceIndicators, PriceMarket, PriceSort, PriceSummary
+from app.services import indicator_service
 from app.services import price_service as service
 
 router=APIRouter(prefix='/prices',tags=['prices'])
@@ -37,10 +38,14 @@ def detail(item_id:Id,db:Db,viewer:Viewer,market:Market=PriceMarket.RETAIL):
     return call(service.detail,db,item_id,viewer,market)
 
 
+# 가격 이력은 웹 상세 차트가 90일·180일·1년을 쓰도록 365일까지 받는다. 14·30일은 기존 호출(홈 등)을 위해 유지한다.
+HISTORY_DAYS=(14,30,90,180,365)
+
+
 @router.get('/items/{item_id}/history',response_model=PriceHistory)
-def history(item_id:Id,db:Db,viewer:Viewer,days:int=Query(14,ge=14,le=90),market:Market=PriceMarket.RETAIL):
-    if days not in (14,30,90):
-        raise HTTPException(400,'기간은 14, 30, 90일 중 선택해 주세요')
+def history(item_id:Id,db:Db,viewer:Viewer,days:int=Query(14,ge=14,le=365),market:Market=PriceMarket.RETAIL):
+    if days not in HISTORY_DAYS:
+        raise HTTPException(400,'기간은 14, 30, 90, 180, 365일 중 선택해 주세요')
     return call(service.history,db,item_id,days,market)
 
 
@@ -63,3 +68,8 @@ def factor_history(item_id:Id,db:Db,viewer:Viewer,factor_id:str=Path(pattern=r'^
         return call(service.factor_history,db,item_id,factor_id,days,market)
     except service.FactorNotFoundError:
         raise HTTPException(404,'공개 예측에 이 요인의 추이가 없습니다') from None
+
+
+@router.get('/items/{item_id}/indicators',response_model=PriceIndicators)
+def indicators(item_id:Id,db:Db,viewer:Viewer,market:Market=PriceMarket.RETAIL):
+    return call(indicator_service.indicators,db,item_id,market)
