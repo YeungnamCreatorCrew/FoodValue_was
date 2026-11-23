@@ -17,12 +17,6 @@ SUMMARY = {'headline': '대파는 지금 평년보다 싼 편입니다.',
 def indicators(prices, monkeypatch):
     client, engine, _ = prices
     monkeypatch.setattr(indicator_service, 'today', lambda: DAY)
-    with engine.begin() as conn:
-        conn.execute(text('''CREATE TABLE price_indicator_run(id INTEGER PRIMARY KEY,series_id INTEGER,as_of_date DATE,
-            data_date DATE,spec_version TEXT,status TEXT,summary JSON,notices JSON DEFAULT '[]',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''))
-        conn.execute(text('''CREATE TABLE price_indicator_card(id INTEGER PRIMARY KEY,run_id INTEGER,indicator_key TEXT,
-            validation_id INTEGER,verdict TEXT,state TEXT,fact JSON,evidence JSON,chart JSON,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'''))
     yield client, engine
 
 
@@ -93,3 +87,19 @@ def test_unknown_item_is_404_and_bad_market_is_rejected(indicators):
     client, _ = indicators
     assert client.get(ROOT + '/items/999/indicators').status_code == 404
     assert client.get(ROOT + '/items/2/indicators?market=BAD').status_code == 400
+
+
+def test_list_items_carry_indicator_signals_and_year_range(indicators):
+    client, engine = indicators
+    run_id = add_run(engine, 1, DAY)
+    with engine.begin() as conn:
+        conn.execute(text('INSERT INTO price_indicator_card(run_id,indicator_key,verdict,state,fact,evidence) VALUES(:r,:k,:v,:s,:f,:e)'),
+                     {'r': run_id, 'k': 'PRICE_POSITION', 'v': 'FACT', 's': 'DOWN',
+                      'f': json.dumps({'low': 1000, 'high': 3000, 'percentile': 0.2}), 'e': '{}'})
+    rows = {r['seriesId']: r for r in client.get(ROOT + '/items').json()['items']}
+    hit = rows[1]['indicators']
+    assert hit['asOfDate'] == DAY.isoformat() and hit['stale'] is False
+    assert hit['signals'][0]['stateLabel'] == '싼 편' and hit['headline'] == SUMMARY['headline']
+    assert hit['yearRange'] == {'low': 1000, 'high': 3000, 'percentile': 0.2}
+    assert all(r['indicators'] is None for sid, r in rows.items() if sid != 1)
+    assert client.get(ROOT + '/items/2').json()['item']['indicators'] is None

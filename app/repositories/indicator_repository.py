@@ -1,7 +1,7 @@
 """판단 보조 지표 저장·조회."""
 from datetime import date
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 
 from app.models.indicator import PriceIndicatorCard, PriceIndicatorRun, PriceIndicatorValidation
 
@@ -10,6 +10,22 @@ def latest_run(db, series_id, as_of: date, spec_version):
     return db.scalar(select(PriceIndicatorRun).where(
         PriceIndicatorRun.series_id == series_id, PriceIndicatorRun.spec_version == spec_version,
         PriceIndicatorRun.as_of_date <= as_of).order_by(PriceIndicatorRun.as_of_date.desc(), PriceIndicatorRun.id.desc()).limit(1))
+
+
+def latest_runs_with_position(db, series_ids, as_of: date, spec_version):
+    """목록용 일괄 조회: 계열 id → (최신 실행, PRICE_POSITION 카드 또는 None). 쿼리 수는 품목 수와 무관하다."""
+    if not series_ids:
+        return {}
+    ranked = select(PriceIndicatorRun.id.label('id'), func.row_number().over(
+        partition_by=PriceIndicatorRun.series_id,
+        order_by=(PriceIndicatorRun.as_of_date.desc(), PriceIndicatorRun.id.desc())).label('rank')).where(
+        PriceIndicatorRun.series_id.in_(series_ids), PriceIndicatorRun.spec_version == spec_version,
+        PriceIndicatorRun.as_of_date <= as_of).subquery()
+    runs = db.scalars(select(PriceIndicatorRun).join(ranked, PriceIndicatorRun.id == ranked.c.id)
+                      .where(ranked.c.rank == 1)).all()
+    positions = {c.run_id: c for c in db.scalars(select(PriceIndicatorCard).where(
+        PriceIndicatorCard.run_id.in_([r.id for r in runs]), PriceIndicatorCard.indicator_key == 'PRICE_POSITION')).all()}
+    return {r.series_id: (r, positions.get(r.id)) for r in runs}
 
 
 def cards(db, run_id) -> list[PriceIndicatorCard]:
