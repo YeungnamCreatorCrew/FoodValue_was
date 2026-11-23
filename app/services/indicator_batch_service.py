@@ -19,6 +19,7 @@ from app.services.indicators.series import weekly_mean
 LEAD, SEASON = 'WHOLESALE_LEAD', 'SEASONAL'
 POSITION, GAP, VOLATILITY = 'PRICE_POSITION', 'RETAIL_WHOLESALE_GAP', 'VOLATILITY'
 KIND_SWITCH = 'KIND_SWITCH'
+WEIGHT_IN_G = {'g': 1, 'kg': 1000}
 NOTICE_TEXT = {
     LEAD: '작형(품종)이 막 바뀌어서 도매 흐름은 잠시 쉬어요. 서로 다른 품종의 가격을 견주면 잘못된 신호가 되기 때문이에요.',
     VOLATILITY: '작형(품종)이 막 바뀌어서 가격 출렁임은 잠시 쉬어요. 같은 품종으로 최근 4주를 견줄 만큼 가격이 쌓이면 다시 보여드려요.',
@@ -35,6 +36,18 @@ def lead_blocked_by_switch(retail: pd.Series, wholesale: pd.Series, as_of: date,
     retail_w, wholesale_w = weekly_mean(retail[retail.index <= cut]), weekly_mean(wholesale[wholesale.index <= cut])
     return (wholesale_lead.latest_changes(retail_w, wholesale_w) is not None
             and wholesale_lead.latest_changes(retail_w, wholesale_w, retail_breaks=retail_breaks, wholesale_breaks=wholesale_breaks) is None)
+
+
+def wholesale_to_retail_unit(retail_series, wholesale_series) -> float | None:
+    """도매가에 곱해 소매 단위(예: 1kg) 가격으로 바꾸는 배수. 소매 1kg, 도매 15kg이면 1/15.
+    단위 종류가 달라 환산할 수 없으면 None(소매÷도매 배수가 의미 없으므로 그 카드는 만들지 않는다)."""
+    r_unit, w_unit = retail_series.unit, wholesale_series.unit
+    r_qty, w_qty = float(retail_series.unit_quantity), float(wholesale_series.unit_quantity)
+    if r_unit in WEIGHT_IN_G and w_unit in WEIGHT_IN_G:
+        r_qty, w_qty = r_qty * WEIGHT_IN_G[r_unit], w_qty * WEIGHT_IN_G[w_unit]
+    elif r_unit != w_unit:
+        return None
+    return r_qty / w_qty if r_qty > 0 and w_qty > 0 else None
 
 
 def _series(rows) -> pd.Series:
@@ -182,7 +195,8 @@ def run(engine, item_id: int, as_of: date | None = None, validate: bool = False)
                 cards.append(lead)
             elif validation.verdict == 'PASS' and lead_blocked_by_switch(retail, wholesale, as_of, retail_breaks, wholesale_breaks):
                 notices.append(kind_switch_notice(LEAD))
-            gap = gap_card(db, retail_series.id, retail, wholesale, as_of, validate)
+            unit_scale = wholesale_to_retail_unit(retail_series, wholesale_series)
+            gap = gap_card(db, retail_series.id, retail, wholesale * unit_scale, as_of, validate) if unit_scale else None
             if gap:
                 cards.append(gap)
         volatility = price_stats.volatility_fact(retail, as_of, retail_breaks)
