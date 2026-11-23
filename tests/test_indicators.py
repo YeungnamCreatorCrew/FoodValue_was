@@ -301,3 +301,15 @@ def test_lead_blocked_by_switch_only_when_switch_is_the_reason():
     assert ibs.lead_blocked_by_switch(retail, wholesale, as_of, [], switch)  # 최근 주에 전환 → 막힘
     assert not ibs.lead_blocked_by_switch(retail, wholesale, as_of, [], [])  # 전환이 없으면 막힌 게 아님
     assert not ibs.lead_blocked_by_switch(retail, wholesale, as_of, [], [days[10].date()])  # 오래전 전환은 영향 없음
+
+
+def test_wholesale_is_converted_to_retail_unit_before_gap():
+    from types import SimpleNamespace as S
+    from app.services import indicator_batch_service as ibs
+    kg1, kg15 = S(unit='kg', unit_quantity=1), S(unit='kg', unit_quantity=15)
+    assert ibs.wholesale_to_retail_unit(kg1, kg15) == 1 / 15
+    assert ibs.wholesale_to_retail_unit(S(unit='kg', unit_quantity=1), S(unit='g', unit_quantity=500)) == 2
+    assert ibs.wholesale_to_retail_unit(S(unit='개', unit_quantity=1), S(unit='개', unit_quantity=10)) == 0.1
+    assert ibs.wholesale_to_retail_unit(S(unit='개', unit_quantity=1), kg15) is None
+    fact = ps.gap_fact(two_years([1792] * 260), two_years([19840 / 15] * 260))
+    assert fact['ratio'] == 1.35 and fact['wholesalePrice'] == 1323

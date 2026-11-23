@@ -60,7 +60,7 @@ def gap_fact(retail: pd.Series, wholesale: pd.Series, as_of: date | None = None)
     if len(window) < C.STATS_MIN_OBS:
         return None
     current = float(ratio.iloc[-1])
-    return {'asOfDate': end.date(), 'retailPrice': int(both.r.iloc[-1]), 'wholesalePrice': int(both.w.iloc[-1]),
+    return {'asOfDate': end.date(), 'retailPrice': int(both.r.iloc[-1]), 'wholesalePrice': round(float(both.w.iloc[-1])),
             'ratio': round(current, 2), 'normalRatio': round(float(window.median()), 2), 'low': round(float(window.min()), 2),
             'high': round(float(window.max()), 2), 'windowDays': C.STATS_WINDOW_DAYS, 'obsDays': int(len(window)),
             'percentile': round(percentile(window, current), 3)}
