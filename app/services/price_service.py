@@ -3,14 +3,15 @@ from decimal import Decimal
 
 from sqlalchemy import select
 
+from app.core import constants as C
 from app.models.fridge import FridgeIngredient
 from app.models.price import RETAIL, PriceModelRun
-from app.repositories import series_repository
+from app.repositories import indicator_repository, series_repository
 from app.repositories import price_repository as repo
 from app.schemas.common import Page
 from app.schemas.price import (FactorCategory, FactorHistory, FactorHistoryPoint, ForecastPoint, ForecastResponse,
-    FridgeHolding, HistoryPoint, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
-    PriceSummaryText)
+    FridgeHolding, HistoryPoint, IndicatorSignal, ListIndicators, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
+    PriceSummaryText, YearRange)
 from app.services import price_explanation, price_summary
 from app.services.fridge_service import today
 
@@ -52,6 +53,20 @@ def summary(item,series,price,previous,run,last,as_of,aliases=()):
         status=state(price,run,as_of))
 
 
+def list_indicators(db,series_list,as_of):
+    """목록 행에 붙일 지표 요약(소매 계열만). 저장된 스냅샷을 그대로 읽는다."""
+    retail=[s.id for s in series_list if s.market==RETAIL]
+    result={}
+    for series_id,(run,position) in indicator_repository.latest_runs_with_position(db,retail,as_of,C.INDICATOR_SPEC_VERSION).items():
+        if run.status=='INSUFFICIENT_DATA' or not run.summary:
+            continue
+        fact=position.fact if position and isinstance(position.fact,dict) else {}
+        year_range=YearRange(low=fact.get('low'),high=fact.get('high'),percentile=fact.get('percentile')) if position else None
+        result[series_id]=ListIndicators(as_of_date=run.as_of_date,stale=(as_of-run.as_of_date).days>C.INDICATOR_STALE_DAYS,
+            signals=[IndicatorSignal(**s) for s in run.summary.get('signals',[])],year_range=year_range)
+    return result
+
+
 def list_items(db,category,keyword,sort,page,size,market=RETAIL):
     as_of=today()
     rows=repo.catalog(db,category,keyword,market)
@@ -59,6 +74,9 @@ def list_items(db,category,keyword,sort,page,size,market=RETAIL):
     names=repo.aliases(db,[item.id for item,_ in rows])
     result=[summary(item,s,prices.get(s.id),previous.get(s.id),runs.get(s.id),forecasts.get(s.id),as_of,names.get(item.id,()))
             for item,s in rows]
+    signals=list_indicators(db,[s for _,s in rows],as_of)
+    for row in result:
+        row.indicators=signals.get(row.series_id)
     if sort!='name':
         field='weekly_change_percent' if sort=='change' else 'forecast_change_percent'
         result.sort(key=lambda row:(getattr(row,field) is None,getattr(row,field) or 0,row.name,row.id))

@@ -43,6 +43,8 @@ class PriceSummary(CamelModel):
     forecast_target_date: date | None
     quality: str | None
     status: str
+    # 목록 응답에만 채운다(상세는 /indicators). 소매 계열이고 저장된 지표 스냅샷이 있을 때만 값이 있다.
+    indicators: 'ListIndicators | None' = None
 
 
 class HistoryPoint(CamelModel):
@@ -184,6 +186,21 @@ class IndicatorSummary(CamelModel):
     signals: list[IndicatorSignal]
 
 
+class YearRange(CamelModel):
+    """1년 가격대에서 현재 위치를 그리기 위한 값. percentile은 0~1(그 값보다 낮았던 날의 비율)"""
+    low: int | None
+    high: int | None
+    percentile: float | None
+
+
+class ListIndicators(CamelModel):
+    """목록 한 줄에 쓰는 지표 요약. state/stateLabel은 /indicators 상세와 같은 스냅샷에서 가져온다(다시 계산하지 않는다)."""
+    as_of_date: date
+    stale: bool
+    signals: list[IndicatorSignal]
+    year_range: YearRange | None = None
+
+
 class IndicatorCard(CamelModel):
     key: str
     verdict: str  # FACT | PASS | CONDITIONAL
@@ -209,3 +226,7 @@ class PriceIndicators(CamelModel):
     summary: IndicatorSummary | None = None
     cards: list[IndicatorCard] = Field(default_factory=list)
     notices: list[IndicatorNotice] = Field(default_factory=list)  # 카드를 만들지 않은 이유(작형 전환 직후 등)
+
+
+PriceSummary.model_rebuild()
+PriceDetail.model_rebuild()

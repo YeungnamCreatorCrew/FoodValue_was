@@ -28,6 +28,10 @@ def prices(api,monkeypatch):
         return None
     application.dependency_overrides[get_optional_user]=optional
     statements=[
+        '''CREATE TABLE price_indicator_run(id INTEGER PRIMARY KEY,series_id INTEGER,as_of_date DATE,
+        data_date DATE,spec_version TEXT,status TEXT,summary JSON,notices JSON DEFAULT '[]',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
+        '''CREATE TABLE price_indicator_card(id INTEGER PRIMARY KEY,run_id INTEGER,indicator_key TEXT,
+        validation_id INTEGER,verdict TEXT,state TEXT,fact JSON,evidence JSON,chart JSON,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         '''CREATE TABLE price_series(id INTEGER PRIMARY KEY,item_id INTEGER,source TEXT DEFAULT 'KAMIS',market TEXT,
         item_code TEXT,kind_code TEXT,rank_code TEXT,unit_quantity NUMERIC,unit TEXT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         '''CREATE TABLE price_daily(id INTEGER PRIMARY KEY,series_id INTEGER,price_date DATE,price INTEGER,
