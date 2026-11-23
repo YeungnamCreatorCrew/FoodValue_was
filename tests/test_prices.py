@@ -256,3 +256,13 @@ def test_factors_without_explanation(prices):
     assert (baseline['evaluationStart'],baseline['evaluationEnd'])==('2026-09-07','2026-10-29')
     assert client.get(ROOT+'/items/2/factors?market=WHOLESALE').json()['unavailableReason']=='NO_FORECAST'
     assert client.get(ROOT+'/items/2/factors/change7/history').status_code==404
+
+
+def test_unlisted_item_is_hidden_from_catalog(prices):
+    client,engine,_=prices
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO item(id,name,category,default_unit,default_storage,food_type,is_price_listed) VALUES(9,'배추(월동)','VEGETABLE','포기','FRIDGE','RAW',0)"))
+        conn.execute(text("INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(9,9,'RETAIL','211','06','04',1,'포기')"))
+    names=[row['name'] for row in client.get(ROOT+'/items?size=50').json()['items']]
+    assert '배추(월동)' not in names and '대파' in names
+    assert client.get(ROOT+'/items/9').status_code==200  # 직접 접근은 가능(원본 확인용)

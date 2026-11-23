@@ -39,7 +39,7 @@ def snapshot(db, series_id, as_of):
 
 def catalog(db, category, keyword, market=RETAIL):
     """해당 시장의 가격 계열이 있는 품목과 계열"""
-    conditions = [PriceSeries.market == market]
+    conditions = [PriceSeries.market == market, Item.is_price_listed.is_(True)]
     if category:
         conditions.append(Item.category == category)
     if keyword and keyword.strip():
