@@ -400,8 +400,8 @@ def test_garak_parse_keeps_only_target_items_with_volume():
         garak_row('합계', '합계', '7788.68761', '< 전체 >', '00'), garak_row('계', '계', '5467.0', sort='31'),
         garak_row('24500', '대파', '408.858'), garak_row('24503', '쪽파', '80.95'), garak_row('24400', '양파', '')]))
     assert total == 5 and len(rows) == 5
-    records = garak.records(rows, date(2026, 11, 6), {'24500': 7, '24400': 8})
-    assert [(r.key, r.item_id, r.payload['SUM_TOT']) for r in records] == [('24500:2026-11-06', 7, '408.858')]
+    records = garak.records(rows, date(2026, 11, 6), {'24500': [7], '24400': [8]})
+    assert [(r.key, r.item_id, r.payload['SUM_TOT']) for r in records] == [('24500:7:2026-11-06', 7, '408.858')]
     assert records[0].units == {'volume': 'TON'} and records[0].entity_name == '대파'
 
 
@@ -425,14 +425,14 @@ def test_garak_collect_pages_skips_sundays_and_clamps_start():
         return garak_page(101, [garak_row('24400', '양파', '600')])
 
     # 2021-01-02(토) ~ 2021-01-04(월). 2020년 날짜는 요청하지 않고 2021-01-03(일)도 건너뛴다.
-    batch = garak.collect(fetch, user_id='uid', password='pw', targets={'24500': 7, '24400': 8},
+    batch = garak.collect(fetch, user_id='uid', password='pw', targets={'24500': [7], '24400': [8]},
                           start=date(2020, 12, 30), end=date(2021, 1, 4))
     assert sorted(calls) == [('20210101', '1'), ('20210101', '2'), ('20210102', '1'), ('20210102', '2'),
                              ('20210104', '1'), ('20210104', '2')]
     assert calls[0][0] == '20210104'  # 최근 날짜를 먼저 확인한다.
     assert batch.requests == 6 and batch.partial_error is None
-    assert sorted(r.key for r in batch.records) == ['24400:2021-01-01', '24400:2021-01-02', '24400:2021-01-04',
-                                                     '24500:2021-01-01', '24500:2021-01-02', '24500:2021-01-04']
+    assert sorted(r.key for r in batch.records) == ['24400:8:2021-01-01', '24400:8:2021-01-02', '24400:8:2021-01-04',
+                                                     '24500:7:2021-01-01', '24500:7:2021-01-02', '24500:7:2021-01-04']
 
 
 def test_garak_first_failure_stops_before_backfill():
@@ -443,7 +443,7 @@ def test_garak_first_failure_stops_before_backfill():
         raise http.NetworkError('HTTP_500')  # 인증 정보가 틀리면 HTTP 500이 온다.
 
     with pytest.raises(http.NetworkError):
-        garak.collect(fetch, user_id='u', password='p', targets={'24500': 1}, start=date(2026, 1, 1), end=date(2026, 3, 1))
+        garak.collect(fetch, user_id='u', password='p', targets={'24500': [1]}, start=date(2026, 1, 1), end=date(2026, 3, 1))
     assert len(calls) == 1
 
 
@@ -453,8 +453,8 @@ def test_garak_keeps_first_day_when_rest_fails():
             raise http.CollectorError('HTTP_400')
         return garak_page(1, [garak_row('24500', '대파', '386.874')])
 
-    batch = garak.collect(fetch, user_id='u', password='p', targets={'24500': 1}, start=date(2026, 11, 9), end=date(2026, 11, 10))
-    assert [r.key for r in batch.records] == ['24500:2026-11-10'] and batch.partial_error == 'HTTP_400'
+    batch = garak.collect(fetch, user_id='u', password='p', targets={'24500': [1]}, start=date(2026, 11, 9), end=date(2026, 11, 10))
+    assert [r.key for r in batch.records] == ['24500:1:2026-11-10'] and batch.partial_error == 'HTTP_400'
 
 
 def test_fetch_text_returns_xml_body(monkeypatch):
@@ -472,3 +472,16 @@ def test_fetch_text_returns_xml_body(monkeypatch):
     monkeypatch.setattr(http.urllib.request, 'urlopen', lambda request, timeout: seen.append(request) or Response())
     assert http.fetch_text('https://garak.example/api', {'a': 1}).startswith('<lists>')
     assert 'xml' in seen[0].get_header('Accept')
+
+
+def test_garak_item_code_maps_kinds_and_aliases():
+    assert garak.item_code('대파') == '24500' and garak.item_code('깐마늘') == '24300'
+    assert garak.item_code('배추(월동)') == garak.item_code('배추') == '21100'
+    assert garak.item_code('무(고랭지)') == '23100'
+    assert garak.item_code('없는품목') is None and garak.item_code('') is None
+
+
+def test_garak_records_fan_out_to_every_kind_item():
+    _, rows = garak.parse_page(garak_page(1, [garak_row('21100', '배추', '900.5')]))
+    records = garak.records(rows, date(2026, 11, 6), {'21100': [6, 7]})
+    assert [(r.key, r.item_id) for r in records] == [('21100:6:2026-11-06', 6), ('21100:7:2026-11-06', 7)]

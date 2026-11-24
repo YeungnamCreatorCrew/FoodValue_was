@@ -185,14 +185,18 @@ def collect_krei_monthly(engine, *, start_year, end_year, cache_dir, groups=tupl
 
 def collect_garak(engine, items, start, end, fetch_text, credentials):
     """가락시장 일별 반입량. 날짜마다 모든 품목이 한 번에 오므로 대상 품목 전체를 하나의 실행으로 받는다."""
-    targets = {garak.ITEM_CODES[item.name]: item.id for item in items if item.name in garak.ITEM_CODES}
+    targets: dict[str, list[int]] = {}
+    for item in items:
+        code = garak.item_code(item.name)
+        if code:
+            targets.setdefault(code, []).append(item.id)
     if not (credentials.garak_id and credentials.garak_password):
         return skipped(engine, garak.SOURCE, garak.DATASET, 'MISSING_GARAK_CREDENTIALS')
     if not targets:
         return skipped(engine, garak.SOURCE, garak.DATASET, 'NO_GARAK_ITEM')
     # 새로 추가된 품목은 자료가 없으므로 품목별 최신일 중 가장 이른 날부터 받는다.
     first = start or min(incremental_start(engine, garak.SOURCE, garak.DATASET, end, item_id=item_id)
-                         for item_id in targets.values())
+                         for ids in targets.values() for item_id in ids)
     first = max(first, garak.FIRST_DAY)
     return run_dataset(engine, garak.SOURCE, garak.DATASET, first, end,
                        lambda: garak.collect(fetch_text, user_id=credentials.garak_id,

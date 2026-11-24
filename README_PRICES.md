@@ -152,7 +152,7 @@ uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/tes
 | KOSIS | 농작물생산조사 통계표 `statisticsParameterData` | CROP_PRODUCTION | `external_observation` → `item_production` | 최신 공개 연도 생산량의 전년 대비 증감(Y년 값은 Y+1년 6월 30일부터) |
 | 한국은행 | ECOS 통계검색 `StatisticSearch` 731Y001 | EXCHANGE_RATE_DAILY | `external_observation` → `exchange_rate_daily` | 원/미국달러 7·28일 변화율(1일 지연) |
 | 기상청 | 단기예보 `VilageFcstInfoService_2.0/getVilageFcst` | VILAGE_FCST_DAILY | `external_observation` | 사용 안 함(과거 발표본이 없어 백테스트 불가). `weather_daily` FORECAST용 |
-| 서울시농수산식품공사 | 가락시장 반입물량(경매후) `dataOpen.do` `dataid=data21` | ARRIVAL_DAILY | `external_observation` → `item_production`(ARRIVAL·DAY) | 사용 안 함(2026-11-09 실험에서 효과 없음, [모델 변경 기록](model_comparison/xgboost/README_MODEL.md)) |
+| 서울시농수산식품공사 | 가락시장 반입물량(경매후) `dataOpen.do` `dataid=data21` | ARRIVAL_DAILY | `external_observation` → `item_production`(ARRIVAL·DAY) | v5 서비스 모델은 사용 안 함(2026-11-09 실험에서 효과 없음). v2 앙상블(GARAK 묶음) 서비스 연동에 사용 예정 |
 
 - 수집·예측 대상은 `price_series`에 소매 계열이 있는 품목입니다. 계열 코드는 `품목-품종-등급`(예: `246-00-04`)이고 부류코드는 품목코드 첫 자리로 정합니다.
 - KAMIS 응답은 `countyname='평균'` 행만 전국 값으로 보존합니다. `price_daily`는 원본의 최신 버전에서 계열별로 다시 만들고
@@ -261,8 +261,11 @@ VALUES (<대파 item_id>, '<ASOS 지점번호>', '<지점명>', '<주산지>', '
 - ECOS는 경로형 URL이라 끝에 `?`가 붙으면 무자료(INFO-200)를 돌려줍니다. 파라미터가 없으면 `?`를 붙이지 않습니다(로컬 실측으로 확인된 문제).
 - KAMIS·ECOS는 해외 서버(클라우드 개발 환경)에서는 연결이 끊깁니다. 국내 IP에서 실행합니다. 서버에서 아래로 확인합니다.
   `uv run --extra prices python -c "from app.collectors import ecos; from app.collectors.http import fetch_json; import os, datetime as d; print(ecos.collect(fetch_json, key=os.environ['ECOS_API_KEY'], start=d.date(2026,10,1), end=d.date.today()).records[:3])"`
-- 가락시장 반입량은 `item.name`이 `garak.ITEM_CODES`의 키(대파 24500·양파·배추·무·사과 등 30개)와 같은 품목만 연결합니다.
-  2026-11-10 응답에서 이름이 정확히 같은 품목만 넣었고, 이름이 다른 품목(풋고추 ↔ 생고추 등)은 추측해서 연결하지 않습니다.
+- 가락시장 반입량은 `garak.item_code(item.name)`로 품목을 연결합니다(대파 24500·양파·배추·무·사과 등 30개).
+  - 작형 접미사는 떼고 찾습니다: `배추(월동)`·`배추(봄)` 등은 모두 가락 `배추`(21100)와 연결되고, 같은 반입량이 작형 품목마다 저장됩니다(가락시장은 작형을 나누지 않음).
+  - 이름이 다른 품목은 `garak.NAME_ALIASES`에 명시한 것만 연결합니다(`깐마늘` → `마늘`). 풋고추 ↔ 생고추처럼 애매한 품목은 추측해서 연결하지 않습니다.
+  - 반입량만 따로 받으려면(다른 원천이 막혔거나 과거치를 처음 채울 때): `uv run --extra prices python -m app.garak_collect`
+    처음이면 2021-01-01부터, 이후에는 마지막 수집일부터 이어 받고 바로 `item_production`까지 적재합니다. `--start`/`--end`로 기간 지정 가능.
   - 한 번 요청에 그날 모든 품목(약 120행)이 오고 한 페이지는 최대 100행이라, 품목 수와 관계없이 날짜당 2회 요청합니다(일요일 제외, 4개 병렬).
   - 2021년 이전 날짜는 HTTP 400("검색가능 년도는 2021년 부터 입니다")이므로 처음 수집은 2021-01-01부터 받습니다.
   - 값은 품목 합계 `SUM_TOT`(톤)를 0.1톤 단위로 적재합니다. 도매법인별 값(`CORP_CD_1~6`)은 원본(`external_observation.payload`)에만 둡니다.

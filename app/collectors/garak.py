@@ -41,6 +41,18 @@ ITEM_CODES = {
 }
 
 
+# DB 품목 이름이 가락 품목 이름과 다른 경우. 작형 접미사('배추(월동)')는 item_code()가 떼고 찾는다.
+NAME_ALIASES = {'깐마늘': '마늘'}
+KIND_SUFFIX = re.compile(r'\s*\(.*\)\s*$')
+
+
+def item_code(name: str) -> str | None:
+    """DB 품목 이름 → 가락 품목코드. 작형별 품목(배추(월동)·무(봄) 등)은 모두 같은 품목코드(배추·무)를 쓴다.
+    가락시장은 작형을 나누지 않고 품목 전체 반입량만 준다."""
+    base = KIND_SUFFIX.sub('', name or '').strip()
+    return ITEM_CODES.get(NAME_ALIASES.get(base, base))
+
+
 def params(user_id: str, password: str, day: date, page: int):
     return {'id': user_id, 'passwd': password, 'dataid': DATA_ID, 'pagesize': str(PAGE_SIZE), 'pageidx': str(page),
             'portal.templet': 'false', 'date': day.strftime('%Y%m%d')}
@@ -59,8 +71,8 @@ def parse_page(text: str):
     return int(total), rows
 
 
-def records(rows, day: date, targets: dict[str, int]):
-    """targets: 가락 품목코드 → item_id. 반입량이 없거나 음수인 행은 만들지 않는다."""
+def records(rows, day: date, targets: dict[str, list[int]]):
+    """targets: 가락 품목코드 → item_id 목록(작형별 품목은 같은 코드를 공유). 반입량이 없거나 음수인 행은 만들지 않는다."""
     result = []
     for row in rows:
         code = text_value(row.get('ITM_CD'))
@@ -69,13 +81,14 @@ def records(rows, day: date, targets: dict[str, int]):
         volume = number(row.get('SUM_TOT'))
         if volume is None or volume < 0:
             continue
-        result.append(Record(SOURCE, DATASET, f'{code}:{day.isoformat()}', dict(row), observed_on=day,
-                             entity_code=code, entity_name=text_value(row.get('ITM_NM')),
-                             units={'volume': VOLUME_UNIT}, item_id=targets[code]))
+        for item_id in targets[code]:
+            result.append(Record(SOURCE, DATASET, f'{code}:{item_id}:{day.isoformat()}', dict(row), observed_on=day,
+                                 entity_code=code, entity_name=text_value(row.get('ITM_NM')),
+                                 units={'volume': VOLUME_UNIT}, item_id=item_id))
     return result
 
 
-def fetch_day(fetch, user_id: str, password: str, day: date, targets: dict[str, int]):
+def fetch_day(fetch, user_id: str, password: str, day: date, targets: dict[str, list[int]]):
     """한 날짜의 모든 페이지를 받는다. (레코드, 요청 수)를 반환한다."""
     rows, page, requests = [], 1, 0
     while True:
@@ -97,8 +110,8 @@ def days(start: date, end: date):
         day -= timedelta(days=1)
 
 
-def collect(fetch, *, user_id, password, targets: dict[str, int], start: date, end: date):
-    """fetch(url, params) → 응답 문자열. targets: 가락 품목코드 → item_id."""
+def collect(fetch, *, user_id, password, targets: dict[str, list[int]], start: date, end: date):
+    """fetch(url, params) → 응답 문자열. targets: 가락 품목코드 → item_id 목록."""
     order = list(days(max(start, FIRST_DAY), end))
     if not order:
         return Batch([], 0)
