@@ -57,8 +57,35 @@ FEATURES = {
     'usdKrwChange7': ('원/달러 환율 7일 변화율', '%', 'MACRO', 100),
     'usdKrwChange28': ('원/달러 환율 28일 변화율', '%', 'MACRO', 100),
 }
+# v2 앙상블(app.services.v2_ensemble) 특징 이름. 실험 코드(tools.loader·model_comparison.v2.features)의 이름 그대로.
+FEATURES.update({
+    'price_age': ('최근 가격 경과일', '일', 'PRICE', 1),
+    'days_since_kind_switch': ('작형 전환 이후 일수', '일', 'CALENDAR', 1),
+    'target_weekday': ('예측 대상일 요일', '', 'CALENDAR', 1),
+    'counter_price': ('{counter} 가격', '원', 'PRICE', 1),
+    'target_counter_ratio': ('{counter} 대비 현재 가격 비율', '배', 'PRICE', 1),
+    'counter_change7': ('{counter} 가격 7일 변화율', '%', 'PRICE', 100),
+    'counter_change28': ('{counter} 가격 28일 변화율', '%', 'PRICE', 100),
+    'nat_temp_mean7': ('전국 최근 7일 평균기온', '℃', 'WEATHER', 1),
+    'nat_rain_sum28': ('전국 최근 28일 강수량', 'mm', 'WEATHER', 1),
+    'nat_heat_index7': ('최근 7일 폭염 지수', '', 'WEATHER', 1),
+    'nat_heat_index28': ('최근 28일 폭염 지수', '', 'WEATHER', 1),
+    'nat_heavy_rain_index28': ('최근 28일 호우 지수', '', 'WEATHER', 1),
+    'nat_cold_index28': ('최근 28일 한파 지수', '', 'WEATHER', 1),
+    'days_to_major_holiday': ('다음 명절까지 남은 날', '일', 'CALENDAR', 1),
+    'days_from_major_holiday': ('지난 명절 이후 지난 날', '일', 'CALENDAR', 1),
+    'target_in_event_window': ('예측 대상일 명절 영향 기간 여부', '', 'CALENDAR', 1),
+    'target_prev_day_holiday': ('예측 대상일 전날 공휴일 여부', '', 'CALENDAR', 1),
+    'arima_trend': ('시계열 추세(AutoARIMA)', '', 'PRICE', 1),
+})
+# 값·추이를 보여주지 않는 항목(추세 모델 몫 등)
+NO_HISTORY = {'arima_trend'}
 # 따로 보면 의미가 없는 특징 쌍은 화면에서 하나로 합친다(SHAP은 더해도 된다). 값·추이는 보여주지 않는다.
-MERGED = {'targetSeason': (('targetSeasonSin', 'targetSeasonCos'), '예측 대상일의 계절', 'CALENDAR')}
+MERGED = {'targetSeason': (('targetSeasonSin', 'targetSeasonCos', 'target_season_sin', 'target_season_cos'),
+                           '예측 대상일의 계절', 'CALENDAR'),
+          # v2 통합 학습의 품목·시장 구분(원핫). 하나씩은 의미가 없어 '이 품목·시장의 평소 움직임'으로 합친다.
+          'seriesProfile': (('is_대파', 'is_양파', 'is_깐마늘', 'is_배추', 'is_무', 'is_wholesale'),
+                            '이 품목·시장의 평소 움직임', 'PRICE')}
 CATEGORY_LABELS = {'PRICE': '최근 가격 흐름', 'WEATHER': '기상 조건', 'CALENDAR': '달력·계절', 'MACRO': '생산량·환율'}
 COUNTER_LABELS = {'RETAIL': '도매', 'WHOLESALE': '소매'}  # 예측 계열의 상대 시장
 
@@ -151,7 +178,7 @@ def display_factors(rows, market):
         factors.append({'id': name, 'label': label(name, market), 'category': meta[2],
                         'value': display_value(name, row['value']), 'unit': meta[1],
                         'contribution': round(contribution, 1), 'direction': direction(contribution),
-                        'hasHistory': True})
+                        'hasHistory': name not in NO_HISTORY})
     factors.sort(key=lambda f: (-abs(f['contribution']), f['id']))
     return factors
 

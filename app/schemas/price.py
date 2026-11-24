@@ -69,6 +69,19 @@ class ForecastPoint(CamelModel):
     upper_price: int | None
 
 
+class ValidationRecord(CamelModel):
+    """공개 예측 모델의 과거 검증 실적(같은 품목·시장). v2 앙상블 실행에만 있다(app.services.v2_calibration).
+    mape: 공개 방식(앙상블 또는 직전 가격 유지)의 평균 오차율(%), naive_mape: 직전 가격 유지의 평균 오차율,
+    improvement_pct: naive 대비 개선율(%), within5_pct: 실제 가격이 예측의 ±5% 안에 든 비율(%)"""
+    mape: float | None = None
+    naive_mape: float | None = None
+    improvement_pct: float | None = None
+    within5_pct: float | None = None
+    points: int | None = None
+    evaluation_start: date | None = None
+    evaluation_end: date | None = None
+
+
 class ForecastResponse(CamelModel):
     item_id: int
     market: PriceMarket
@@ -82,6 +95,7 @@ class ForecastResponse(CamelModel):
     quality: str | None = None
     points: list[ForecastPoint] = Field(default_factory=list)
     metrics: dict | None = None
+    validation: ValidationRecord | None = None
     latest_attempt_status: str | None = None
     updated_at: datetime | None = None
 
@@ -147,6 +161,7 @@ class PriceFactors(CamelModel):
     # 최종 평가(과거 검증) 구간. 모델 채택 여부를 이 기간의 백테스트로 정했다는 근거 표시용
     evaluation_start: date | None = None
     evaluation_end: date | None = None
+    validation: ValidationRecord | None = None
     method: str | None = None
     horizon_days: int | None = None
     target_date: date | None = None

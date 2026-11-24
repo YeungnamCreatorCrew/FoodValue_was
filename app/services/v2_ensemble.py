@@ -34,6 +34,70 @@ class SeriesForecast:
     prices: list[float | None]  # 시점 1~7, 앙상블 평균(반올림 전). 모든 구성원 실패면 None
     members: dict[str, list[float | None]] = field(default_factory=dict)  # 구성원별 후처리 가격
     errors: dict[str, str] = field(default_factory=dict)
+    explanation: object = None  # price_explanation.Explanation(7일 뒤, 앙상블 기준). 만들지 못하면 None
+    explanation_error: str = ''
+
+
+EXPLAIN_HORIZON = 7
+METHOD = 'V2_ENSEMBLE_TREE_SHAP'
+ARIMA_FACTOR = 'arima_trend'
+
+
+def _tree_contributions(model, row, names, horizon):
+    """통합 모델 한 시점의 TreeSHAP(변화율 단위). 반환: (특징→기여, 기대값, 현재가, 모델 변화율)."""
+    from model_comparison.v2.models import relative
+
+    x, current = relative(np.asarray(row, dtype=np.float64)[None, :], names)
+    xk = x[:, model.keep]
+    estimator = model.models[horizon]
+    if hasattr(estimator, 'get_booster'):
+        from xgboost import DMatrix
+        contrib = estimator.get_booster().predict(DMatrix(xk, missing=np.nan), pred_contribs=True)[0]
+    else:
+        contrib = np.asarray(estimator.predict(xk, pred_contrib=True))[0]
+    change = float(estimator.predict(xk)[0])
+    if abs(float(contrib.sum()) - change) > 1e-4:
+        raise ValueError('SHAP 합이 모델 변화율과 다름')
+    kept = [names[j] for j in model.keep]
+    return dict(zip(kept, (float(v) for v in contrib[:-1]))), float(contrib[-1]), float(current[0]), change
+
+
+def explain(sid, snap, pooled, arima_price, as_of, horizon=EXPLAIN_HORIZON):
+    """앙상블 7일 뒤 예측의 원 단위 기여. 앙상블 = 구성원 n개의 같은 비중 평균이므로
+    - 트리 구성원 m: 가격 = 현재가 × (1 + 기대값 + Σ기여) → 원 단위 기여 = 현재가 × 기여 / n
+    - AutoARIMA: SHAP이 없어 '시계열 추세' 한 항목 = (ARIMA 예측 − 현재가) / n
+    - 기준값 = (Σ_트리 현재가 × (1 + 기대값) + 현재가) / n. 기준값 + Σ기여 = 앙상블 예측(반올림 전).
+    pooled: 이름 → (모델, Matrices). 트리 구성원 하나라도 없으면 만들지 않는다(구성 비중이 바뀌므로)."""
+    from app.services import price_explanation
+
+    s = snap.series[sid]
+    i = s.index(as_of)
+    n = len(pooled) + (arima_price is not None)
+    contributions, base, current, row = {}, 0.0, None, None
+    for model, mats in pooled.values():
+        row = mats.by[sid, horizon][i]
+        contrib, bias, current, _ = _tree_contributions(model, row, mats.names, horizon)
+        base += current * (1 + bias) / n
+        for name, value in contrib.items():
+            contributions[name] = contributions.get(name, 0.0) + current * value / n
+    if arima_price is not None:
+        base += current / n
+        contributions[ARIMA_FACTOR] = (arima_price - current) / n
+    names = next(iter(pooled.values()))[1].names
+    values = {name: price_explanation.clean(row[names.index(name)]) for name in contributions if name in names}
+    history = {}
+    mats = next(iter(pooled.values()))[1]
+    for name in contributions:
+        if name not in names or name.startswith('is_'):
+            continue
+        j = names.index(name)
+        start = max(0, i - price_explanation.HISTORY_DAYS + 1)
+        history[name] = [(s.day(k).isoformat(), price_explanation.clean(mats.by[sid, horizon][k][j]))
+                         for k in range(start, i + 1)]
+    predicted = base + sum(contributions.values())
+    return price_explanation.Explanation(horizon=horizon, current_price=current, damping=1.0, base_price=base,
+                                         predicted_price=int(round(predicted)), contributions=contributions,
+                                         values=values, history=history, method=METHOD)
 
 
 def _post(values, status='OK', error=''):
@@ -102,10 +166,11 @@ def combine(members: dict[str, list[float | None]]) -> list[float | None]:
 
 def forecast(snap: loader.Snapshot, as_of: date, log=print) -> dict[int, SeriesForecast]:
     """스냅샷의 모든 계열을 as_of 기준으로 예측한다. 반환: 스냅샷 계열 id → SeriesForecast."""
-    member_out, errors = {}, {}
+    member_out, errors, pooled = {}, {}, {}
     for name, path in POOLED.items():
         try:
-            member_out[name] = _pooled(snap, as_of, path, log)[0]
+            member_out[name], model, mats = _pooled(snap, as_of, path, log)
+            pooled[name] = (model, mats)
         except Exception as error:  # noqa: BLE001
             errors[name] = type(error).__name__
             log(f'{name} 실패: {type(error).__name__}: {error}')
@@ -119,5 +184,14 @@ def forecast(snap: loader.Snapshot, as_of: date, log=print) -> dict[int, SeriesF
         s = snap.series[sid]
         members = {name: out[sid][0] for name, out in member_out.items()}
         member_errors = {**errors, **{name: out[sid][1] for name, out in member_out.items() if out[sid][1]}}
-        result[sid] = SeriesForecast(sid, s.item, s.market, combine(members), members, member_errors)
+        forecast_ = SeriesForecast(sid, s.item, s.market, combine(members), members, member_errors)
+        h = EXPLAIN_HORIZON - 1
+        if len(pooled) == len(POOLED) and all(members[name][h] is not None for name in POOLED):
+            arima = members.get(ARIMA[0], [None] * len(standard.HORIZONS))[h]
+            try:
+                forecast_.explanation = explain(sid, snap, pooled, arima, as_of)
+            except Exception as error:  # noqa: BLE001 — 설명 실패가 예측 공개를 막지 않는다
+                forecast_.explanation_error = type(error).__name__
+                log(f'{sid} 설명 실패: {type(error).__name__}: {error}')
+        result[sid] = forecast_
     return result
