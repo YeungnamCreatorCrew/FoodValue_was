@@ -9,7 +9,7 @@ from app.models.fridge import Item
 from app.models.price import (COUNTERPART, RETAIL, PriceForecast, PriceForecastExplanation, PriceForecastFactor,
     PriceInsight, PriceModelRun, PriceSeries)
 from app.repositories import covariate_repository, series_repository
-from app.services import price_explanation, price_summary
+from app.services import price_explanation, price_summary, v2_service
 from app.services.exogenous import WEATHER_LAG_DAYS, COUNTERPART_LAG_DAYS
 from app.services.fridge_service import today
 from app.services.price_prediction import InsufficientDataError, MODEL_VERSION, predict
@@ -124,12 +124,18 @@ def _run(engine,series_id,base_date):
         rows,covariates=load_inputs(db,series,base_date)
         item_name=db.get(Item,series.item_id).name
         market=series.market
+        v2_key=v2_service.series_key(item_name,series.source,market) if v2_service.enabled() else None
         run=PriceModelRun(series_id=series_id,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
         db.add(run)
         db.commit()
         run_id=run.id
     try:
-        result=predict([(d,p) for d,p in rows],base_date,covariates,explain=True)
+        if v2_key:
+            if not rows:
+                raise InsufficientDataError('가격 자료 없음')
+            result=v2_service.prediction(engine,v2_key,base_date,rows[-1][1])
+        else:
+            result=predict([(d,p) for d,p in rows],base_date,covariates,explain=True)
         if len(result.prices)!=7 or len(result.lower)!=7 or len(result.upper)!=7:
             raise ValueError('예측 결과는 7개여야 합니다')
         current=rows[-1][1]
@@ -165,7 +171,7 @@ def _run(engine,series_id,base_date):
             run=db.get(PriceModelRun,run_id)
             run.status='SUCCESS'
             run.model_name=result.model
-            run.model_version=MODEL_VERSION
+            run.model_version=result.metrics.get('modelVersion',MODEL_VERSION)
             run.quality=result.quality
             run.metrics=result.metrics
             run.finished_at=datetime.now()
