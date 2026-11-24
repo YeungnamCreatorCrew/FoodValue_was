@@ -17,8 +17,8 @@ from sqlalchemy import exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.collectors import data_go_kr, ecos, kamis, kosis, krei
-from app.collectors.http import CollectorError, fetch_bytes, fetch_json
+from app.collectors import data_go_kr, ecos, garak, kamis, kosis, krei
+from app.collectors.http import CollectorError, fetch_bytes, fetch_json, fetch_text
 from app.models.external import ExternalCollectionRun, ExternalObservation, ItemWeatherStation
 from app.models.fridge import Item
 from app.models.price import RETAIL, PriceSeries
@@ -40,12 +40,15 @@ class Credentials:
     data_go_kr_key: str | None = None
     kosis_key: str | None = None
     ecos_key: str | None = None
+    garak_id: str | None = None
+    garak_password: str | None = None
 
     @classmethod
     def from_env(cls):
         return cls(os.getenv('KAMIS_CERT_KEY') or None, os.getenv('KAMIS_CERT_ID') or None,
                    os.getenv('DATA_GO_KR_SERVICE_KEY') or None, os.getenv('KOSIS_API_KEY') or None,
-                   os.getenv('ECOS_API_KEY') or None)
+                   os.getenv('ECOS_API_KEY') or None, os.getenv('GARAK_API_ID') or None,
+                   os.getenv('GARAK_API_PASSWORD') or None)
 
 
 def digest(payload: dict) -> str:
@@ -180,6 +183,27 @@ def collect_krei_monthly(engine, *, start_year, end_year, cache_dir, groups=tupl
                                             cache_dir=cache_dir))
 
 
+def collect_garak(engine, items, start, end, fetch_text, credentials):
+    """가락시장 일별 반입량. 날짜마다 모든 품목이 한 번에 오므로 대상 품목 전체를 하나의 실행으로 받는다."""
+    targets: dict[str, list[int]] = {}
+    for item in items:
+        code = garak.item_code(item.name)
+        if code:
+            targets.setdefault(code, []).append(item.id)
+    if not (credentials.garak_id and credentials.garak_password):
+        return skipped(engine, garak.SOURCE, garak.DATASET, 'MISSING_GARAK_CREDENTIALS')
+    if not targets:
+        return skipped(engine, garak.SOURCE, garak.DATASET, 'NO_GARAK_ITEM')
+    # 새로 추가된 품목은 자료가 없으므로 품목별 최신일 중 가장 이른 날부터 받는다.
+    first = start or min(incremental_start(engine, garak.SOURCE, garak.DATASET, end, item_id=item_id)
+                         for ids in targets.values() for item_id in ids)
+    first = max(first, garak.FIRST_DAY)
+    return run_dataset(engine, garak.SOURCE, garak.DATASET, first, end,
+                       lambda: garak.collect(fetch_text, user_id=credentials.garak_id,
+                                             password=credentials.garak_password, targets=targets,
+                                             start=first, end=end))
+
+
 def verified_stations(engine, item_ids):
     with Session(engine) as db:
         return sorted(set(db.scalars(select(ItemWeatherStation.station_code).where(
@@ -195,8 +219,11 @@ def prediction_items(engine, item_ids=None):
         return db.scalars(query.order_by(Item.id)).all()
 
 
-def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, credentials=None):
-    """품목별 KAMIS 소매·도매 계열, 주산지 ASOS 기상, 공휴일을 차례로 수집하고 데이터셋별 결과를 반환한다."""
+def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, fetch_text=fetch_text, credentials=None):
+    """품목별 KAMIS 소매·도매 계열, 가락 반입량, 주산지 ASOS 기상, 공휴일을 차례로 수집하고 데이터셋별 결과를 반환한다.
+
+    fetch는 JSON 원천, fetch_text는 XML 원천(가락시장)에 쓴다.
+    """
     if engine.dialect.name != 'postgresql':
         raise ValueError('수집 적재에는 PostgreSQL이 필요합니다')
     credentials = credentials or Credentials.from_env()
@@ -225,6 +252,7 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, cr
         warehouse_service.refresh_price_daily(engine, [item.id for item in items], since=min(firsts))
     results.append(collect_kosis(engine, items, start, end, fetch, credentials))
     results.append(collect_ecos(engine, start, end, fetch, credentials))
+    results.append(collect_garak(engine, items, start, end, fetch_text, credentials))
     if not credentials.data_go_kr_key:
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.ASOS, 'MISSING_DATA_GO_KR_KEY'))
         results.append(skipped(engine, data_go_kr.KMA, data_go_kr.VILAGE, 'MISSING_DATA_GO_KR_KEY'))

@@ -135,3 +135,14 @@ def test_price_rows_from_latest_kamis_observations():
             SimpleNamespace(id=13, observed_on=date(2026, 1, 7), payload={'price': '0'})]
     assert warehouse.price_rows(7, rows) == [{'series_id': 7, 'price_date': date(2026, 1, 5), 'price': 1930,
                                               'observation_id': 10}]
+
+
+def test_arrival_rows_from_garak_observations():
+    observation = SimpleNamespace(item_id=3, observed_on=date(2026, 11, 6), payload={'SUM_TOT': '408.858'},
+                                  units={'volume': 'TON'})
+    empty = SimpleNamespace(item_id=3, observed_on=date(2026, 11, 7), payload={'SUM_TOT': ''}, units={'volume': 'TON'})
+    other_unit = SimpleNamespace(item_id=3, observed_on=date(2026, 11, 9), payload={'SUM_TOT': '1'}, units={'volume': 'KG'})
+    assert warehouse.arrival_rows([observation, empty, other_unit]) == [{
+        'item_id': 3, 'measure_type': 'ARRIVAL', 'period_type': 'DAY', 'period_start': date(2026, 11, 6),
+        'period_end': date(2026, 11, 6), 'volume': Decimal('408.9'), 'volume_unit': 'TON',
+        'is_estimate': False, 'source': 'GARAK'}]

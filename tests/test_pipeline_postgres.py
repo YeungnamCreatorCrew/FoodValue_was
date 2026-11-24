@@ -10,7 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import price_backtest, price_pipeline
-from app.collectors import data_go_kr, ecos, kamis, kosis
+from app.collectors import data_go_kr, ecos, garak, kamis, kosis
 from app.collectors.records import windows
 from app.repositories import covariate_repository, series_repository
 from app.services import collection_service, warehouse_service
@@ -161,7 +161,8 @@ def test_collect_store_dedupe_and_revision(pipeline):
     assert {key: row['status'] for key, row in first.items()} == {
         ('KAMIS', 'RETAIL_DAILY'): 'SUCCESS', ('KAMIS', 'WHOLESALE_DAILY'): 'SUCCESS',
         ('KMA', 'ASOS_DAILY'): 'SUCCESS', ('KMA', 'VILAGE_FCST_DAILY'): 'SUCCESS', ('KASI', 'HOLIDAY'): 'SUCCESS',
-        ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS', ('ECOS', 'EXCHANGE_RATE_DAILY'): 'SUCCESS'}
+        ('KOSIS', 'CROP_PRODUCTION'): 'SUCCESS', ('ECOS', 'EXCHANGE_RATE_DAILY'): 'SUCCESS',
+        ('GARAK', 'ARRIVAL_DAILY'): 'SKIPPED'}  # 가락 인증 정보 없음 → 다른 원천과 예측은 계속
     kamis_days, kamis_requests = kamis_expectation(apis)
     assert first[('KAMIS', 'RETAIL_DAILY')]['inserted'] == kamis_days
     # 주산지 관측소 + 전국 집계 관측소. ASOS는 전일까지
@@ -178,7 +179,7 @@ def test_collect_store_dedupe_and_revision(pipeline):
         assert run[0] == 'SUCCESS' and run[1] == kamis_requests and run[2] == run[3] == kamis_days and run[4] is not None
     # 같은 내용의 재수집은 새 행을 만들지 않는다.
     again = collect(engine, item_id, apis, start=apis.start)
-    assert all(row['inserted'] == 0 for row in again.values())
+    assert all(row.get('inserted', 0) == 0 for row in again.values())
     # 원천이 값을 수정하면 새 버전을 보존하고 예측 대상 가격도 갱신한다.
     apis.overrides[today()] = 4321
     revised = collect(engine, item_id, apis)
@@ -199,7 +200,7 @@ def test_missing_credentials_are_recorded_as_skipped(pipeline):
     _, engine, item_id, apis = pipeline
     results = collection_service.collect(engine, [item_id], fetch=apis, credentials=Credentials())
     assert {row['status'] for row in results} == {'SKIPPED'} and apis.calls == []
-    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY', 'MISSING_KOSIS_KEY',
+    assert {row['errorCode'] for row in results} == {'MISSING_KAMIS_CREDENTIALS', 'MISSING_DATA_GO_KR_KEY', 'MISSING_KOSIS_KEY', 'MISSING_GARAK_CREDENTIALS',
                                                     'MISSING_ECOS_KEY'}
 
 
@@ -316,3 +317,37 @@ def test_structured_tables_are_refreshed_idempotently(pipeline):
                          {'id': item_id})
             conn.execute(text('DELETE FROM item_production WHERE item_id=:id'), {'id': item_id})
             conn.execute(text('DELETE FROM event_item_weight WHERE item_id=:id'), {'id': item_id})
+
+
+def test_garak_arrivals_are_stored_and_refreshed(pipeline, monkeypatch):
+    _, engine, item_id, _ = pipeline
+    with engine.connect() as conn:
+        name = conn.scalar(text('SELECT name FROM item WHERE id=:id'), {'id': item_id})
+    monkeypatch.setitem(garak.ITEM_CODES, name, '24500')
+    end = today()
+    start = end - timedelta(days=9)
+    volumes = {}
+
+    def fetch_text(url, params):
+        assert url == garak.URL and params['id'] == 'garak-id' and params['passwd'] == 'garak-pw'
+        day = date(int(params['date'][:4]), int(params['date'][4:6]), int(params['date'][6:]))
+        volume = volumes.setdefault(day, f'{300 + day.day}.4')
+        return ('<lists><list_total_count>2</list_total_count>'
+                '<list><ITM_CD><![CDATA[합계]]></ITM_CD><SUM_TOT><![CDATA[9000]]></SUM_TOT></list>'
+                f'<list><ITM_CD><![CDATA[24500]]></ITM_CD><ITM_NM><![CDATA[대파]]></ITM_NM><SUM_TOT><![CDATA[{volume}]]></SUM_TOT></list>'
+                '</lists>')
+
+    credentials = Credentials(garak_id='garak-id', garak_password='garak-pw')
+    items = collection_service.prediction_items(engine, [item_id])
+    result = collection_service.collect_garak(engine, items, start, end, fetch_text, credentials)
+    expected = [d for d in (start + timedelta(days=i) for i in range(10)) if d.weekday() != 6]
+    assert result['status'] == 'SUCCESS' and result['inserted'] == len(expected) and result['requests'] == len(expected)
+    assert warehouse_service.refresh_item_arrival(engine, [item_id], start) == len(expected)
+    again = collection_service.collect_garak(engine, items, start, end, fetch_text, credentials)
+    assert again['inserted'] == 0  # 같은 내용은 다시 저장하지 않는다.
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT period_start,volume,volume_unit,source FROM item_production "
+                                 "WHERE item_id=:id AND measure_type='ARRIVAL' ORDER BY period_start"), {'id': item_id}).all()
+    assert [tuple(r) for r in rows] == [(d, Decimal(volumes[d]), 'TON', 'GARAK') for d in expected]
+    skipped = collection_service.collect_garak(engine, items, start, end, fetch_text, Credentials())
+    assert skipped['status'] == 'SKIPPED' and skipped['errorCode'] == 'MISSING_GARAK_CREDENTIALS'
