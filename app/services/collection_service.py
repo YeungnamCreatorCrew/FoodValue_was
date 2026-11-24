@@ -235,6 +235,8 @@ def collect(engine, item_ids=None, *, start=None, end=None, fetch=fetch_json, fe
         series = series_repository.of_items(db, [item.id for item in items])
     results, firsts = [], []
     for row in series:
+        if row.source != kamis.SOURCE:
+            continue  # 이어 붙인 계열(MERGED)은 KAMIS에서 받지 않고 작형별 계열로 다시 계산한다(merged_series_service).
         dataset = kamis.MARKET_DATASETS[row.market]
         if not (credentials.kamis_cert_key and credentials.kamis_cert_id):
             results.append({**skipped(engine, kamis.SOURCE, dataset, 'MISSING_KAMIS_CREDENTIALS'), 'itemId': row.item_id})
