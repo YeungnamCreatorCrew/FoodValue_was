@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.collectors import garak
 from app.core.constants import ID_MAX
 from app.repositories import series_repository
-from app.services import collection_service, price_batch_service, warehouse_service
+from app.services import collection_service, merged_series_service, price_batch_service, warehouse_service
 from app.services.fridge_service import today
 from app.services.price_prediction import ModelDependencyError
 
@@ -62,6 +62,7 @@ def run(engine, args):
         output['tables'] = warehouse_service.refresh(engine, [item.id for item in items], weather_start=since,
                                                      weather_end=end, since=since - timedelta(days=7),
                                                      arrival_since=min(arrival) if arrival else since)
+        output['merged'] = merged_series_service.refresh(engine)  # 배추·무 이어 붙인 계열(작형별 가격 정제 뒤)
     if not args.collect_only:
         with Session(engine) as db:
             targets = [(row.id, row.item_id, row.market) for row in series_repository.of_items(db, [item.id for item in items])]

@@ -307,6 +307,8 @@ def refresh_price_daily(engine, item_ids, since: date | None = None):
     total = 0
     with Session(engine) as db:
         for series in series_repository.of_items(db, item_ids):
+            if series.source != kamis.SOURCE:
+                continue  # MERGED 계열은 merged_series_service가 만든다.
             conditions = [ExternalObservation.source == kamis.SOURCE, ExternalObservation.dataset == kamis.MARKET_DATASETS[series.market],
                           ExternalObservation.item_id == series.item_id,
                           ExternalObservation.source_record_key.like(f'{series.code}:%')]
