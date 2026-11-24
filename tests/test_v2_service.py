@@ -60,3 +60,35 @@ def test_prediction_missing_forecast_is_insufficient(monkeypatch):
     monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base: _forecast([None] * 7))
     with pytest.raises(InsufficientDataError):
         v2_service.prediction(None, '대파|RETAIL', date(2026, 11, 24), 950)
+
+
+def test_baseline_validation_reports_naive_record(monkeypatch):
+    monkeypatch.setattr(v2_calibration, 'load', lambda: _calibration('BASELINE'))
+    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base: _forecast([1000.0] * 7))
+    result = v2_service.prediction(None, '대파|RETAIL', date(2026, 11, 24), 950)
+    assert result.metrics['validation']['mape'] == 3.5 and result.metrics['validation']['within5Pct'] is None
+    assert result.explanation is None
+
+
+def test_display_factors_groups_v2_series_identity_and_season():
+    from app.services import price_explanation
+    rows = [{'feature': 'is_대파', 'value': 1.0, 'contribution': 5.0}, {'feature': 'is_wholesale', 'value': 0.0, 'contribution': -2.0},
+            {'feature': 'target_season_sin', 'value': .1, 'contribution': 3.0}, {'feature': 'target_season_cos', 'value': .9, 'contribution': 1.0},
+            {'feature': 'nat_temp_mean7', 'value': 12.3, 'contribution': -10.0}, {'feature': 'arima_trend', 'value': None, 'contribution': 4.0},
+            {'feature': 'counter_change7', 'value': -0.05, 'contribution': 2.0}]
+    by_id = {f['id']: f for f in price_explanation.display_factors(rows, 'RETAIL')}
+    assert by_id['seriesProfile']['contribution'] == 3.0 and by_id['targetSeason']['contribution'] == 4.0
+    assert by_id['nat_temp_mean7']['label'] == '전국 최근 7일 평균기온' and by_id['nat_temp_mean7']['hasHistory']
+    assert by_id['arima_trend']['hasHistory'] is False and by_id['counter_change7']['value'] == -5.0
+    assert by_id['counter_change7']['label'] == '도매 가격 7일 변화율'
+    assert 'is_대파' not in by_id
+
+
+def test_validation_record_from_run_metrics():
+    from types import SimpleNamespace
+    from app.services import price_service
+    run = SimpleNamespace(metrics={'validation': {'mape': 4.7, 'naiveMape': 5.2, 'improvementPct': 8.8, 'within5Pct': 68.3,
+                                                  'points': 1700}, 'evaluationStart': '2024-11-01', 'evaluationEnd': '2025-10-31'})
+    record = price_service.validation_record(run)
+    assert record.within5_pct == 68.3 and record.evaluation_start == date(2024, 11, 1)
+    assert price_service.validation_record(SimpleNamespace(metrics={'evaluation': {}})) is None

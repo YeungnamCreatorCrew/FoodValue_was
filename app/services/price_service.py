@@ -11,7 +11,7 @@ from app.repositories import price_repository as repo
 from app.schemas.common import Page
 from app.schemas.price import (FactorCategory, FactorHistory, FactorHistoryPoint, ForecastPoint, ForecastResponse,
     FridgeHolding, HistoryPoint, IndicatorSignal, ListIndicators, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
-    PriceSummaryText, YearRange)
+    PriceSummaryText, ValidationRecord, YearRange)
 from app.services import price_explanation, price_summary
 from app.services.fridge_service import today
 
@@ -99,6 +99,7 @@ def forecast_result(db,item_id,series,as_of,run,points):
     result.model_version=run.model_version
     result.quality=run.quality
     result.metrics=run.metrics
+    result.validation=validation_record(run)
     result.updated_at=run.finished_at
     result.status='STALE' if (as_of-run.base_date).days>1 or (as_of-run.data_date).days>7 else 'READY' if run.quality=='VALIDATED' else 'BASELINE'
     result.points=[ForecastPoint.model_validate(row) for row in points]
@@ -157,6 +158,18 @@ def _previous(history,base_date,days=7):
     return (hit['value'],date.fromisoformat(target)) if hit and hit['value'] is not None else (None,None)
 
 
+def validation_record(run):
+    """v2 실행 metrics의 검증 실적 → ValidationRecord. 없으면 None(v5 실행)."""
+    metrics=run.metrics if run is not None and isinstance(run.metrics,dict) else {}
+    record=metrics.get('validation')
+    if not isinstance(record,dict) or not record:
+        return None
+    start,end=_evaluation_period(run)
+    return ValidationRecord(mape=record.get('mape'),naive_mape=record.get('naiveMape'),
+                            improvement_pct=record.get('improvementPct'),within5_pct=record.get('within5Pct'),
+                            points=record.get('points'),evaluation_start=start,evaluation_end=end)
+
+
 def _evaluation_period(run):
     """실행 metrics에 저장된 최종 평가 구간(과거 검증 기간). 없거나 형식이 다르면 (None, None)."""
     metrics=run.metrics if isinstance(run.metrics,dict) else {}
@@ -178,6 +191,7 @@ def factors(db,item_id,market=RETAIL):
         response.unavailable_reason='NO_FORECAST'
         return response
     response.evaluation_start,response.evaluation_end=_evaluation_period(run)
+    response.validation=validation_record(run)
     header,rows=repo.explanation(db,run.id)
     if header is None:
         response.unavailable_reason='BASELINE_MODEL' if run.quality=='BASELINE' else 'NOT_EXPLAINED'

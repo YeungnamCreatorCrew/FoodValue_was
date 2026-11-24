@@ -3,7 +3,8 @@
 - 대상 계열: 실험 품목(대파·양파·깐마늘 KAMIS 계열, 배추·무 MERGED 계열)의 소매·도매. 나머지(작형별 원본 등)는 v5 그대로.
 - 한 기준일에 한 번만 DB → 스냅샷 → 10계열 예측을 하고 프로세스 안에서 재사용한다(배치가 계열마다 불러도 학습 1회).
 - 공개 기준: 검증 실적(app.services.v2_calibration). 앙상블이 naive보다 나빴던 계열은 BASELINE(직전 가격 유지)으로 공개.
-- 결과는 기존 배치와 같은 Prediction 형식이라 저장·API·화면은 그대로 쓴다. SHAP 설명은 아직 없다(explanation=None).
+- 결과는 기존 배치와 같은 Prediction 형식이라 저장·API·화면은 그대로 쓴다.
+- 7일 뒤 예측의 요인(SHAP)은 XGB·LGBM TreeSHAP 평균 + AutoARIMA 몫 '시계열 추세'(v2_ensemble.explain).
 """
 import os
 import tempfile
@@ -59,7 +60,11 @@ def prediction(engine, key: str, base_date: date, last_price: int) -> Prediction
     bounds = [v2_calibration.interval(entry, h, p, naive=not validated) for h, p in zip(standard.HORIZONS, raw)]
     lower = [None if lo is None else max(0, int(round(lo))) for lo, _ in bounds]
     upper = [None if hi is None else int(round(hi)) for _, hi in bounds]
-    validation = {k: entry.get(k) for k in ('mape', 'naiveMape', 'improvementPct', 'within5Pct', 'points')} if entry else {}
+    # 화면 실적 배지: 공개한 방식의 실적. 직전 가격 유지로 공개하면 그 방식의 오차(naive)를 보여 준다.
+    validation = ({'mape': entry['mape'] if validated else entry['naiveMape'], 'naiveMape': entry['naiveMape'],
+                   'improvementPct': entry['improvementPct'] if validated else 0.0,
+                   'within5Pct': entry['within5Pct'] if validated else None, 'points': entry['points']}
+                  if entry else {})
     evaluation = {model: {'mape': entry['mape'] if validated else entry['naiveMape']} if entry else {'mape': None}}
     metrics = {
         'engine': 'v2', 'modelVersion': v2_ensemble.MODEL_VERSION, 'selectedModel': model,
@@ -68,5 +73,9 @@ def prediction(engine, key: str, base_date: date, last_price: int) -> Prediction
         'ensemblePrices': [round(p, 2) for p in forecast.prices],
         'members': {name: [None if v is None else round(v, 2) for v in values] for name, values in forecast.members.items()},
         'memberErrors': forecast.errors, 'intervalMethod': 'validation_ratio_quantile', 'nominalCoverage': .95,
+        **({'explanationError': forecast.explanation_error} if forecast.explanation_error else {}),
     }
-    return Prediction(model, 'VALIDATED' if validated else 'BASELINE', prices, lower, upper, metrics)
+    explanation = forecast.explanation if validated else None  # 직전 가격 유지로 공개하면 설명할 모델이 없다(v5와 같음)
+    if explanation is not None:
+        explanation.predicted_price = prices[v2_ensemble.EXPLAIN_HORIZON - 1]
+    return Prediction(model, 'VALIDATED' if validated else 'BASELINE', prices, lower, upper, metrics, explanation)
