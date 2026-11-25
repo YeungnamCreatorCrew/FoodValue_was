@@ -1,0 +1,442 @@
+{
+  "1": {
+    "series_id": 1,
+    "market": "retail",
+    "terms": [
+      "transmission",
+      "ratio",
+      "season",
+      "event"
+    ],
+    "coef": {
+      "a:counter_change7": 0.14051422355262425,
+      "b": -0.04176765971649862,
+      "c": 0.14149140911960506,
+      "d:target_in_event_window": 0.0015144370422542765,
+      "d:target_prev_day_holiday": 0.002196941152646629
+    },
+    "k_h": [
+      0.5,
+      0.75,
+      0.75,
+      0.75,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": 0.4409838087935229,
+    "usual_ratio": 1.5542355371900827,
+    "n_params": 5,
+    "nan_counts": {
+      "fit": {
+        "transmission:counter_change7": 0,
+        "ratio": 0,
+        "season": 1589,
+        "event:target_in_event_window": 0,
+        "event:target_prev_day_holiday": 0
+      },
+      "fit_samples": 8430,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8430,
+      "market": "retail",
+      "terms": [
+        "transmission",
+        "ratio",
+        "season",
+        "event"
+      ],
+      "season_masked": 0,
+      "selection": "last_fraction",
+      "fit_n": 6757,
+      "val_n": 1656,
+      "val_loss": 0.045160155290252225,
+      "val_loss_naive": 0.047302842704605344
+    }
+  },
+  "2": {
+    "series_id": 2,
+    "market": "wholesale",
+    "terms": [],
+    "coef": {},
+    "k_h": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": NaN,
+    "usual_ratio": null,
+    "n_params": 0,
+    "nan_counts": {
+      "fit": {},
+      "fit_samples": 8430,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8430,
+      "market": "wholesale",
+      "terms": []
+    }
+  },
+  "7": {
+    "series_id": 7,
+    "market": "wholesale",
+    "terms": [],
+    "coef": {},
+    "k_h": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": NaN,
+    "usual_ratio": null,
+    "n_params": 0,
+    "nan_counts": {
+      "fit": {},
+      "fit_samples": 8257,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8257,
+      "market": "wholesale",
+      "terms": []
+    }
+  },
+  "8": {
+    "series_id": 8,
+    "market": "retail",
+    "terms": [
+      "transmission",
+      "ratio",
+      "season",
+      "event"
+    ],
+    "coef": {
+      "a:counter_change7": 0.10270653414436752,
+      "b": -0.033795406495868645,
+      "c": 0.052381075373611176,
+      "d:target_in_event_window": 0.0007389166539021263,
+      "d:target_prev_day_holiday": -0.004356390258590158
+    },
+    "k_h": [
+      0.5,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": -2.020173896581264,
+    "usual_ratio": 0.13263239875389404,
+    "n_params": 5,
+    "nan_counts": {
+      "fit": {
+        "transmission:counter_change7": 10,
+        "ratio": 5,
+        "season": 1582,
+        "event:target_in_event_window": 0,
+        "event:target_prev_day_holiday": 0
+      },
+      "fit_samples": 8388,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8388,
+      "market": "retail",
+      "terms": [
+        "transmission",
+        "ratio",
+        "season",
+        "event"
+      ],
+      "season_masked": 0,
+      "selection": "last_fraction",
+      "fit_n": 6729,
+      "val_n": 1642,
+      "val_loss": 0.03550333711713837,
+      "val_loss_naive": 0.03674588543237064
+    }
+  },
+  "9": {
+    "series_id": 9,
+    "market": "wholesale",
+    "terms": [],
+    "coef": {},
+    "k_h": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": NaN,
+    "usual_ratio": null,
+    "n_params": 0,
+    "nan_counts": {
+      "fit": {},
+      "fit_samples": 8187,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8187,
+      "market": "wholesale",
+      "terms": []
+    }
+  },
+  "10": {
+    "series_id": 10,
+    "market": "retail",
+    "terms": [
+      "transmission",
+      "ratio",
+      "season",
+      "event"
+    ],
+    "coef": {
+      "a:counter_change7": 0.21510520643654482,
+      "b": -0.09991777753080369,
+      "c": 0.34694397471957705,
+      "d:target_in_event_window": -0.0005476715479513637,
+      "d:target_prev_day_holiday": 0.013057257373167692
+    },
+    "k_h": [
+      0.25,
+      0.75,
+      0.75,
+      0.75,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "lambda": 100.0,
+    "usual_log_ratio": -2.6524986859547344,
+    "usual_ratio": 0.07047489823609225,
+    "n_params": 5,
+    "nan_counts": {
+      "fit": {
+        "transmission:counter_change7": 91,
+        "ratio": 60,
+        "season": 1589,
+        "event:target_in_event_window": 0,
+        "event:target_prev_day_holiday": 0
+      },
+      "fit_samples": 8430,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8430,
+      "market": "retail",
+      "terms": [
+        "transmission",
+        "ratio",
+        "season",
+        "event"
+      ],
+      "season_masked": 0,
+      "selection": "last_fraction",
+      "fit_n": 6757,
+      "val_n": 1656,
+      "val_loss": 0.030984776148710976,
+      "val_loss_naive": 0.032669725951170285
+    }
+  },
+  "9001": {
+    "series_id": 9001,
+    "market": "retail",
+    "terms": [
+      "transmission",
+      "ratio",
+      "season",
+      "event"
+    ],
+    "coef": {
+      "a:counter_change7": 0.21253723070317182,
+      "b": -0.004392373619089993,
+      "c": 0.16884571716009766,
+      "d:target_in_event_window": 0.0019873223047196325,
+      "d:target_prev_day_holiday": 0.02471759973842474
+    },
+    "k_h": [
+      0.5,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": -1.091680680065788,
+    "usual_ratio": 0.33565189593498235,
+    "n_params": 5,
+    "nan_counts": {
+      "fit": {
+        "transmission:counter_change7": 0,
+        "ratio": 817,
+        "season": 1582,
+        "event:target_in_event_window": 0,
+        "event:target_prev_day_holiday": 0
+      },
+      "fit_samples": 8346,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8346,
+      "market": "retail",
+      "terms": [
+        "transmission",
+        "ratio",
+        "season",
+        "event"
+      ],
+      "season_masked": 0,
+      "selection": "last_fraction",
+      "fit_n": 6673,
+      "val_n": 1656,
+      "val_loss": 0.046342652181134175,
+      "val_loss_naive": 0.056347522642389423
+    }
+  },
+  "9002": {
+    "series_id": 9002,
+    "market": "wholesale",
+    "terms": [],
+    "coef": {},
+    "k_h": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": NaN,
+    "usual_ratio": null,
+    "n_params": 0,
+    "nan_counts": {
+      "fit": {},
+      "fit_samples": 8416,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8416,
+      "market": "wholesale",
+      "terms": []
+    }
+  },
+  "9011": {
+    "series_id": 9011,
+    "market": "retail",
+    "terms": [
+      "transmission",
+      "ratio",
+      "season",
+      "event"
+    ],
+    "coef": {
+      "a:counter_change7": 0.12207402861153108,
+      "b": -0.009203918516242846,
+      "c": 0.19440868235251488,
+      "d:target_in_event_window": 0.0023853051568703573,
+      "d:target_prev_day_holiday": 0.011999517612730947
+    },
+    "k_h": [
+      0.25,
+      0.5,
+      0.5,
+      0.5,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": -2.223424414043624,
+    "usual_ratio": 0.1082378223495702,
+    "n_params": 5,
+    "nan_counts": {
+      "fit": {
+        "transmission:counter_change7": 0,
+        "ratio": 777,
+        "season": 1589,
+        "event:target_in_event_window": 0,
+        "event:target_prev_day_holiday": 0
+      },
+      "fit_samples": 8402,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8402,
+      "market": "retail",
+      "terms": [
+        "transmission",
+        "ratio",
+        "season",
+        "event"
+      ],
+      "season_masked": 0,
+      "selection": "last_fraction",
+      "fit_n": 6729,
+      "val_n": 1656,
+      "val_loss": 0.03574637074185671,
+      "val_loss_naive": 0.037859324012925244
+    }
+  },
+  "9012": {
+    "series_id": 9012,
+    "market": "wholesale",
+    "terms": [],
+    "coef": {},
+    "k_h": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "lambda": 0.0,
+    "usual_log_ratio": NaN,
+    "usual_ratio": null,
+    "n_params": 0,
+    "nan_counts": {
+      "fit": {},
+      "fit_samples": 8430,
+      "predict": {},
+      "predict_rows": 0
+    },
+    "fit_info": {
+      "samples": 8430,
+      "market": "wholesale",
+      "terms": []
+    }
+  }
+}

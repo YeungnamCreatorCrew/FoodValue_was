@@ -1,0 +1,62 @@
+{
+  "model": "Structural",
+  "owner": "B",
+  "class": "model_comparison.structural.model:StructuralModel",
+  "params": {
+    "retail_terms": [
+      "transmission",
+      "ratio",
+      "season",
+      "event"
+    ],
+    "wholesale_terms": [
+      "season",
+      "event"
+    ],
+    "transmission": [
+      "counter_change7"
+    ],
+    "ratio_window_days": 91,
+    "season_years": 3,
+    "season_weights": [
+      0.5,
+      0.3,
+      0.2
+    ],
+    "season_window": 3,
+    "season_kind_tol": null,
+    "event_features": [
+      "target_in_event_window",
+      "target_prev_day_holiday"
+    ],
+    "h_scale_terms": [],
+    "lambda_grid": [
+      0.0,
+      0.1,
+      1.0,
+      10.0,
+      100.0
+    ],
+    "k_mode": "per_horizon",
+    "k_grid": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "select_loss": "mape",
+    "val_fraction": 0.2,
+    "train_window_days": null,
+    "y_clip": 1.0,
+    "season_event_mask": true
+  },
+  "feature_set": "base_v1+MARKET+EVENT",
+  "extra_features": [
+    "MARKET",
+    "EVENT"
+  ],
+  "target_transform": "log_ratio",
+  "strategy": "pooled_horizons",
+  "seed": 42
+}
