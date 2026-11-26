@@ -1,6 +1,6 @@
 # FoodValue
 
-1~2인 가구를 위한 식자재 서비스입니다. 냉장고 재료를 관리하고, 보유한 재료로 만들 수 있는 레시피를 추천하며, 부족한 재료의 시세와 구매 시점을 안내합니다.
+FoodValue는 식자재 시세, 7일 가격 예측, 구매 판단 지표를 제공합니다.
 
 ## 문서
 
@@ -11,7 +11,6 @@
 - [가격 예측 모델 변경 기록](model_comparison/xgboost/README_MODEL.md): 모델 버전별 변경 내용·실데이터 백테스트 결과
 - [모델 비교 실험 기준서 v1](model_comparison/MODEL_TRAINING_STANDARD.md): 4개 모델 비교 실험의 고정 규칙. 공통 도구는 [tools](tools/README.md), 결과 형식은 [experiments](experiments/README.md)
 
-- [냉장고 API 가이드](README_FRIDGE.md): 확정 기능, 단위·영양 계산과 OCR 설정
 
 - [DB 가이드](README_DB.md): 로컬 DB 실행, 스키마(Flyway) 변경 규칙
 

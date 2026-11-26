@@ -20,7 +20,7 @@ from app.collectors import garak
 from app.core.constants import ID_MAX
 from app.repositories import series_repository
 from app.services import collection_service, merged_series_service, price_batch_service, warehouse_service
-from app.services.fridge_service import today
+from app.core.dates import today
 from app.services.price_prediction import ModelDependencyError
 
 COLLECTION_FAILURES = {'AUTH_ERROR', 'NETWORK_ERROR', 'FAILED', 'PARTIAL'}

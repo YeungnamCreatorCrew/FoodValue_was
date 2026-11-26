@@ -2,10 +2,13 @@ from datetime import timedelta
 
 from sqlalchemy import exists, func, select
 
-from app.models.fridge import Item, ItemAlias
+from app.models.item import Item, ItemAlias
 from app.models.price import (RETAIL, PriceDaily, PriceForecast, PriceForecastExplanation, PriceForecastFactor, PriceInsight,
     PriceModelRun, PriceSeries)
-from app.repositories.fridge_repository import escape_like
+
+
+def escape_like(value: str) -> str:
+    return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
 
 def item(db, item_id, market=RETAIL):

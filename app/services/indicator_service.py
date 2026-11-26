@@ -3,7 +3,7 @@ from app.core import constants as C
 from app.models.price import RETAIL
 from app.repositories import indicator_repository as repo
 from app.schemas.price import IndicatorCard, IndicatorNotice, IndicatorSummary, PriceIndicators
-from app.services.fridge_service import today
+from app.core.dates import today
 from app.services.price_service import NotFoundError, require_item
 
 

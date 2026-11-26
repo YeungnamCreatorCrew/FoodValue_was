@@ -5,13 +5,13 @@ from statistics import mean
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.models.fridge import Item
+from app.models.item import Item
 from app.models.price import (COUNTERPART, RETAIL, PriceForecast, PriceForecastExplanation, PriceForecastFactor,
     PriceInsight, PriceModelRun, PriceSeries)
 from app.repositories import covariate_repository, series_repository
 from app.services import price_explanation, price_summary, v2_service
 from app.services.exogenous import WEATHER_LAG_DAYS, COUNTERPART_LAG_DAYS
-from app.services.fridge_service import today
+from app.core.dates import today
 from app.services.price_prediction import InsufficientDataError, MODEL_VERSION, predict
 
 

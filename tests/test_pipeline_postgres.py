@@ -15,8 +15,8 @@ from app.collectors.records import windows
 from app.repositories import covariate_repository, series_repository
 from app.services import collection_service, warehouse_service
 from app.services.collection_service import Credentials
-from app.services.fridge_service import today
-from tests.test_fridge_postgres import local
+from app.core.dates import today
+from tests.price_postgres_fixture import local
 
 pytestmark = pytest.mark.skipif(os.getenv('FOODVALUE_TEST_POSTGRES') != '1', reason='로컬 PostgreSQL 명시 실행 필요')
 DAYS = 480
@@ -105,7 +105,7 @@ class FakeApis:
 
 @pytest.fixture
 def pipeline(local, monkeypatch):
-    client, engine, item_id, _, _ = local
+    client, engine, item_id = local
     with engine.connect() as conn:
         name = conn.scalar(text('SELECT name FROM item WHERE id=:id'), {'id': item_id})
     monkeypatch.setitem(kosis.PRODUCTION_SERIES, name, ('DT_1ET0291', 'T44'))  # 테스트 품목을 대파 시계열에 연결

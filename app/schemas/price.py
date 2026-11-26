@@ -116,17 +116,11 @@ class PriceGuide(CamelModel):
     factors: list[dict]
 
 
-class FridgeHolding(CamelModel):
-    ingredient_count: int
-    quantities: dict[str, str]
-
-
 class PriceDetail(CamelModel):
     item: PriceSummary
     forecast: ForecastResponse
     guide: PriceGuide | None
     summary: PriceSummaryText | None = None
-    fridge: FridgeHolding | None
 
 
 class FactorCategory(CamelModel):

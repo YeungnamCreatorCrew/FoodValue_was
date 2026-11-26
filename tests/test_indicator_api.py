@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import text
 
 from app.services import indicator_service
-from tests.test_fridge import api  # noqa: F401  (픽스처)
 from tests.test_prices import DAY, ROOT, prices  # noqa: F401  (픽스처)
 
 from app.core.constants import INDICATOR_SPEC_VERSION as SPEC  # noqa: E402
@@ -15,7 +14,7 @@ SUMMARY = {'headline': '대파는 지금 평년보다 싼 편입니다.',
 
 @pytest.fixture
 def indicators(prices, monkeypatch):
-    client, engine, _ = prices
+    client, engine = prices
     monkeypatch.setattr(indicator_service, 'today', lambda: DAY)
     yield client, engine
 

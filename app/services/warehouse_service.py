@@ -35,7 +35,7 @@ from app.models.price import RETAIL, PriceDaily
 from app.repositories import covariate_repository, series_repository
 from app.repositories.covariate_repository import latest_versions
 from app.services.exogenous import event_weight
-from app.services.fridge_service import today
+from app.core.dates import today
 
 MAX_CARRY_DAYS = 7  # 휴장일 기준가는 직전 거래일 가격을 최대 7일까지 사용
 EVENTS = {'설날': 'SEOLLAL', '추석': 'CHUSEOK'}
