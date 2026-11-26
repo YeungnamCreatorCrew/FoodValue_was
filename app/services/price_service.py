@@ -1,19 +1,17 @@
 from datetime import date, timedelta
-from decimal import Decimal
 
 from sqlalchemy import select
 
 from app.core import constants as C
-from app.models.fridge import FridgeIngredient
 from app.models.price import RETAIL, PriceModelRun
 from app.repositories import indicator_repository, series_repository
 from app.repositories import price_repository as repo
 from app.schemas.common import Page
 from app.schemas.price import (FactorCategory, FactorHistory, FactorHistoryPoint, ForecastPoint, ForecastResponse,
-    FridgeHolding, HistoryPoint, IndicatorSignal, ListIndicators, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
+    HistoryPoint, IndicatorSignal, ListIndicators, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
     PriceSummaryText, ValidationRecord, YearRange)
 from app.services import price_explanation, price_summary
-from app.services.fridge_service import today
+from app.core.dates import today
 
 
 class NotFoundError(Exception):
@@ -113,24 +111,16 @@ def forecast(db,item_id,market=RETAIL):
     return forecast_result(db,item_id,series,as_of,run,points)
 
 
-def detail(db,item_id,user,market=RETAIL):
+def detail(db,item_id,market=RETAIL):
     item,series=require_item(db,item_id,market)
     as_of=today()
     prices,previous,runs,forecasts=repo.overview_rows(db,[series],as_of)
     run,points,guide=repo.snapshot(db,series.id,as_of)
-    holdings=None
-    if user:
-        rows=db.scalars(select(FridgeIngredient).where(FridgeIngredient.user_id==user.id,
-            FridgeIngredient.item_id==item_id,FridgeIngredient.deleted_at.is_(None),FridgeIngredient.quantity>0)).all()
-        quantities={}
-        for row in rows:
-            quantities[row.unit]=quantities.get(row.unit,Decimal(0))+row.quantity
-        holdings=FridgeHolding(ingredient_count=len(rows),quantities={k:str(v) for k,v in quantities.items()})
     names=repo.aliases(db,[item_id])
     return PriceDetail(item=summary(item,series,prices.get(series.id),previous.get(series.id),run,points[-1] if points else None,
                                     as_of,names.get(item_id,())),
         forecast=forecast_result(db,item_id,series,as_of,run,points),
-        guide=PriceGuide.model_validate(guide) if guide else None,summary=summary_text(guide,run),fridge=holdings)
+        guide=PriceGuide.model_validate(guide) if guide else None,summary=summary_text(guide,run))
 
 
 def history(db,item_id,days,market=RETAIL):

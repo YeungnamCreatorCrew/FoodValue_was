@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 
 from app.services import collection_service
-from app.services.fridge_service import today
+from app.core.dates import today
 
 CACHE_DIR = Path('data/raw/krei_monthly')
 

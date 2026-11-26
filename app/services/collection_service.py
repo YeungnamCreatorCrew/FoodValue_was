@@ -20,11 +20,11 @@ from sqlalchemy.orm import Session
 from app.collectors import data_go_kr, ecos, garak, kamis, kosis, krei
 from app.collectors.http import CollectorError, fetch_bytes, fetch_json, fetch_text
 from app.models.external import ExternalCollectionRun, ExternalObservation, ItemWeatherStation
-from app.models.fridge import Item
+from app.models.item import Item
 from app.models.price import RETAIL, PriceSeries
 from app.repositories import series_repository
 from app.services import warehouse_service
-from app.services.fridge_service import today
+from app.core.dates import today
 
 BACKFILL_DAYS = 1830  # 예측 모델이 사용하는 최대 5년
 KOSIS_RECENT_YEARS = 6  # 연간 생산량은 최근 6년을 매번 다시 받아 수정 공표를 반영

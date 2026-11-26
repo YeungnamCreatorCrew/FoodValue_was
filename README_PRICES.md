@@ -9,10 +9,10 @@
 - 시세 제공 품목 목록·이름/별칭 검색·카테고리 필터·등락률 정렬
 - 전국 가격의 과거 14/30/90일 조회, 향후 달력 7일 예측
 - 구매 가이드·예측 평가 지표·구간 포함률·업데이트 지연 표시
-- 비로그인 조회 허용. 토큰을 보내면 검증하고, 로그인 사용자의 냉장고 잔량만 연결
+- 시세 API는 공개 조회를 지원합니다.
 - 예측 대상은 KAMIS 가격 계열(소매·도매, 처음 적재한 품목은 대파). 참가격 가공품은 가격 계열이 없어 시세·예측 API에서 빠짐
 - Open API 수집기와 통합 파이프라인(`python -m app.price_pipeline`). 아래 [외부 원천 통합](#외부-원천-통합) 참고
-- 관심 품목·알림·지역별 확장·레시피 연결은 후속 작업
+- 알림과 지역별 확장은 후속 작업
 
 가격은 가격 계열(`price_series`) 단위로 저장·예측합니다. 계열 = 품목 × 시장(RETAIL 소매·WHOLESALE 도매)이며
 KAMIS 품목·품종·등급 코드(예: `246`-`00`-`04`)와 가격 단위(`unit_quantity`·`unit`, 예: 1 kg)를 가집니다.
@@ -85,7 +85,7 @@ XGBOOST_WEIGHTED가 선택되면 원천별 `modelWeight`와 '외부변수 가중
 | 메서드 | 경로 | 기능 |
 | --- | --- | --- |
 | GET | /items | 품목 목록: category, keyword, sort, page, size |
-| GET | /items/{itemId} | 요약·예측·구매 가이드·내 냉장고 잔량 |
+| GET | /items/{itemId} | 요약·예측·구매 가이드 |
 | GET | /items/{itemId}/history?days=14 | 과거 14/30/90일 가격 |
 | GET | /items/{itemId}/forecast | 최신 완성된 7일 예측·평가 지표 |
 | GET | /items/{itemId}/factors | 같은 실행의 관측 통계 |
@@ -98,7 +98,6 @@ page=1, size=20(최대 50). 정렬값이 없는 품목은 마지막입니다.
 현재 가격은 서울 기준 오늘 이하의 최신 관측일입니다. 오늘 가격이 없으면 priceDate를 반드시 표시합니다.
 전주 비교는 최신 관측일-7일 이하의 가격을 최대 7일 더 거슬러 조회합니다.
 forecastBaseDate와 targetDate를 그대로 표시합니다. 지연된 예측을 '오늘 기준 +7일'로 바꾸어 표시하지 않습니다.
-내 냉장고 잔량은 단위별로 합산합니다. 단/팩/g를 임의로 더하지 않습니다.
 
 주요 상태: NO_DATA, NO_FORECAST, INSUFFICIENT_DATA, BASELINE, READY, STALE.
 예측 기준일이 1일 넘게 지연되거나 원본 관측이 7일 넘게 지연되면 STALE입니다.
@@ -115,7 +114,7 @@ docker compose run --rm flyway
 uv run --extra prices python -m app.price_batch --item-id 1
 ```
 
-item-id는 실제 대파 마스터 ID로 지정합니다. 배치는 DATABASE_URL만 요구하며 JWT/S3 키는 사용하지 않습니다.
+item-id는 실제 대파 마스터 ID로 지정합니다. 배치는 DATABASE_URL만 요구합니다.
 운영은 이 명령을 서울 기준 하루 1회 OS 스케줄러에서 실행합니다. 현재 기기에 예약 작업을 자동 등록하지 않습니다.
 이 명령은 이미 적재된 가격만 사용합니다. 수집부터 예측까지 한 번에 실행하려면 아래 통합 파이프라인을 사용합니다.
 
@@ -132,7 +131,7 @@ V20261008_1331과 V20261008_1346을 추가했고 기존 migration은 변경하�
 ```powershell
 uv run --group dev --extra prices pytest tests/test_price_prediction.py tests/test_prices.py -p no:cacheprovider
 $env:FOODVALUE_TEST_POSTGRES='1'
-uv run --group dev --extra prices pytest tests/test_prices_postgres.py tests/test_fridge_postgres.py -p no:cacheprovider
+uv run --group dev --extra prices pytest tests/test_prices_postgres.py -p no:cacheprovider
 ```
 
 실제 PostgreSQL 테스트는 로컬 주소만 허용하고 생성한 테스트 데이터만 정리합니다.

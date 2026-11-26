@@ -7,9 +7,9 @@ import pytest
 from sqlalchemy import text
 
 from app.services import price_batch_service as batch
-from app.services.fridge_service import today
+from app.core.dates import today
 from app.services.price_prediction import InsufficientDataError, Prediction
-from tests.test_fridge_postgres import local
+from tests.price_postgres_fixture import local
 
 pytestmark=pytest.mark.skipif(os.getenv('FOODVALUE_TEST_POSTGRES')!='1',reason='로컬 PostgreSQL 명시 실행 필요')
 ROOT='/api/v1/prices'
@@ -17,7 +17,7 @@ ROOT='/api/v1/prices'
 
 @pytest.fixture
 def pricing(local):
-    client,engine,item_id,users,headers=local
+    _,engine,item_id=local
     with engine.begin() as conn:
         conn.execute(text("UPDATE item SET food_type='RAW',price_source='KAMIS',price_unit_label='1kg' WHERE id=:id"),{'id':item_id})
         # 실데이터 계열과 겹치지 않도록 품종·등급 코드를 99로 둔다.
@@ -43,7 +43,7 @@ def fake_prediction():
 
 
 def test_real_training_and_public_api(pricing):
-    client,engine,item_id,_,_,series_id=pricing
+    client,engine,item_id,series_id=pricing
     result=batch.run(engine,series_id)
     assert result['status']=='SUCCESS' and result['quality']=='BASELINE'
     response=client.get(f'{ROOT}/items/{item_id}')
@@ -57,7 +57,7 @@ def test_real_training_and_public_api(pricing):
 
 
 def test_retry_failure_preserves_previous_result_and_no_duplicates(pricing,monkeypatch):
-    client,engine,item_id,_,_,series_id=pricing
+    client,engine,item_id,series_id=pricing
     monkeypatch.setattr(batch,'predict',lambda *args,**kwargs:fake_prediction())
     first=batch.run(engine,series_id)
     second=batch.run(engine,series_id)
@@ -86,7 +86,7 @@ def test_retry_failure_preserves_previous_result_and_no_duplicates(pricing,monke
 
 
 def test_advisory_lock_rejects_concurrent_batch_and_releases(pricing,monkeypatch):
-    _,engine,item_id,_,_,series_id=pricing
+    _,engine,item_id,series_id=pricing
     entered,release=Event(),Event()
     def blocked(*args,**kwargs):
         entered.set()
@@ -107,7 +107,7 @@ def test_advisory_lock_rejects_concurrent_batch_and_releases(pricing,monkeypatch
 
 
 def test_invalid_scope_and_untrained_run(pricing):
-    client,engine,item_id,_,_,series_id=pricing
+    client,engine,item_id,series_id=pricing
     with pytest.raises(ValueError):
         batch.run(engine,series_id,today()+timedelta(days=1))
     with engine.begin() as conn:

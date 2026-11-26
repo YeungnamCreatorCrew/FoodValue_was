@@ -17,7 +17,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.models.fridge import Item
+from app.models.item import Item
 from app.models.prediction_input import CalendarDay
 from app.models.price import PriceDaily, PriceSeries
 from tools import loader

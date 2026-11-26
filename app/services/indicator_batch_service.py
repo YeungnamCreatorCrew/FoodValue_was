@@ -9,7 +9,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.core import constants as C
-from app.models.fridge import Item
+from app.models.item import Item
 from app.repositories import indicator_repository as repo
 from app.repositories import series_repository
 from app.models.price import RETAIL, WHOLESALE
