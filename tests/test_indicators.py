@@ -115,6 +115,12 @@ def test_state_needs_enough_window_obs():
     assert sea.seasonal_state({'windowObsDays': 20, 'diffRate': 0.05}) == 'NEUTRAL'
 
 
+@pytest.mark.parametrize(('rate', 'state'), [(-0.10, 'DOWN'), (-0.099, 'NEUTRAL'),
+                                            (0.087, 'NEUTRAL'), (0.099, 'NEUTRAL'), (0.10, 'UP')])
+def test_seasonal_ten_percent_boundaries(rate, state):
+    assert sea.seasonal_state({'windowObsDays': 20, 'diffRate': rate}) == state
+
+
 def test_seasonal_on_snapshot():
     """대파 스냅샷(~2026-10-30). 28일 구간 방식은 달력 월 방식(-14.9%)과 같은 방향이다."""
     import pathlib

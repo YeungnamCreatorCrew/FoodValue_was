@@ -55,13 +55,17 @@ def list_indicators(db,series_list,as_of):
     """목록 행에 붙일 지표 요약(소매 계열만). 저장된 스냅샷을 그대로 읽는다."""
     retail=[s.id for s in series_list if s.market==RETAIL]
     result={}
-    for series_id,(run,position) in indicator_repository.latest_runs_with_position(db,retail,as_of,C.INDICATOR_SPEC_VERSION).items():
+    snapshots=indicator_repository.latest_runs_with_position(db,retail,as_of,C.INDICATOR_SPEC_VERSION)
+    seasons=indicator_repository.facts_for_runs(db,[run.id for run,_ in snapshots.values()],'SEASONAL')
+    for series_id,(run,position) in snapshots.items():
         if run.status=='INSUFFICIENT_DATA' or not run.summary:
             continue
         fact=position.fact if position and isinstance(position.fact,dict) else {}
         year_range=YearRange(low=fact.get('low'),high=fact.get('high'),percentile=fact.get('percentile')) if position else None
+        seasonal_fact=seasons.get(run.id) or {}
         result[series_id]=ListIndicators(as_of_date=run.as_of_date,stale=(as_of-run.as_of_date).days>C.INDICATOR_STALE_DAYS,headline=run.summary.get('headline'),
-            signals=[IndicatorSignal(**s) for s in run.summary.get('signals',[])],year_range=year_range)
+            signals=[IndicatorSignal(**s) for s in run.summary.get('signals',[])],year_range=year_range,
+            seasonal_diff_rate=seasonal_fact.get('diffRate'))
     return result
 
 

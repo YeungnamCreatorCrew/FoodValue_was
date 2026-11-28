@@ -33,6 +33,14 @@ def cards(db, run_id) -> list[PriceIndicatorCard]:
                            .order_by(PriceIndicatorCard.id)).all())
 
 
+def facts_for_runs(db, run_ids, key):
+    """목록의 같은 실행들에서 특정 지표 fact를 한 번에 읽는다(품목별 추가 조회 없음)."""
+    if not run_ids:
+        return {}
+    return dict(db.execute(select(PriceIndicatorCard.run_id, PriceIndicatorCard.fact).where(
+        PriceIndicatorCard.run_id.in_(run_ids), PriceIndicatorCard.indicator_key == key)).all())
+
+
 def validation_before(db, series_id, key, spec_version, as_of: date):
     """기준일 이하의 가격으로 만든(data_end ≤ as_of) 가장 최근 검증. 기준일 이후 자료로 만든 검증은 쓰지 않는다."""
     return db.scalar(select(PriceIndicatorValidation).where(

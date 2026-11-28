@@ -227,6 +227,7 @@ class ListIndicators(CamelModel):
     headline: str | None = None  # 상세의 한 줄 요약과 같은 문장
     signals: list[IndicatorSignal]
     year_range: YearRange | None = None
+    seasonal_diff_rate: float | None = None  # 같은 실행 SEASONAL.fact.diffRate. 비율(0.10 = 10%)
 
 
 class IndicatorCard(CamelModel):
