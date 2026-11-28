@@ -39,8 +39,8 @@ def _forecast(prices):
 
 
 def test_prediction_validated_uses_ensemble_and_interval(monkeypatch):
-    monkeypatch.setattr(v2_calibration, 'load', lambda: _calibration('VALIDATED'))
-    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base: _forecast([1000.4] * 7))
+    monkeypatch.setattr(v2_calibration, 'load', lambda *a: _calibration('VALIDATED'))
+    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base, **kw: _forecast([1000.4] * 7))
     result = v2_service.prediction(None, '대파|RETAIL', date(2026, 11, 24), 950)
     assert result.model == 'V2_ENSEMBLE' and result.quality == 'VALIDATED'
     assert result.prices == [1000] * 7 and result.lower[0] == 900 and result.upper[0] == 1100
@@ -48,23 +48,23 @@ def test_prediction_validated_uses_ensemble_and_interval(monkeypatch):
 
 
 def test_prediction_baseline_keeps_last_price(monkeypatch):
-    monkeypatch.setattr(v2_calibration, 'load', lambda: _calibration('BASELINE'))
-    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base: _forecast([1000.0] * 7))
+    monkeypatch.setattr(v2_calibration, 'load', lambda *a: _calibration('BASELINE'))
+    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base, **kw: _forecast([1000.0] * 7))
     result = v2_service.prediction(None, '대파|RETAIL', date(2026, 11, 24), 950)
     assert result.model == 'LAST_PRICE' and result.quality == 'BASELINE'
     assert result.prices == [950] * 7 and result.lower[0] == 760 and result.upper[0] == 1140
 
 
 def test_prediction_missing_forecast_is_insufficient(monkeypatch):
-    monkeypatch.setattr(v2_calibration, 'load', lambda: _calibration('VALIDATED'))
-    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base: _forecast([None] * 7))
+    monkeypatch.setattr(v2_calibration, 'load', lambda *a: _calibration('VALIDATED'))
+    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base, **kw: _forecast([None] * 7))
     with pytest.raises(InsufficientDataError):
         v2_service.prediction(None, '대파|RETAIL', date(2026, 11, 24), 950)
 
 
 def test_baseline_validation_reports_naive_record(monkeypatch):
-    monkeypatch.setattr(v2_calibration, 'load', lambda: _calibration('BASELINE'))
-    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base: _forecast([1000.0] * 7))
+    monkeypatch.setattr(v2_calibration, 'load', lambda *a: _calibration('BASELINE'))
+    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base, **kw: _forecast([1000.0] * 7))
     result = v2_service.prediction(None, '대파|RETAIL', date(2026, 11, 24), 950)
     assert result.metrics['validation']['mape'] == 3.5 and result.metrics['validation']['within5Pct'] is None
     assert result.explanation is None
@@ -92,3 +92,29 @@ def test_validation_record_from_run_metrics():
     record = price_service.validation_record(run)
     assert record.within5_pct == 68.3 and record.evaluation_start == date(2024, 11, 1)
     assert price_service.validation_record(SimpleNamespace(metrics={'evaluation': {}})) is None
+
+
+def test_struct_track_uses_its_own_calibration_and_name(monkeypatch):
+    from app.services import struct_service
+    paths = []
+    monkeypatch.setattr(v2_calibration, 'load', lambda path=None: paths.append(path) or _calibration('VALIDATED'))
+    forecast = struct_service.StructForecast(1, '대파', 'RETAIL', [1000.4] * 7, {'STRUCT': [1000.4] * 7},
+                                             parameters={'coef': {'a:counter_change7': 0.1}})
+    calls = []
+    monkeypatch.setattr(v2_service, 'forecasts', lambda engine, base, track='ENSEMBLE', **kw: calls.append(track) or {'대파|RETAIL': forecast})
+    result = v2_service.prediction(None, '대파|RETAIL', date(2026, 11, 24), 950, 'STRUCT')
+    assert paths == [struct_service.CALIBRATION_PATH] and calls == ['STRUCT']
+    assert result.model == 'STRUCT' and result.quality == 'VALIDATED' and result.prices == [1000] * 7
+    assert result.metrics['engine'] == 'struct' and result.metrics['modelTrack'] == 'STRUCT'
+    assert result.metrics['modelVersion'] == struct_service.MODEL_VERSION and result.metrics['structPrices'] == [1000.4] * 7
+    assert result.metrics['parameters'] == {'coef': {'a:counter_change7': 0.1}} and 'ensemblePrices' not in result.metrics
+
+
+def test_struct_summary_does_not_call_contributions_shap(monkeypatch):
+    from app.services import price_summary
+    monkeypatch.setenv(price_summary.LLM_ENV, '0')
+    categories = [{'category': 'PRICE', 'label': '최근 가격 흐름', 'contribution': 0.0, 'direction': 'NEUTRAL'}]
+    summary, generator, _, version = price_summary.generate('대파', 'RETAIL', 1000, 1010, categories, [],
+                                                            model=price_summary.STRUCT_MODEL)
+    assert generator == 'TEMPLATE' and version == 'price-struct-v1' and len(version) <= 20
+    assert 'SHAP' not in summary['categories']['PRICE'] and '항별 기여' in summary['categories']['PRICE']

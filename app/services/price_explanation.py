@@ -77,9 +77,11 @@ FEATURES.update({
     'target_in_event_window': ('예측 대상일 명절 영향 기간 여부', '', 'CALENDAR', 1),
     'target_prev_day_holiday': ('예측 대상일 전날 공휴일 여부', '', 'CALENDAR', 1),
     'arima_trend': ('시계열 추세(AutoARIMA)', '', 'PRICE', 1),
+    # 구조적 가격 전달 모델(app.services.struct_service)의 계절 항: 1~3년 전 같은 시기 7일 변화율(가중 0.5·0.3·0.2)
+    'struct_season': ('과거 같은 시기 7일 변화율(1~3년 전)', '%', 'CALENDAR', 100),
 })
-# 값·추이를 보여주지 않는 항목(추세 모델 몫 등)
-NO_HISTORY = {'arima_trend'}
+# 값·추이를 보여주지 않는 항목(추세 모델 몫, 기준일마다 과거 가격으로 다시 계산하는 계절 항)
+NO_HISTORY = {'arima_trend', 'struct_season'}
 # 따로 보면 의미가 없는 특징 쌍은 화면에서 하나로 합친다(SHAP은 더해도 된다). 값·추이는 보여주지 않는다.
 MERGED = {'targetSeason': (('targetSeasonSin', 'targetSeasonCos', 'target_season_sin', 'target_season_cos'),
                            '예측 대상일의 계절', 'CALENDAR'),

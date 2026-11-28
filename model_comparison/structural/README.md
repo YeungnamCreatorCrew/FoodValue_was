@@ -99,3 +99,10 @@ uv run --group dev --extra prices pytest model_comparison/structural -q   # 91 p
 - `results/tuning_log.csv`: 튜닝 18회 기록. `results/val-t18/`: 검증 1회 결과(예측, 지표, 비교표, 로그)
 - `final_params_t18_20250602.json`: 2025-06-02 재학습 시점의 계열별 계수
 - `runs/struct/smoke-v0*`(Git에 없음): 초기 점검용. 검증 구간 일부의 정확도가 들어 있어 사용 금지
+
+## 서비스에서 쓰기 (앙상블과 같은 응답 형식)
+- 배치(`FOODVALUE_PRICE_MODEL=v2`)는 v2 대상 계열마다 앙상블 실행 뒤에 struct 실행을 따로 저장한다(`price_model_run.model_track='STRUCT'`). `FOODVALUE_STRUCT_MODEL=0`이면 struct를 끈다.
+- API는 `?model=STRUCT`로 고른다(기본 ENSEMBLE). 코드: `app/services/struct_service.py`
+- 공개 규칙은 앙상블과 같다: `service/calibration.json`(검증 1회 결과 `results/val-t18`로 만듦, `python -m app.struct_calibrate`)에서 naive보다 나은 계열만 VALIDATED. 소매 5계열 VALIDATED, 도매 5계열 BASELINE(직전 가격 유지)
+- 서비스는 기준일마다 재학습한다. 실험은 주 첫 기준일에만 재학습했으므로, 주 첫 기준일(예: 2025-06-02)에서만 실험 예측과 같다(`tests/test_struct_service.py`가 확인)
+- 요인(`/factors?model=STRUCT`)은 7일 뒤 예측의 항별 원 단위 분해다. (예측가 − 현재가)를 항별 로그 기여 비율로 나눈다

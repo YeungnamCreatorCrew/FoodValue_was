@@ -115,3 +115,53 @@ def test_invalid_scope_and_untrained_run(pricing):
     assert batch.run(engine,series_id)['status']=='INSUFFICIENT_DATA'
     result=client.get(f'{ROOT}/items/{item_id}/forecast').json()
     assert result['status']=='INSUFFICIENT_DATA' and result['points']==[]
+
+
+def _track_prediction(track,price):
+    model='STRUCT' if track=='STRUCT' else 'V2_ENSEMBLE'
+    return Prediction(model,'VALIDATED',[price]*7,[price-50]*7,[price+50]*7,
+                      {'evaluation':{model:{'mape':4.0}},'modelVersion':f'test-{track.lower()}','modelTrack':track})
+
+
+def test_struct_track_is_saved_and_served_in_same_format(pricing,monkeypatch):
+    client,engine,item_id,series_id=pricing
+    from app.services import v2_service
+    monkeypatch.setattr(batch,'_v2_key',lambda db,series:'대파|RETAIL')
+    monkeypatch.setattr(v2_service,'struct_enabled',lambda:True)
+    monkeypatch.setattr(v2_service,'prediction',lambda engine,key,base,last,track='ENSEMBLE':
+                        _track_prediction(track,1100 if track=='STRUCT' else 1200))
+    result=batch.run(engine,series_id)
+    assert result['status']=='SUCCESS' and result['track']=='ENSEMBLE'
+    assert result['struct']['status']=='SUCCESS' and result['struct']['model']=='STRUCT'
+    default=client.get(f'{ROOT}/items/{item_id}/forecast').json()
+    struct=client.get(f'{ROOT}/items/{item_id}/forecast?model=STRUCT').json()
+    assert default['modelTrack']=='ENSEMBLE' and default['modelName']=='V2_ENSEMBLE' and default['points'][-1]['predictedPrice']==1200
+    assert struct['modelTrack']=='STRUCT' and struct['modelName']=='STRUCT' and struct['points'][-1]['predictedPrice']==1100
+    assert set(default)==set(struct)  # 같은 응답 형식
+    detail=client.get(f'{ROOT}/items/{item_id}?model=STRUCT').json()
+    assert detail['item']['forecastPrice']==1100 and detail['forecast']['modelTrack']=='STRUCT'
+    listing=client.get(f'{ROOT}/items?keyword=pg-test&model=STRUCT').json()
+    assert any(row['id']==item_id and row['forecastPrice']==1100 for row in listing['items'])
+    assert client.get(f'{ROOT}/items/{item_id}/factors?model=STRUCT').json()['modelTrack']=='STRUCT'
+    assert client.get(f'{ROOT}/items/{item_id}/forecast?model=OTHER').status_code==400
+
+    # struct가 실패해도 앙상블 실행은 성공으로 남고, struct 화면은 이전 struct 실행을 유지한다.
+    def struct_fails(engine,key,base,last,track='ENSEMBLE'):
+        if track=='STRUCT':
+            raise RuntimeError('boom')
+        return _track_prediction(track,1300)
+    monkeypatch.setattr(v2_service,'prediction',struct_fails)
+    again=batch.run(engine,series_id)
+    assert again['status']=='SUCCESS' and again['struct']=={'track':'STRUCT','status':'FAILED','errorCode':'RuntimeError'}
+    struct=client.get(f'{ROOT}/items/{item_id}/forecast?model=STRUCT').json()
+    assert struct['points'][-1]['predictedPrice']==1100 and struct['latestAttemptStatus']=='FAILED'
+    assert client.get(f'{ROOT}/items/{item_id}/forecast').json()['latestAttemptStatus']=='SUCCESS'
+
+
+def test_struct_track_without_runs_is_no_forecast_not_ensemble(pricing,monkeypatch):
+    client,engine,item_id,series_id=pricing
+    monkeypatch.setattr(batch,'predict',lambda *args,**kwargs:fake_prediction())
+    result=batch.run(engine,series_id)
+    assert 'struct' not in result
+    struct=client.get(f'{ROOT}/items/{item_id}/forecast?model=STRUCT').json()
+    assert struct['status']=='NO_FORECAST' and struct['points']==[] and struct['latestAttemptStatus'] is None
