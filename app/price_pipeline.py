@@ -13,9 +13,9 @@ import os
 from datetime import date, timedelta
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from app.core.db import make_engine
 from app.collectors import garak
 from app.core.constants import ID_MAX
 from app.repositories import series_repository
@@ -98,7 +98,7 @@ def main(argv=None):
     url = os.getenv('DATABASE_URL')
     if not url:
         parser.error('DATABASE_URL 설정이 필요합니다')
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     try:
         output = run(engine, args)
         print(json.dumps(output, ensure_ascii=False))

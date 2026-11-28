@@ -47,3 +47,6 @@ LEVEL_AHEAD_GRID = (1, 2, 3, 4)  # 결과를 보는 기간(주) 탐색 범위. p
 LEVEL_MIN_VALIDATION_WEEKS = 156  # 수준 신호를 검증하려면 주 평균이 이만큼(3년) 필요
 LEVEL_WEAK_RATIO = 0.5  # 한쪽 edge가 다른 쪽의 이 비율보다 작으면 그쪽은 '근거가 약함'
 LEVEL_OVERLAP_CORR = 0.5  # 배수 백분위와 도매 2주 변화의 상관(절댓값)이 이 이상이면 도매 흐름과 겹친다고 표시
+
+# DB 세션 타임존(app.core.db.make_engine이 접속마다 설정). 날짜 계산(app.core.dates.today)과 같은 기준
+DB_TIMEZONE = 'Asia/Seoul'

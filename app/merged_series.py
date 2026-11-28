@@ -7,8 +7,8 @@ import json
 import os
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 
+from app.core.db import make_engine
 from app.services import merged_series_service
 
 
@@ -17,7 +17,7 @@ def main():
     url = os.getenv('DATABASE_URL')
     if not url:
         raise SystemExit('DATABASE_URL 설정이 필요합니다')
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     print(json.dumps(merged_series_service.refresh(engine), ensure_ascii=False, indent=2))
 
 

@@ -11,8 +11,8 @@ import os
 from datetime import date
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 
+from app.core.db import make_engine
 from app.collectors import garak
 from app.services import collection_service, warehouse_service
 
@@ -26,7 +26,7 @@ def main(argv=None):
     url = os.getenv('DATABASE_URL')
     if not url:
         parser.error('DATABASE_URL 설정이 필요합니다')
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     end = min(args.end or collection_service.today(), collection_service.today())
     items = collection_service.prediction_items(engine)
     run = collection_service.collect_garak(engine, items, args.start, end, collection_service.fetch_text,
