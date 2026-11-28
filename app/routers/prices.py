@@ -7,7 +7,7 @@ from app.core.constants import ID_MAX, PAGE_MAX_SIZE
 from app.core.db import get_db
 from app.schemas.common import Page
 from app.schemas.price import (FactorHistory, ForecastResponse, PriceCategory, PriceDetail, PriceFactors, PriceHistory, PriceIndicators,
-    PriceMarket, PriceModelTrack, PriceSort, PriceSummary)
+    PriceHistories, PriceMarket, PriceModelTrack, PriceSort, PriceSummary)
 from app.services import indicator_service
 from app.services import price_service as service
 
@@ -34,13 +34,32 @@ def listing(db:Db,category:PriceCategory | None=None,
     return service.list_items(db,category,keyword,sort,page,size,market,model)
 
 
+# 가격 이력은 웹 상세 차트가 90일·180일·1년을 쓰도록 365일까지 받는다. 14·30일은 기존 호출(홈 등)을 위해 유지한다.
+HISTORY_DAYS=(14,30,90,180,365)
+
+
+def _item_ids(ids:str=Query(description='품목 id 쉼표 목록(최대 50개). 예: 60,130,131')):
+    try:
+        values=[int(value) for value in ids.split(',') if value.strip()]
+    except ValueError:
+        raise HTTPException(400,'품목 id는 숫자를 쉼표로 이어 주세요') from None
+    if not values or len(set(values))>PAGE_MAX_SIZE or any(not 1<=value<=ID_MAX for value in values):
+        raise HTTPException(400,f'품목 id는 1~{PAGE_MAX_SIZE}개를 지정해 주세요')
+    return values
+
+
+# 여러 품목 이력을 한 요청·SQL 2개로 준다(분석실 미니 그래프의 품목별 N번 호출 대신). /items/{item_id}보다 먼저 선언해야 한다.
+@router.get('/items/history',response_model=PriceHistories)
+def histories(db:Db,item_ids:Annotated[list[int],Depends(_item_ids)],days:int=Query(14,ge=14,le=365),
+              market:Market=PriceMarket.RETAIL):
+    if days not in HISTORY_DAYS:
+        raise HTTPException(400,'기간은 14, 30, 90, 180, 365일 중 선택해 주세요')
+    return service.histories(db,item_ids,days,market)
+
+
 @router.get('/items/{item_id}',response_model=PriceDetail)
 def detail(item_id:Id,db:Db,market:Market=PriceMarket.RETAIL,model:Model=PriceModelTrack.ENSEMBLE):
     return call(service.detail,db,item_id,market,model)
-
-
-# 가격 이력은 웹 상세 차트가 90일·180일·1년을 쓰도록 365일까지 받는다. 14·30일은 기존 호출(홈 등)을 위해 유지한다.
-HISTORY_DAYS=(14,30,90,180,365)
 
 
 @router.get('/items/{item_id}/history',response_model=PriceHistory)

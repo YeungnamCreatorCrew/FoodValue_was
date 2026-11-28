@@ -8,7 +8,7 @@ from app.repositories import indicator_repository, series_repository
 from app.repositories import price_repository as repo
 from app.schemas.common import Page
 from app.schemas.price import (FactorCategory, FactorHistory, FactorHistoryPoint, ForecastPoint, ForecastResponse,
-    HistoryPoint, IndicatorSignal, ListIndicators, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
+    HistoryPoint, IndicatorSignal, PriceHistories, ListIndicators, PriceDetail, PriceFactor, PriceFactors, PriceGuide, PriceHistory, PriceSummary,
     PriceSummaryText, ValidationRecord, YearRange)
 from app.services import price_explanation, price_summary
 from app.core.dates import today
@@ -129,7 +129,25 @@ def history(db,item_id,days,market=RETAIL):
     start=end-timedelta(days=days-1)
     lookup=dict(series_repository.prices(db,series.id,start,end))
     return PriceHistory(item_id=item_id,market=series.market,days=days,start_date=start,end_date=end,
-        points=[HistoryPoint(date=start+timedelta(days=i),price=lookup.get(start+timedelta(days=i))) for i in range(days)])
+        points=history_points(lookup,start,days))
+
+
+def history_points(lookup,start,days):
+    """날짜별 점(관측이 없는 날은 price=None). 단건·묶음 이력이 같은 규칙을 쓴다."""
+    return [HistoryPoint(date=start+timedelta(days=i),price=lookup.get(start+timedelta(days=i))) for i in range(days)]
+
+
+def histories(db,item_ids,days,market=RETAIL):
+    """여러 품목의 최근 days일 이력. 품목 수와 관계없이 SQL 2개(품목·계열, 가격)로 읽는다."""
+    end=today()
+    start=end-timedelta(days=days-1)
+    ids=list(dict.fromkeys(item_ids))  # 순서를 지키며 중복 제거
+    found=repo.items(db,ids,market)
+    prices=series_repository.prices_by_series(db,[series.id for _,series in found.values()],start,end)
+    items=[PriceHistory(item_id=item_id,market=market,days=days,start_date=start,end_date=end,
+                        points=history_points(prices[found[item_id][1].id],start,days)) for item_id in ids if item_id in found]
+    return PriceHistories(market=market,days=days,start_date=start,end_date=end,items=items,
+                          missing_item_ids=[item_id for item_id in ids if item_id not in found])
 
 
 def summary_text(guide,run=None):

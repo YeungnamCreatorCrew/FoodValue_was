@@ -278,3 +278,43 @@ def test_unlisted_item_is_hidden_from_catalog(prices):
     names=[row['name'] for row in client.get(ROOT+'/items?size=50').json()['items']]
     assert '배추(월동)' not in names and '대파' in names
     assert client.get(ROOT+'/items/9').status_code==200  # 직접 접근은 가능(원본 확인용)
+
+
+def test_batch_history_same_points_as_single_and_keeps_order(prices):
+    client,_=prices
+    batch=client.get(ROOT+'/items/history?ids=2,1,999,2&days=14')
+    assert batch.status_code==200,batch.text
+    body=batch.json()
+    assert [row['itemId'] for row in body['items']]==[2,1] and body['missingItemIds']==[999]
+    single=client.get(ROOT+'/items/2/history?days=14').json()
+    assert body['items'][0]==single  # 단건 /history와 같은 형식·같은 값
+    assert all(point['price'] is None for point in body['items'][1]['points'])  # 자료 없는 계열은 빈 점
+    assert body['startDate']==single['startDate'] and body['days']==14
+    wholesale=client.get(ROOT+'/items/history?ids=2,1&days=14&market=WHOLESALE').json()
+    assert [row['itemId'] for row in wholesale['items']]==[2] and wholesale['missingItemIds']==[1]
+
+
+@pytest.mark.parametrize('query',['ids=','ids=a,b','ids=0','ids=2&days=15',
+                                  'ids='+','.join(str(i) for i in range(1,52))])
+def test_batch_history_validation(prices,query):
+    client,_=prices
+    assert client.get(ROOT+'/items/history?'+query).status_code==400
+
+
+def test_batch_history_query_count_is_constant(prices):
+    client,engine=prices
+    with engine.begin() as conn:
+        for i in range(3,13):
+            conn.execute(text("INSERT INTO item(id,name,category,default_unit,default_storage,food_type,price_source) VALUES(:id,:name,'VEGETABLE','g','FRIDGE','RAW','KAMIS')"),{'id':i,'name':f'품목{i}'})
+            conn.execute(text("INSERT INTO price_series(id,item_id,market,item_code,kind_code,rank_code,unit_quantity,unit) VALUES(:id,:id,'RETAIL',:code,'00','01',1,'kg')"),{'id':i+10,'code':f'{i+100}'})
+    def count(ids):
+        calls=[]
+        def listener(*args):
+            calls.append(1)
+        event.listen(engine,'before_cursor_execute',listener)
+        try:
+            assert client.get(ROOT+f'/items/history?ids={ids}&days=365').status_code==200
+        finally:
+            event.remove(engine,'before_cursor_execute',listener)
+        return len(calls)
+    assert count('2')==count(','.join(str(i) for i in range(1,13)))==2
