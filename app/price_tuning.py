@@ -21,9 +21,9 @@ from concurrent.futures import ProcessPoolExecutor
 from datetime import date
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from app.core.db import make_engine
 from app.repositories import series_repository
 from app.services.price_batch_service import load_inputs
 from app.services.price_prediction import DAMPING_ENV, XGB_PARAMS, XGB_PARAMS_ENV, check_dependencies, predict
@@ -145,7 +145,7 @@ def main(argv=None):
     if not url:
         parser.error('DATABASE_URL 설정이 필요합니다')
     check_dependencies()
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     names = args.only or list(CANDIDATES)
     inputs = []
     try:

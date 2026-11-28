@@ -1,6 +1,6 @@
-# FoodValue 로컬 DB 가이드
+# FoodValue DB 가이드
 
-로컬은 Docker로 띄운 PostgreSQL을 각자 쓰고, 운영 DB(Supabase)는 나중에 연결 주소만 바꿔서 붙입니다.
+팀은 **공유 DB(Supabase)** 하나를 같이 봅니다(2026-11-28~). 로컬 Docker PostgreSQL은 테스트·실험용입니다. 공유 DB 운영 규칙은 아래 [공유 DB](#공유-dbsupabase) 절을 봅니다.
 테이블은 `db/migration/` 의 SQL 파일로만 만들고 바꿉니다. `docker compose up` 하면 Flyway 컨테이너가 이 파일을 자동 실행합니다.
 
 최신 스키마는 앱 테이블 26개이며 날짜 기반 migration도 포함합니다.
@@ -46,6 +46,7 @@ docker compose up -d          # PostgreSQL 실행
 - `DB_PASSWORD`
 - `DB_PORT`
 - `DATABASE_URL`
+- `SUPABASE_DATABASE_URL` (공유 DB, Session pooler 주소)
 
 가격 예측 Open API 변수. 수집 파이프라인만 사용하며 API 서버는 읽지 않습니다. 자세한 내용은 [시세 가이드](README_PRICES.md#외부-원천-통합)를 참고합니다.
 
@@ -92,12 +93,32 @@ DBeaver/DataGrip 접속 정보: host `localhost`, port `.env`의 DB_PORT, DB/계
 - (정함, `V20261106_1700`) 지역은 전국만 씁니다. `price_daily.region` 컬럼은 없앴습니다.
 - 시세 적재 범위: 운영 DB(Supabase 무료 플랜)는 용량이 작으므로 지역 수와 기간을 먼저 정합니다.
 
-## 운영 DB(Supabase)로 옮길 때
+## 공유 DB(Supabase)
 
-운영 서버의 `DATABASE_URL`을 Supabase 주소로 바꾸고, 같은 SQL 파일을 Flyway로 Supabase에 한 번 실행합니다.
+2026-11-28에 로컬 기준 덤프(`foodvalue_base_20261128.dump`, 가격 11-27까지·예측 11-28 기준)를 복원해 시작했습니다. 서버는 배포하지 않고 각자 로컬에서 띄우되, DB만 같이 봅니다.
 
-```bash
-docker run --rm -v ./db/migration:/flyway/sql:ro flyway/flyway:12-alpine \
-  -url="jdbc:postgresql://<supabase-host>:5432/postgres" -user="<user>" -password="<password>" migrate
-```
-Direct connection이 안 붙으면 Supabase 대시보드 Connect 메뉴의 Session pooler 주소를 사용합니다.
+**접속**
+- Supabase 대시보드 → Connect → Direct → **Session pooler**(포트 5432) 주소를 씁니다.
+  - Transaction pooler(6543)는 쓰지 않습니다. 배치의 계열별 잠금(`pg_try_advisory_lock`)이 깨집니다.
+  - Direct connection은 무료 플랜에서 IPv6 전용이라 붙지 않을 수 있습니다.
+- `.env`에는 두 줄을 둡니다. 앞부분은 `postgresql+psycopg://`입니다(psycopg 3).
+  - `SUPABASE_DATABASE_URL=postgresql+psycopg://postgres.<프로젝트>:<비밀번호>@<pooler 호스트>:5432/postgres`
+  - `DATABASE_URL`: 서버를 공유 DB로 띄울 때는 위와 같은 값, 테스트를 돌릴 때는 로컬 DB
+- 접속 정보는 `.env` 파일로 직접 전달합니다. 메신저·Git에 붙이지 않습니다.
+
+**규칙**
+1. **migration은 머지 후 담당자 1명만** 적용합니다. `scripts/flyway_shared.sh info`로 상태를 보고 `scripts/flyway_shared.sh migrate`로 적용합니다(`.env`의 `SUPABASE_DATABASE_URL`을 읽음).
+2. **수집·예측 배치는 담당자 1명이 하루 1회** 공유 DB에 돌립니다.
+   ```bash
+   DATABASE_URL="$SUPABASE_DATABASE_URL" FOODVALUE_PRICE_MODEL=v2 uv run --extra prices python -m app.price_pipeline
+   DATABASE_URL="$SUPABASE_DATABASE_URL" uv run python -m app.indicator_batch --item-id <품목>   # 대파·양파·깐마늘·배추·무
+   ```
+   여러 명이 돌려도 계열 잠금 때문에 깨지지는 않지만, 같은 날 실행이 중복으로 쌓입니다.
+3. **테스트(`FOODVALUE_TEST_POSTGRES=1`)와 실험은 로컬 DB에서만** 합니다. 테스트는 `DATABASE_URL`에 행을 넣고 지웁니다.
+4. 스키마는 공유 DB에서 직접 바꾸지 않습니다. 로컬에서 V 파일로 만들고 PR → 머지 → 1번 순서로 적용합니다.
+
+**알아 둘 점**
+- **타임존**: Session pooler는 DB·계정 기본값(`ALTER DATABASE/ROLE ... SET timezone`)과 접속 옵션을 무시하고 UTC로 접속합니다. 그래서 코드는 `app.core.db.make_engine`이 접속마다 `SET TIME ZONE 'Asia/Seoul'`을 실행합니다. DBeaver·psql로 직접 볼 때는 `now()`가 UTC로 나옵니다.
+- **정렬**: 공유 DB는 로컬(en_US.utf8)과 정렬 규칙이 달라 한글 이름순이 가나다순으로 나옵니다.
+- **용량**: 무료 플랜 500MB. 시작 시점 217MB이고 대부분 `external_observation`(원본 수집)입니다.
+- **일시 정지**: 무료 프로젝트는 1주일 동안 접속이 없으면 멈춥니다. 대시보드에서 다시 켭니다.

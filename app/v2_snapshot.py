@@ -11,8 +11,8 @@ from datetime import date
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 
+from app.core.db import make_engine
 from app.services import v2_snapshot
 
 
@@ -27,7 +27,7 @@ def main(argv=None):
     url = os.getenv('DATABASE_URL')
     if not url:
         parser.error('DATABASE_URL 설정이 필요합니다')
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     manifest = v2_snapshot.build(engine, args.as_of, args.out, replace=args.replace)
     result = {'out': str(args.out), 'cutoff': manifest['cutoff'],
               'series': [f"{s['series_id']} {s['item']} {s['market']}" for s in manifest['series']]}

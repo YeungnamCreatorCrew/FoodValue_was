@@ -6,8 +6,8 @@ import os
 from datetime import date
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 
+from app.core.db import make_engine
 from app.core.constants import ID_MAX
 from app.services import indicator_batch_service
 
@@ -24,7 +24,7 @@ def main():
     url = os.getenv('DATABASE_URL')
     if not url:
         parser.error('DATABASE_URL 설정이 필요합니다')
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     try:
         result = indicator_batch_service.run(engine, args.item_id, args.as_of, args.validate)
         print(json.dumps(result, ensure_ascii=False))

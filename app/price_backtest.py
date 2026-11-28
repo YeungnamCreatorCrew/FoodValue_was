@@ -23,9 +23,9 @@ from datetime import date, timedelta
 from statistics import mean
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from app.core.db import make_engine
 from app.core.constants import ID_MAX
 from app.models.price import BacktestOrigin, BacktestPoint, BacktestRun
 from app.repositories import series_repository
@@ -190,7 +190,7 @@ def main(argv=None):
     url = os.getenv('DATABASE_URL')
     if not url:
         parser.error('DATABASE_URL 설정이 필요합니다')
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     try:
         output, records = run(engine, args.item_id, base_dates(args.start, args.end, args.every), args.workers, args.market)
         if args.save:

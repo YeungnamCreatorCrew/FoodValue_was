@@ -10,8 +10,8 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
 
+from app.core.db import make_engine
 from app.services import collection_service
 from app.core.dates import today
 
@@ -31,7 +31,7 @@ def main():
     url = os.getenv('DATABASE_URL')
     if not url:
         parser.error('DATABASE_URL 설정이 필요합니다')
-    engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = make_engine(url)
     try:
         result = collection_service.collect_krei_monthly(engine, start_year=args.start_year, end_year=args.end_year,
                                                          cache_dir=args.cache_dir)
