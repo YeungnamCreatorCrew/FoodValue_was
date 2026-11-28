@@ -19,6 +19,12 @@ class PriceMarket(StrEnum):
     WHOLESALE = 'WHOLESALE'
 
 
+class PriceModelTrack(StrEnum):
+    """예측 모델 트랙. ENSEMBLE이 기본 공개(v2 앙상블, v2 대상 밖 계열은 v5). STRUCT는 구조적 가격 전달 모델(v2 대상 계열만)"""
+    ENSEMBLE = 'ENSEMBLE'
+    STRUCT = 'STRUCT'
+
+
 class PriceSort(StrEnum):
     NAME = 'name'
     CHANGE = 'change'
@@ -86,6 +92,7 @@ class ForecastResponse(CamelModel):
     item_id: int
     market: PriceMarket
     series_id: int
+    model_track: PriceModelTrack = PriceModelTrack.ENSEMBLE
     status: str
     base_date: date | None = None
     data_date: date | None = None
@@ -147,6 +154,7 @@ class PriceFactor(CamelModel):
 class PriceFactors(CamelModel):
     item_id: int
     market: PriceMarket
+    model_track: PriceModelTrack = PriceModelTrack.ENSEMBLE
     base_date: date | None
     status: str
     explained: bool = False

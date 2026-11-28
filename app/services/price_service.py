@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 
 from app.core import constants as C
-from app.models.price import RETAIL, PriceModelRun
+from app.models.price import ENSEMBLE, RETAIL, PriceModelRun
 from app.repositories import indicator_repository, series_repository
 from app.repositories import price_repository as repo
 from app.schemas.common import Page
@@ -65,10 +65,10 @@ def list_indicators(db,series_list,as_of):
     return result
 
 
-def list_items(db,category,keyword,sort,page,size,market=RETAIL):
+def list_items(db,category,keyword,sort,page,size,market=RETAIL,track=ENSEMBLE):
     as_of=today()
     rows=repo.catalog(db,category,keyword,market)
-    prices,previous,runs,forecasts=repo.overview_rows(db,[s for _,s in rows],as_of)
+    prices,previous,runs,forecasts=repo.overview_rows(db,[s for _,s in rows],as_of,track)
     names=repo.aliases(db,[item.id for item,_ in rows])
     result=[summary(item,s,prices.get(s.id),previous.get(s.id),runs.get(s.id),forecasts.get(s.id),as_of,names.get(item.id,()))
             for item,s in rows]
@@ -81,10 +81,10 @@ def list_items(db,category,keyword,sort,page,size,market=RETAIL):
     return Page(items=result[(page-1)*size:page*size],page=page,size=size,total=len(result))
 
 
-def forecast_result(db,item_id,series,as_of,run,points):
-    attempt=db.scalar(select(PriceModelRun).where(PriceModelRun.series_id==series.id,
+def forecast_result(db,item_id,series,as_of,run,points,track=ENSEMBLE):
+    attempt=db.scalar(select(PriceModelRun).where(PriceModelRun.series_id==series.id,PriceModelRun.model_track==track,
         PriceModelRun.base_date<=as_of).order_by(PriceModelRun.base_date.desc(),PriceModelRun.id.desc()).limit(1))
-    result=ForecastResponse(item_id=item_id,market=series.market,series_id=series.id,status='NO_FORECAST',
+    result=ForecastResponse(item_id=item_id,market=series.market,series_id=series.id,model_track=track,status='NO_FORECAST',
                             latest_attempt_status=attempt.status if attempt else None)
     if not run:
         if attempt and attempt.status=='INSUFFICIENT_DATA':
@@ -104,22 +104,22 @@ def forecast_result(db,item_id,series,as_of,run,points):
     return result
 
 
-def forecast(db,item_id,market=RETAIL):
+def forecast(db,item_id,market=RETAIL,track=ENSEMBLE):
     _,series=require_item(db,item_id,market)
     as_of=today()
-    run,points,_=repo.snapshot(db,series.id,as_of)
-    return forecast_result(db,item_id,series,as_of,run,points)
+    run,points,_=repo.snapshot(db,series.id,as_of,track)
+    return forecast_result(db,item_id,series,as_of,run,points,track)
 
 
-def detail(db,item_id,market=RETAIL):
+def detail(db,item_id,market=RETAIL,track=ENSEMBLE):
     item,series=require_item(db,item_id,market)
     as_of=today()
-    prices,previous,runs,forecasts=repo.overview_rows(db,[series],as_of)
-    run,points,guide=repo.snapshot(db,series.id,as_of)
+    prices,previous,runs,forecasts=repo.overview_rows(db,[series],as_of,track)
+    run,points,guide=repo.snapshot(db,series.id,as_of,track)
     names=repo.aliases(db,[item_id])
     return PriceDetail(item=summary(item,series,prices.get(series.id),previous.get(series.id),run,points[-1] if points else None,
                                     as_of,names.get(item_id,())),
-        forecast=forecast_result(db,item_id,series,as_of,run,points),
+        forecast=forecast_result(db,item_id,series,as_of,run,points,track),
         guide=PriceGuide.model_validate(guide) if guide else None,summary=summary_text(guide,run))
 
 
@@ -169,13 +169,13 @@ def _evaluation_period(run):
         return None,None
 
 
-def factors(db,item_id,market=RETAIL):
+def factors(db,item_id,market=RETAIL,track=ENSEMBLE):
     """7일 뒤 예측의 변수별 SHAP 기여(원). 기준 모델로 공개된 실행은 설명이 없다(unavailableReason=BASELINE_MODEL)."""
     _,series=require_item(db,item_id,market)
     as_of=today()
-    run,points,guide=repo.snapshot(db,series.id,as_of)
-    result=forecast_result(db,item_id,series,as_of,run,points)
-    response=PriceFactors(item_id=item_id,market=series.market,base_date=result.base_date,status=result.status,
+    run,points,guide=repo.snapshot(db,series.id,as_of,track)
+    result=forecast_result(db,item_id,series,as_of,run,points,track)
+    response=PriceFactors(item_id=item_id,market=series.market,model_track=track,base_date=result.base_date,status=result.status,
                           model_name=result.model_name,summary=summary_text(guide,run))
     if run is None:
         response.unavailable_reason='NO_FORECAST'
@@ -211,10 +211,10 @@ class FactorNotFoundError(Exception):
     pass
 
 
-def factor_history(db,item_id,factor_id,days,market=RETAIL):
+def factor_history(db,item_id,factor_id,days,market=RETAIL,track=ENSEMBLE):
     """공개 실행 기준일까지 최근 days일의 특징값(화면 단위). 배치가 예측 시점에 저장한 값이다."""
     _,series=require_item(db,item_id,market)
-    run,_,_=repo.snapshot(db,series.id,today())
+    run,_,_=repo.snapshot(db,series.id,today(),track)
     header,rows=repo.explanation(db,run.id) if run else (None,[])
     row=next((r for r in rows if r['feature']==factor_id),None)
     if row is None:

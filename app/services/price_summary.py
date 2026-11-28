@@ -15,15 +15,20 @@ MAX_SENTENCE = 120
 CAUSAL_WORDS = ('때문', '원인', '탓', '덕분')  # SHAP은 인과가 아니므로 이런 표현이 있으면 고정 문장을 쓴다
 MARKET_LABELS = {'RETAIL': '소매', 'WHOLESALE': '도매'}
 
-_PROMPT = """너는 식자재 가격 예측 서비스의 설명 문장을 다듬는다. 아래 JSON은 XGBoost 모델의 7일 뒤 가격 예측과
-변수 분류별 SHAP 기여(원)다. 이 정보만으로 한국어 존댓말 문장을 JSON으로 써라.
+# 모델 종류별 문구. 트리 모델(v5·v2 앙상블)은 기존 프롬프트 그대로이고, struct는 회귀 항별 기여라 SHAP이라고 쓰지 않는다.
+TREE_MODEL = {'model': 'XGBoost 모델', 'contribution': 'SHAP 기여', 'subject': 'SHAP은', 'version': PROMPT_VERSION}
+STRUCT_MODEL = {'model': '구조적 가격 전달 모델(도매 변화 전달·소매/도매 배수 되돌림·과거 같은 시기 흐름·명절 항의 회귀)',
+                'contribution': '항별 기여', 'subject': '항별 기여는', 'version': 'price-struct-v1'}  # summary_prompt_version VARCHAR(20)
+
+_PROMPT = """너는 식자재 가격 예측 서비스의 설명 문장을 다듬는다. 아래 JSON은 {model}의 7일 뒤 가격 예측과
+변수 분류별 {contribution}(원)다. 이 정보만으로 한국어 존댓말 문장을 JSON으로 써라.
 
 규칙:
 - 출력 형식: {{"detail": "문장 1개", "categories": {{"분류코드": "문장 1~2개", ...}}}}
 - categories의 키는 입력 categories의 category 값과 정확히 같아야 한다(추가·누락 금지).
 - 각 값은 {max_len}자 이내.
 - 숫자는 입력에 있는 값만 쓴다. 새 숫자·날짜·비율을 만들지 않는다. 숫자를 안 써도 된다.
-- SHAP은 모델 예측에 대한 기여다. "때문에", "원인", "~해서 올랐다"처럼 인과를 단정하지 말고
+- {subject} 모델 예측에 대한 기여다. "때문에", "원인", "~해서 올랐다"처럼 인과를 단정하지 말고
   "가격을 높이는(낮추는) 방향으로 작용했습니다"처럼 쓴다.
 - 입력에 없는 사건(태풍, 작황 등)을 지어내지 않는다.
 - detail은 분류들이 어느 방향으로 작용했는지 한 문장으로 요약한다. 화면에서 바로 위에 예측가 문장이 있으므로
@@ -55,7 +60,7 @@ def baseline_summary():
             'detail': '변수별 영향은 제공하지 않습니다.', 'categories': {}}
 
 
-def template(categories):
+def template(categories, model=TREE_MODEL):
     """고정 문장. categories: price_explanation.category_totals 결과"""
     if not categories:
         return {'detail': '이번 예측은 최근 가격을 기준으로 한 기준 모델을 사용해 변수별 영향은 제공하지 않습니다.',
@@ -68,7 +73,7 @@ def template(categories):
     texts = {}
     for c in categories:
         if c['direction'] == 'NEUTRAL':
-            texts[c['category']] = f'{c["label"]}의 SHAP 기여 합계는 중립입니다.'
+            texts[c['category']] = f'{c["label"]}의 {model["contribution"]} 합계는 중립입니다.'
         else:
             texts[c['category']] = (f'{c["label"]}{_topic(c["label"])} 이번 모델 예측에서 가격을 '
                                     f'{"낮추는" if c["direction"] == "DOWN" else "높이는"} 방향으로 작용했습니다.')
@@ -147,7 +152,7 @@ def _call_gemini(prompt):
     return response.text or '', model
 
 
-def generate(name, market, current, forecast, categories, factors):
+def generate(name, market, current, forecast, categories, factors, model=TREE_MODEL):
     """(summary, generator, model, prompt_version). Gemini 무료 플랜 한도를 아끼려고 실행당 최대 1회만 부른다.
 
     - 기준 모델 실행(categories 없음), 키·모델명 없음, FOODVALUE_PRICE_SUMMARY_LLM=0이면 부르지 않는다.
@@ -158,17 +163,20 @@ def generate(name, market, current, forecast, categories, factors):
     summary = {'headline': headline(name, market, current, forecast)}
     if categories and _llm_enabled():
         data = payload(name, market, current, forecast, categories, factors)
-        prompt = _PROMPT.format(max_len=MAX_SENTENCE, payload=json.dumps(data, ensure_ascii=False))
+        prompt = _PROMPT.format(max_len=MAX_SENTENCE, payload=json.dumps(data, ensure_ascii=False), model=model['model'],
+                                contribution=model['contribution'], subject=model['subject'])
         try:
-            text, model = _call_gemini(prompt)
+            text, llm = _call_gemini(prompt)
             checked = validate(json.loads(text), data)
+            if checked and model is not TREE_MODEL and 'SHAP' in json.dumps(checked, ensure_ascii=False):
+                checked = None  # struct 기여는 SHAP이 아니다(입력 키 이름 shapWon을 따라 쓰면 고정 문장)
         except Exception as error:  # 원문은 남기지 않는다(키가 섞일 수 있음)
-            checked, model = None, None
+            checked, llm = None, None
             if _is_quota_error(error):
                 _quota_exhausted = True
         if checked:
-            return {**summary, **checked}, 'GEMINI', model, PROMPT_VERSION
-    return {**summary, **template(categories)}, 'TEMPLATE', None, PROMPT_VERSION
+            return {**summary, **checked}, 'GEMINI', llm, model['version']
+    return {**summary, **template(categories, model)}, 'TEMPLATE', None, model['version']
 
 
 LLM_ENV = 'FOODVALUE_PRICE_SUMMARY_LLM'  # 0이면 Gemini를 쓰지 않고 고정 문장만 만든다

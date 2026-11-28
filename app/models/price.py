@@ -10,6 +10,9 @@ from app.core.db import Base
 
 RETAIL, WHOLESALE = 'RETAIL', 'WHOLESALE'
 COUNTERPART = {RETAIL: WHOLESALE, WHOLESALE: RETAIL}  # 예측 변수로 쓰는 상대 시장
+# 예측 모델 트랙(price_model_run.model_track). ENSEMBLE이 기본 공개 트랙(v2 앙상블, v2 대상 밖 계열은 v5)
+ENSEMBLE, STRUCT = 'ENSEMBLE', 'STRUCT'
+TRACKS = (ENSEMBLE, STRUCT)
 
 
 class PriceSeries(Base):
@@ -50,6 +53,7 @@ class PriceModelRun(Base):
     __tablename__ = 'price_model_run'
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     series_id: Mapped[int] = mapped_column(ForeignKey('price_series.id'))
+    model_track: Mapped[str] = mapped_column(String(20), server_default=ENSEMBLE)
     base_date: Mapped[date] = mapped_column(Date)
     data_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[str] = mapped_column(String(20))

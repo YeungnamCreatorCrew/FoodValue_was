@@ -6,7 +6,7 @@ from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.models.item import Item
-from app.models.price import (COUNTERPART, RETAIL, PriceForecast, PriceForecastExplanation, PriceForecastFactor,
+from app.models.price import (COUNTERPART, ENSEMBLE, RETAIL, STRUCT, PriceForecast, PriceForecastExplanation, PriceForecastFactor,
     PriceInsight, PriceModelRun, PriceSeries)
 from app.repositories import covariate_repository, series_repository
 from app.services import price_explanation, price_summary, v2_service
@@ -109,7 +109,14 @@ def load_inputs(db,series,base_date):
     return rows,covariates
 
 
-def _run(engine,series_id,base_date):
+def _v2_key(db,series):
+    """v2 대상 계열이면 '품목|시장' 키, 아니면 None(v2가 꺼져 있어도 None)"""
+    if not v2_service.enabled():
+        return None
+    return v2_service.series_key(db.get(Item,series.item_id).name,series.source,series.market)
+
+
+def _run(engine,series_id,base_date,track=ENSEMBLE):
     if base_date>today():
         raise ValueError('미래 기준일로 실행할 수 없습니다')
     with Session(engine,expire_on_commit=False) as db:
@@ -118,14 +125,16 @@ def _run(engine,series_id,base_date):
             raise ValueError('가격 계열이 없습니다')
         # 과거 날짜를 다시 실행해 최신 결과를 뒤로 돌리지 않는다.
         newest=db.scalar(select(PriceModelRun.base_date).where(PriceModelRun.series_id==series_id,
-            PriceModelRun.status=='SUCCESS').order_by(PriceModelRun.base_date.desc()).limit(1))
+            PriceModelRun.model_track==track,PriceModelRun.status=='SUCCESS').order_by(PriceModelRun.base_date.desc()).limit(1))
         if newest and base_date<newest:
             raise ValueError('최신 공개 기준일보다 과거인 배치는 실행할 수 없습니다')
         rows,covariates=load_inputs(db,series,base_date)
         item_name=db.get(Item,series.item_id).name
         market=series.market
-        v2_key=v2_service.series_key(item_name,series.source,market) if v2_service.enabled() else None
-        run=PriceModelRun(series_id=series_id,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
+        v2_key=_v2_key(db,series)
+        if track==STRUCT and not v2_key:
+            raise ValueError('struct 트랙은 v2 대상 계열(FOODVALUE_PRICE_MODEL=v2)에서만 실행합니다')
+        run=PriceModelRun(series_id=series_id,model_track=track,base_date=base_date,data_date=rows[-1][0] if rows else None,status='RUNNING')
         db.add(run)
         db.commit()
         run_id=run.id
@@ -133,7 +142,7 @@ def _run(engine,series_id,base_date):
         if v2_key:
             if not rows:
                 raise InsufficientDataError('가격 자료 없음')
-            result=v2_service.prediction(engine,v2_key,base_date,rows[-1][1])
+            result=v2_service.prediction(engine,v2_key,base_date,rows[-1][1],track)
         else:
             result=predict([(d,p) for d,p in rows],base_date,covariates,explain=True)
         if len(result.prices)!=7 or len(result.lower)!=7 or len(result.upper)!=7:
@@ -151,7 +160,8 @@ def _run(engine,series_id,base_date):
         display=price_explanation.display_factors(shap_rows,market) if shap_rows else []
         # LLM 호출은 DB 연결을 잡지 않은 상태에서 한다. 실패해도 고정 문장으로 대체되어 배치는 계속된다.
         summary,generator,summary_model,prompt_version=price_summary.generate(
-            item_name,market,current,result.prices[-1],price_explanation.category_totals(display),display)
+            item_name,market,current,result.prices[-1],price_explanation.category_totals(display),display,
+            model=price_summary.STRUCT_MODEL if track==STRUCT else price_summary.TREE_MODEL)
         with Session(engine,expire_on_commit=False) as db:
             # 같은 날 다시 실행해도 이전 실행의 예측은 지우지 않는다. 공개는 최신 성공 실행을 고른다.
             for index,price in enumerate(result.prices):
@@ -176,7 +186,7 @@ def _run(engine,series_id,base_date):
             run.metrics=result.metrics
             run.finished_at=datetime.now()
             db.commit()
-            return {'runId':run_id,'status':run.status,'model':run.model_name,'quality':run.quality}
+            return {'runId':run_id,'track':track,'status':run.status,'model':run.model_name,'quality':run.quality}
     except Exception as error:
         with Session(engine) as db:
             run=db.get(PriceModelRun,run_id)
@@ -186,7 +196,7 @@ def _run(engine,series_id,base_date):
             run.finished_at=datetime.now()
             db.commit()
         if isinstance(error,InsufficientDataError):
-            return {'runId':run_id,'status':'INSUFFICIENT_DATA'}
+            return {'runId':run_id,'track':track,'status':'INSUFFICIENT_DATA'}
         raise
 
 
@@ -198,7 +208,25 @@ def series_id_for(engine,item_id,market=RETAIL):
     return series.id
 
 
+def struct_target(engine,series_id):
+    if not v2_service.struct_enabled():
+        return False
+    with Session(engine) as db:
+        series=db.get(PriceSeries,series_id)
+        return series is not None and _v2_key(db,series) is not None
+
+
+def _run_struct(engine,series_id,base_date):
+    """struct 트랙 실행. 실패해도 앙상블 실행 결과·배치 종료 코드에 영향을 주지 않는다(결과의 'struct'에만 남김)."""
+    try:
+        return _run(engine,series_id,base_date,STRUCT)
+    except Exception as error:
+        # 접속 주소·비밀정보가 포함될 수 있어 예외 원문은 기록하지 않는다.
+        return {'track':STRUCT,'status':'FAILED','errorCode':type(error).__name__}
+
+
 def run(engine,series_id,base_date=None):
+    """계열 하나의 예측 배치. 기본(ENSEMBLE) 트랙을 실행하고, struct 대상 계열이면 STRUCT 트랙도 이어서 실행한다."""
     if engine.dialect.name!='postgresql':
         raise ValueError('예측 공개에는 PostgreSQL이 필요합니다')
     # 잠금용 연결은 commit 후에도 풀에 반환하지 않는다. finally에서 명시적으로 해제한다.
@@ -209,7 +237,17 @@ def run(engine,series_id,base_date=None):
         if not acquired:
             raise BatchBusyError('이미 실행 중인 계열입니다')
         try:
-            return _run(engine,series_id,base_date or today())
+            base_date=base_date or today()
+            struct=struct_target(engine,series_id)
+            try:
+                result=_run(engine,series_id,base_date)
+            except Exception:
+                if struct:  # 앙상블이 실패해도 struct는 따로 저장한다
+                    _run_struct(engine,series_id,base_date)
+                raise
+            if struct:
+                result['struct']=_run_struct(engine,series_id,base_date)
+            return result
         finally:
             lock.execute(text('SELECT pg_advisory_unlock(hashtextextended(:name,0))'),{'name':name})
             lock.commit()

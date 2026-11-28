@@ -3,7 +3,7 @@ from datetime import timedelta
 from sqlalchemy import exists, func, select
 
 from app.models.item import Item, ItemAlias
-from app.models.price import (RETAIL, PriceDaily, PriceForecast, PriceForecastExplanation, PriceForecastFactor, PriceInsight,
+from app.models.price import (ENSEMBLE, RETAIL, PriceDaily, PriceForecast, PriceForecastExplanation, PriceForecastFactor, PriceInsight,
     PriceModelRun, PriceSeries)
 
 
@@ -18,22 +18,22 @@ def item(db, item_id, market=RETAIL):
     return (row[0], row[1]) if row else (None, None)
 
 
-def published_query(series_id, as_of):
-    # 공개는 7개 예측과 가이드가 같은 실행으로 완성된 경우만 허용한다.
+def published_query(series_id, as_of, track=ENSEMBLE):
+    # 공개는 7개 예측과 가이드가 같은 실행으로 완성된 경우만 허용한다. 트랙(모델)마다 따로 고른다.
     count = (select(func.count(PriceForecast.id)).where(
         PriceForecast.model_run_id == PriceModelRun.id).correlate(PriceModelRun).scalar_subquery())
-    return (select(PriceModelRun.id).where(PriceModelRun.series_id == series_id,
+    return (select(PriceModelRun.id).where(PriceModelRun.series_id == series_id, PriceModelRun.model_track == track,
         PriceModelRun.base_date <= as_of, PriceModelRun.status == 'SUCCESS', count == 7,
         exists().where(PriceInsight.model_run_id == PriceModelRun.id))
         .order_by(PriceModelRun.base_date.desc(), PriceModelRun.id.desc()).limit(1).correlate(None))
 
 
-def snapshot(db, series_id, as_of):
+def snapshot(db, series_id, as_of, track=ENSEMBLE):
     # 한 SELECT에서 실행·7일 예측·가이드를 읽어 결과 교체 중에도 서로 섞이지 않게 한다.
     rows = db.execute(select(PriceModelRun,PriceForecast,PriceInsight)
         .join(PriceForecast,PriceForecast.model_run_id==PriceModelRun.id)
         .join(PriceInsight,PriceInsight.model_run_id==PriceModelRun.id)
-        .where(PriceModelRun.id==published_query(series_id,as_of).scalar_subquery())
+        .where(PriceModelRun.id==published_query(series_id,as_of,track).scalar_subquery())
         .order_by(PriceForecast.target_date)).all()
     if not rows:
         return None, [], None
@@ -53,7 +53,7 @@ def catalog(db, category, keyword, market=RETAIL):
                                                    .where(*conditions).order_by(Item.name, Item.id)).all()]
 
 
-def overview_rows(db, series_list, as_of):
+def overview_rows(db, series_list, as_of, track=ENSEMBLE):
     """목록은 품목 수에 따라 쿼리가 늘지 않도록 일괄 SELECT한다. 결과는 계열 id 기준."""
     ids = [row.id for row in series_list]
     if not ids:
@@ -77,6 +77,7 @@ def overview_rows(db, series_list, as_of):
     count = select(func.count(PriceForecast.id)).where(PriceForecast.model_run_id==PriceModelRun.id).correlate(PriceModelRun).scalar_subquery()
     candidates = (select(PriceModelRun.id.label('id'),func.row_number().over(
         partition_by=PriceModelRun.series_id,order_by=(PriceModelRun.base_date.desc(),PriceModelRun.id.desc())).label('rank')).where(PriceModelRun.series_id.in_(ids),
+        PriceModelRun.model_track==track,
         PriceModelRun.base_date<=as_of,PriceModelRun.status=='SUCCESS',count==7,
         exists().where(PriceInsight.model_run_id==PriceModelRun.id))
         ).subquery()

@@ -45,7 +45,7 @@ def prices(monkeypatch):
         item_code TEXT,kind_code TEXT,rank_code TEXT,unit_quantity NUMERIC,unit TEXT,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
         '''CREATE TABLE price_daily(id INTEGER PRIMARY KEY,series_id INTEGER,price_date DATE,price INTEGER,
         observation_id INTEGER,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''',
-        '''CREATE TABLE price_model_run(id INTEGER PRIMARY KEY,series_id INTEGER,base_date DATE,data_date DATE,
+        '''CREATE TABLE price_model_run(id INTEGER PRIMARY KEY,series_id INTEGER,model_track TEXT DEFAULT 'ENSEMBLE',base_date DATE,data_date DATE,
         status TEXT,model_name TEXT,model_version TEXT,quality TEXT,metrics JSON,error_code TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,finished_at TIMESTAMP)''',
         '''CREATE TABLE price_forecast(id INTEGER PRIMARY KEY,target_date DATE,
