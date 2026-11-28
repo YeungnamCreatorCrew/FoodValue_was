@@ -120,5 +120,6 @@ DBeaver/DataGrip 접속 정보: host `localhost`, port `.env`의 DB_PORT, DB/계
 **알아 둘 점**
 - **타임존**: Session pooler는 DB·계정 기본값(`ALTER DATABASE/ROLE ... SET timezone`)과 접속 옵션을 무시하고 UTC로 접속합니다. 그래서 코드는 `app.core.db.make_engine`이 접속마다 `SET TIME ZONE 'Asia/Seoul'`을 실행합니다. DBeaver·psql로 직접 볼 때는 `now()`가 UTC로 나옵니다.
 - **정렬**: 공유 DB는 로컬(en_US.utf8)과 정렬 규칙이 달라 한글 이름순이 가나다순으로 나옵니다.
+- **동시 접속 한도**: Session pooler는 프로젝트 전체에서 동시 접속 15개까지만 받습니다(무료 기본값). 넘치면 `EMAXCONNSESSION` 오류로 요청이 실패합니다. 그래서 API 서버는 연결을 5개로 고정했습니다(`DB_POOL_SIZE`). 그래서 공유 DB에 동시에 붙는 WAS는 약 3개까지가 안전합니다. 더 필요하면 Supabase Database 설정에서 pooler Pool Size를 올립니다.
 - **용량**: 무료 플랜 500MB. 시작 시점 217MB이고 대부분 `external_observation`(원본 수집)입니다.
 - **일시 정지**: 무료 프로젝트는 1주일 동안 접속이 없으면 멈춥니다. 대시보드에서 다시 켭니다.
