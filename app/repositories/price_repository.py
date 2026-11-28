@@ -18,6 +18,15 @@ def item(db, item_id, market=RETAIL):
     return (row[0], row[1]) if row else (None, None)
 
 
+def items(db, item_ids, market=RETAIL):
+    """여러 품목과 그 시장의 가격 계열(한 쿼리). 반환: 품목 id → (품목, 계열). 계열이 없는 품목은 빠진다."""
+    if not item_ids:
+        return {}
+    rows = db.execute(select(Item, PriceSeries).join(PriceSeries, PriceSeries.item_id == Item.id)
+                      .where(Item.id.in_(list(item_ids)), PriceSeries.market == market)).all()
+    return {row[0].id: (row[0], row[1]) for row in rows}
+
+
 def published_query(series_id, as_of, track=ENSEMBLE):
     # 공개는 7개 예측과 가이드가 같은 실행으로 완성된 경우만 허용한다. 트랙(모델)마다 따로 고른다.
     count = (select(func.count(PriceForecast.id)).where(

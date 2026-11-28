@@ -36,6 +36,18 @@ def prices(db, series_id, start: date | None = None, end: date | None = None) ->
                                                       .where(*conditions).order_by(PriceDaily.price_date)).all()]
 
 
+def prices_by_series(db, series_ids, start: date, end: date) -> dict[int, dict[date, int]]:
+    """여러 계열의 기간 가격을 한 쿼리로 읽는다. 반환: 계열 id → {날짜: 가격}(관측이 없는 계열은 빈 dict)"""
+    result = {series_id: {} for series_id in series_ids}
+    if not result:
+        return result
+    rows = db.execute(select(PriceDaily.series_id, PriceDaily.price_date, PriceDaily.price).where(
+        PriceDaily.series_id.in_(list(result)), PriceDaily.price_date >= start, PriceDaily.price_date <= end)).all()
+    for series_id, day, price in rows:
+        result[series_id][day] = price
+    return result
+
+
 def kind_switch_dates(db, series_id) -> list[date]:
     """이어 붙인 계열(배추·무)에서 작형이 바뀐 날(새 작형 첫날). 원본 payload의 kindSwitch=1. 없는 계열은 빈 목록."""
     return list(db.scalars(select(PriceDaily.price_date).join(ExternalObservation, ExternalObservation.id == PriceDaily.observation_id)

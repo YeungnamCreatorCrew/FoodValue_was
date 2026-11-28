@@ -68,6 +68,16 @@ class PriceHistory(CamelModel):
     points: list[HistoryPoint]
 
 
+class PriceHistories(CamelModel):
+    """여러 품목의 가격 이력(묶음). items는 요청한 순서이고 각 항목은 /items/{id}/history와 같은 형식이다."""
+    market: PriceMarket
+    days: int
+    start_date: date
+    end_date: date
+    items: list[PriceHistory]
+    missing_item_ids: list[int] = Field(default_factory=list)  # 없는 품목이거나 그 시장 계열이 없는 품목
+
+
 class ForecastPoint(CamelModel):
     target_date: date
     predicted_price: int
