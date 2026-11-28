@@ -61,7 +61,7 @@ def factors(item_id:Id,db:Db,market:Market=PriceMarket.RETAIL,model:Model=PriceM
 
 
 @router.get('/items/{item_id}/factors/{factor_id}/history',response_model=FactorHistory)
-def factor_history(item_id:Id,db:Db,factor_id:str=Path(pattern=r'^[A-Za-z0-9]{1,40}$'),
+def factor_history(item_id:Id,db:Db,factor_id:str=Path(pattern=r'^[A-Za-z0-9_]{1,40}$'),
                    days:int=Query(30,ge=14,le=90),market:Market=PriceMarket.RETAIL,model:Model=PriceModelTrack.ENSEMBLE):
     if days not in (14,30,90):
         raise HTTPException(400,'기간은 14, 30, 90일 중 선택해 주세요')

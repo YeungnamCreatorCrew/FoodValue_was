@@ -168,6 +168,8 @@ def generate(name, market, current, forecast, categories, factors, model=TREE_MO
         try:
             text, llm = _call_gemini(prompt)
             checked = validate(json.loads(text), data)
+            if checked and model is not TREE_MODEL and 'SHAP' in json.dumps(checked, ensure_ascii=False):
+                checked = None  # struct 기여는 SHAP이 아니다(입력 키 이름 shapWon을 따라 쓰면 고정 문장)
         except Exception as error:  # 원문은 남기지 않는다(키가 섞일 수 있음)
             checked, llm = None, None
             if _is_quota_error(error):

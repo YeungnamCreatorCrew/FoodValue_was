@@ -31,6 +31,8 @@ def pricing(local):
         with engine.begin() as conn:
             runs='SELECT id FROM price_model_run WHERE series_id=:id'
             conn.execute(text(f'DELETE FROM price_insight WHERE model_run_id IN ({runs})'),{'id':series_id})
+            conn.execute(text(f'DELETE FROM price_forecast_factor WHERE model_run_id IN ({runs})'),{'id':series_id})
+            conn.execute(text(f'DELETE FROM price_forecast_explanation WHERE model_run_id IN ({runs})'),{'id':series_id})
             conn.execute(text(f'DELETE FROM price_forecast WHERE model_run_id IN ({runs})'),{'id':series_id})
             for table in ('price_model_run','price_daily'):
                 conn.execute(text(f'DELETE FROM {table} WHERE series_id=:id'),{'id':series_id})
@@ -165,3 +167,43 @@ def test_struct_track_without_runs_is_no_forecast_not_ensemble(pricing,monkeypat
     assert 'struct' not in result
     struct=client.get(f'{ROOT}/items/{item_id}/forecast?model=STRUCT').json()
     assert struct['status']=='NO_FORECAST' and struct['points']==[] and struct['latestAttemptStatus'] is None
+
+
+def test_struct_factors_are_saved_and_served_with_real_struct_output(pricing,monkeypatch):
+    """실험 스냅샷 2025-06-02 대파 소매 struct 예측(실제 항 분해)을 저장하고 /factors?model=STRUCT로 다시 읽는다."""
+    from tests.test_struct_service import SNAPSHOT, REFIT_DAY
+    if not SNAPSHOT.exists():
+        pytest.skip('실험 스냅샷이 없음(Git 밖)')
+    from app.services import price_summary, struct_service, v2_service
+    from tools import loader
+    client,engine,item_id,series_id=pricing
+    monkeypatch.setenv(price_summary.LLM_ENV,'0')
+    real=struct_service.forecast(loader.Snapshot(SNAPSHOT),REFIT_DAY,log=lambda *_:None)[1]
+    monkeypatch.setattr(batch,'_v2_key',lambda db,series:'대파|RETAIL')
+    monkeypatch.setattr(v2_service,'struct_enabled',lambda:True)
+    real_prediction=v2_service.prediction
+    def prediction(engine,key,base,last,track='ENSEMBLE'):
+        if track=='ENSEMBLE':
+            return _track_prediction(track,1200)
+        return real_prediction(engine,key,base,last,track)
+    monkeypatch.setattr(v2_service,'prediction',prediction)
+    monkeypatch.setattr(v2_service,'forecasts',lambda engine,base,log=print,track='ENSEMBLE':{'대파|RETAIL':real})
+    result=batch.run(engine,series_id)
+    assert result['struct']['status']=='SUCCESS' and result['struct']['quality']=='VALIDATED'
+    factors=client.get(f'{ROOT}/items/{item_id}/factors?model=STRUCT').json()
+    assert factors['explained'] and factors['method']=='STRUCT_TERM_SHARE' and factors['modelName']=='STRUCT'
+    assert {f['id'] for f in factors['factors']}<={'counter_change7','target_counter_ratio','struct_season',
+                                                  'target_in_event_window','target_prev_day_holiday'}
+    assert factors['basePrice']==factors['currentPrice']
+    assert factors['basePrice']+sum(f['contribution'] for f in factors['factors'])==pytest.approx(factors['predictedPrice'],abs=1)
+    assert factors['summary']['generator']=='TEMPLATE' and 'SHAP' not in str(factors['summary'])
+    season=next(f for f in factors['factors'] if f['id']=='struct_season')
+    assert season['hasHistory'] is False and season['category']=='CALENDAR'
+    # 추이는 저장된 90일 값. 예측 입력은 2025-06-02 스냅샷이고 실행 기준일은 오늘이라 API 기간 필터 대신 저장값을 본다.
+    with engine.connect() as conn:
+        stored=conn.scalar(text("SELECT history FROM price_forecast_factor WHERE model_run_id=:id AND feature='counter_change7'"),
+                           {'id':result['struct']['runId']})
+    assert len(stored)==90 and stored[-1]['date']==REFIT_DAY.isoformat()
+    history=client.get(f'{ROOT}/items/{item_id}/factors/counter_change7/history?model=STRUCT')
+    assert history.status_code==200 and history.json()['factorId']=='counter_change7'
+    assert client.get(f'{ROOT}/items/{item_id}/factors').json()['explained'] is False  # 앙상블(가짜 예측)은 설명 없음
