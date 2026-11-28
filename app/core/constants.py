@@ -50,3 +50,7 @@ LEVEL_OVERLAP_CORR = 0.5  # 배수 백분위와 도매 2주 변화의 상관(절
 
 # DB 세션 타임존(app.core.db.make_engine이 접속마다 설정). 날짜 계산(app.core.dates.today)과 같은 기준
 DB_TIMEZONE = 'Asia/Seoul'
+# API 서버 DB 연결 풀. 공유 DB(Supabase) Session pooler는 프로젝트 전체 동시 접속을 15개로 제한한다(무료 기본값).
+# 넘치면 접속 자체가 실패하므로 넘침(max_overflow) 없이 고정 크기로 두고, 몰린 요청은 풀에서 기다리게 한다.
+DB_POOL_SIZE = 5
+DB_POOL_TIMEOUT_SECONDS = 30

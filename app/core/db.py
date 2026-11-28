@@ -5,7 +5,7 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
-from app.core.constants import DB_TIMEZONE
+from app.core.constants import DB_POOL_SIZE, DB_POOL_TIMEOUT_SECONDS, DB_TIMEZONE
 
 
 class Base(DeclarativeBase):
@@ -33,7 +33,9 @@ def make_engine(url, **kwargs) -> Engine:
 
 @lru_cache
 def get_engine() -> Engine:
-    return make_engine(get_settings().database_url)
+    """API 서버 엔진. 연결 수를 DB_POOL_SIZE로 고정한다(공유 DB 동시 접속 한도, constants 참고)."""
+    return make_engine(get_settings().database_url, pool_size=DB_POOL_SIZE, max_overflow=0,
+                       pool_timeout=DB_POOL_TIMEOUT_SECONDS)
 
 
 @lru_cache
