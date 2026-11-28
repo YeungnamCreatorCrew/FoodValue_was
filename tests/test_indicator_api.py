@@ -100,5 +100,14 @@ def test_list_items_carry_indicator_signals_and_year_range(indicators):
     assert hit['asOfDate'] == DAY.isoformat() and hit['stale'] is False
     assert hit['signals'][0]['stateLabel'] == '싼 편' and hit['headline'] == SUMMARY['headline']
     assert hit['yearRange'] == {'low': 1000, 'high': 3000, 'percentile': 0.2}
+    assert hit['seasonalDiffRate'] == -0.149
     assert all(r['indicators'] is None for sid, r in rows.items() if sid != 1)
     assert client.get(ROOT + '/items/2').json()['item']['indicators'] is None
+
+
+def test_list_seasonal_rate_does_not_reuse_an_older_card(indicators):
+    client, engine = indicators
+    add_run(engine, 1, DAY - timedelta(days=1))
+    add_run(engine, 1, DAY, cards=False)
+    rows = {row['seriesId']: row for row in client.get(ROOT + '/items').json()['items']}
+    assert rows[1]['indicators']['seasonalDiffRate'] is None

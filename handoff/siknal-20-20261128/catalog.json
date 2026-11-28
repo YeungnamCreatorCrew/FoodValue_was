@@ -1,0 +1,195 @@
+{
+  "version": "siknal-20-20261128",
+  "verified_on": "2026-11-28",
+  "source_date": "2026-11-27",
+  "source": "https://www.kamis.or.kr/customer/price/knowhow/knowhow.do?action=itemList",
+  "existing": [
+    "대파",
+    "양파",
+    "깐마늘",
+    "배추",
+    "무"
+  ],
+  "items": [
+    {
+      "name": "양배추",
+      "category": "VEGETABLE",
+      "code": "212-00-04",
+      "retail": "1포기",
+      "wholesale": "8kg",
+      "aliases": [
+        "양배추 한통"
+      ],
+      "reason": "잎채소와 저장 채소 사이의 가격 흐름 비교"
+    },
+    {
+      "name": "시금치",
+      "category": "VEGETABLE",
+      "code": "213-00-04",
+      "retail": "100g",
+      "wholesale": "4kg",
+      "aliases": [
+        "시금치나물"
+      ],
+      "reason": "계절에 따른 가격 변화와 단기 등락 비교"
+    },
+    {
+      "name": "상추",
+      "category": "VEGETABLE",
+      "code": "214-02-04",
+      "retail": "100g",
+      "wholesale": "4kg",
+      "aliases": [
+        "청상추",
+        "청 상추"
+      ],
+      "reason": "청상추 단일 품종으로 잎채소 가격 변동 관찰"
+    },
+    {
+      "name": "오이",
+      "category": "VEGETABLE",
+      "code": "223-02-04",
+      "retail": "10개",
+      "wholesale": "50개",
+      "aliases": [
+        "다다기오이",
+        "다다기 오이",
+        "백오이"
+      ],
+      "reason": "다다기계통의 소매·도매 선행 움직임 비교"
+    },
+    {
+      "name": "애호박",
+      "category": "VEGETABLE",
+      "code": "224-01-04",
+      "retail": "1개",
+      "wholesale": "20개",
+      "aliases": [
+        "애 호박"
+      ],
+      "reason": "일상 구매 단위가 명확하고 단기 가격 변화 비교에 적합"
+    },
+    {
+      "name": "토마토",
+      "category": "VEGETABLE",
+      "code": "225-00-04",
+      "retail": "1kg",
+      "wholesale": "5kg",
+      "aliases": [
+        "일반토마토"
+      ],
+      "reason": "시설 과채류의 계절·도매 대비 비교"
+    },
+    {
+      "name": "당근",
+      "category": "VEGETABLE",
+      "code": "232-01-04",
+      "retail": "1kg",
+      "wholesale": "20kg",
+      "aliases": [
+        "국산당근",
+        "흙당근",
+        "무세척당근"
+      ],
+      "reason": "국산 무세척 품종으로 저장·출하 시기 비교"
+    },
+    {
+      "name": "청양고추",
+      "category": "VEGETABLE",
+      "code": "242-03-04",
+      "retail": "100g",
+      "wholesale": "10kg",
+      "aliases": [
+        "청양 고추",
+        "매운고추"
+      ],
+      "reason": "자주 쓰는 양념 채소의 단기 가격 변화 관찰"
+    },
+    {
+      "name": "깻잎",
+      "category": "VEGETABLE",
+      "code": "253-00-04",
+      "retail": "50g",
+      "wholesale": "2kg",
+      "aliases": [
+        "깻 잎"
+      ],
+      "reason": "잎채소 간 가격 변화와 구매 시기 비교"
+    },
+    {
+      "name": "파프리카",
+      "category": "VEGETABLE",
+      "code": "256-00-04",
+      "retail": "1개",
+      "wholesale": "5kg",
+      "aliases": [
+        "파프 리카"
+      ],
+      "reason": "개수·중량 단위 차이를 명시하며 과채 가격 비교"
+    },
+    {
+      "name": "감자",
+      "category": "VEGETABLE",
+      "code": "152-01-04",
+      "retail": "100g",
+      "wholesale": "20kg",
+      "aliases": [
+        "수미감자",
+        "수미 감자",
+        "노지감자"
+      ],
+      "reason": "수미 노지 단일 작형의 수확·저장 시기 비교"
+    },
+    {
+      "name": "고구마",
+      "category": "VEGETABLE",
+      "code": "151-00-04",
+      "retail": "1kg",
+      "wholesale": "10kg",
+      "aliases": [
+        "밤고구마",
+        "밤 고구마"
+      ],
+      "reason": "밤고구마 단일 품종의 저장·계절 가격 비교"
+    },
+    {
+      "name": "방울토마토",
+      "category": "VEGETABLE",
+      "code": "422-02-04",
+      "retail": "1kg",
+      "wholesale": "3kg",
+      "aliases": [
+        "대추방울토마토",
+        "대추 방울토마토",
+        "방울 토마토"
+      ],
+      "reason": "대추방울 단일 품종으로 일반 토마토와 가격 흐름 비교"
+    },
+    {
+      "name": "사과",
+      "category": "FRUIT",
+      "code": "411-05-04",
+      "retail": "10개",
+      "wholesale": "10kg",
+      "aliases": [
+        "후지사과",
+        "후지 사과",
+        "부사",
+        "부사사과"
+      ],
+      "reason": "후지 단일 품종으로 수확기·저장기·명절 전후 비교"
+    },
+    {
+      "name": "배",
+      "category": "FRUIT",
+      "code": "412-01-04",
+      "retail": "10개",
+      "wholesale": "15kg",
+      "aliases": [
+        "신고배",
+        "신고 배"
+      ],
+      "reason": "신고 단일 품종의 수확·저장·명절 가격 비교"
+    }
+  ]
+}

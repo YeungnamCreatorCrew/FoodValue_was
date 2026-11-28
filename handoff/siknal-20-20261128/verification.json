@@ -1,0 +1,415 @@
+{
+  "version": "siknal-20-20261128",
+  "listed_items": 20,
+  "series": [
+    {
+      "name": "배",
+      "market": "RETAIL",
+      "code": "412-01-04",
+      "unit_quantity": "10.000",
+      "unit": "개",
+      "observations": 335,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "배",
+      "market": "WHOLESALE",
+      "code": "412-01-04",
+      "unit_quantity": "15.000",
+      "unit": "kg",
+      "observations": 324,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "감자",
+      "market": "RETAIL",
+      "code": "152-01-04",
+      "unit_quantity": "100.000",
+      "unit": "g",
+      "observations": 333,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "감자",
+      "market": "WHOLESALE",
+      "code": "152-01-04",
+      "unit_quantity": "20.000",
+      "unit": "kg",
+      "observations": 327,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "깻잎",
+      "market": "RETAIL",
+      "code": "253-00-04",
+      "unit_quantity": "50.000",
+      "unit": "g",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "깻잎",
+      "market": "WHOLESALE",
+      "code": "253-00-04",
+      "unit_quantity": "2.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "당근",
+      "market": "RETAIL",
+      "code": "232-01-04",
+      "unit_quantity": "1.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "당근",
+      "market": "WHOLESALE",
+      "code": "232-01-04",
+      "unit_quantity": "20.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "사과",
+      "market": "RETAIL",
+      "code": "411-05-04",
+      "unit_quantity": "10.000",
+      "unit": "개",
+      "observations": 305,
+      "first_date": "2021-11-03",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "사과",
+      "market": "WHOLESALE",
+      "code": "411-05-04",
+      "unit_quantity": "10.000",
+      "unit": "kg",
+      "observations": 303,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "상추",
+      "market": "RETAIL",
+      "code": "214-02-04",
+      "unit_quantity": "100.000",
+      "unit": "g",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "상추",
+      "market": "WHOLESALE",
+      "code": "214-02-04",
+      "unit_quantity": "4.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "오이",
+      "market": "RETAIL",
+      "code": "223-02-04",
+      "unit_quantity": "10.000",
+      "unit": "개",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "오이",
+      "market": "WHOLESALE",
+      "code": "223-02-04",
+      "unit_quantity": "50.000",
+      "unit": "개",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "고구마",
+      "market": "RETAIL",
+      "code": "151-00-04",
+      "unit_quantity": "1.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "고구마",
+      "market": "WHOLESALE",
+      "code": "151-00-04",
+      "unit_quantity": "10.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "시금치",
+      "market": "RETAIL",
+      "code": "213-00-04",
+      "unit_quantity": "100.000",
+      "unit": "g",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "시금치",
+      "market": "WHOLESALE",
+      "code": "213-00-04",
+      "unit_quantity": "4.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "애호박",
+      "market": "RETAIL",
+      "code": "224-01-04",
+      "unit_quantity": "1.000",
+      "unit": "개",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "애호박",
+      "market": "WHOLESALE",
+      "code": "224-01-04",
+      "unit_quantity": "20.000",
+      "unit": "개",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "양배추",
+      "market": "RETAIL",
+      "code": "212-00-04",
+      "unit_quantity": "1.000",
+      "unit": "포기",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "양배추",
+      "market": "WHOLESALE",
+      "code": "212-00-04",
+      "unit_quantity": "8.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "토마토",
+      "market": "RETAIL",
+      "code": "225-00-04",
+      "unit_quantity": "1.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "토마토",
+      "market": "WHOLESALE",
+      "code": "225-00-04",
+      "unit_quantity": "5.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "청양고추",
+      "market": "RETAIL",
+      "code": "242-03-04",
+      "unit_quantity": "100.000",
+      "unit": "g",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "청양고추",
+      "market": "WHOLESALE",
+      "code": "242-03-04",
+      "unit_quantity": "10.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "파프리카",
+      "market": "RETAIL",
+      "code": "256-00-04",
+      "unit_quantity": "1.000",
+      "unit": "개",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "파프리카",
+      "market": "WHOLESALE",
+      "code": "256-00-04",
+      "unit_quantity": "5.000",
+      "unit": "kg",
+      "observations": 344,
+      "first_date": "2021-11-01",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "방울토마토",
+      "market": "RETAIL",
+      "code": "422-02-04",
+      "unit_quantity": "1.000",
+      "unit": "kg",
+      "observations": 244,
+      "first_date": "2025-11-28",
+      "last_date": "2026-11-27"
+    },
+    {
+      "name": "방울토마토",
+      "market": "WHOLESALE",
+      "code": "422-02-04",
+      "unit_quantity": "3.000",
+      "unit": "kg",
+      "observations": 244,
+      "first_date": "2025-11-28",
+      "last_date": "2026-11-27"
+    }
+  ],
+  "indicators": [
+    {
+      "name": "배",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 3
+    },
+    {
+      "name": "감자",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "깻잎",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "당근",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "사과",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 3
+    },
+    {
+      "name": "상추",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "오이",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "고구마",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "시금치",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "애호박",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "양배추",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 3
+    },
+    {
+      "name": "토마토",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "청양고추",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 4
+    },
+    {
+      "name": "파프리카",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 3
+    },
+    {
+      "name": "방울토마토",
+      "status": "SUCCESS",
+      "as_of_date": "2026-11-27",
+      "data_date": "2026-11-27",
+      "cards": 3
+    }
+  ],
+  "coverage_note": "신규 품목은 최근 1년 일별 관측과 기준일 이전 5개 연도의 같은 28일 관측을 적재했습니다. 5년 연속 일별 이력은 아니며, 휴일·미조사·계절 품종 공백은 채우지 않습니다.",
+  "forecast_note": "기존 v2 검증 대상은 5품목뿐입니다. 신규 품목에 검증 정확도·구매 권고를 복사하지 않습니다."
+}
